@@ -56,7 +56,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 		message, err := reader.ReadString('\n')
 
 		if len(message) > 0 {
-			go server.router.HandleCommand([]byte(message))
+			go server.router.HandleEnvelope([]byte(message))
 		}
 
 		if err == nil {

@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"fmt"
 	"mycelia/commands"
 	"mycelia/utils"
 )
@@ -25,8 +24,7 @@ type Channel struct {
 func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
 	// Temp setup of single array of subscribers.
 	c.subscribers = append(c.subscribers, *subscriber)
-	aMsg := fmt.Sprintf("Added Subscriber %s", subscriber.Address)
-	utils.ActionPrint(aMsg)
+	utils.SprintfLnIndent("AddedSubscriber: %s", 2, subscriber.Address)
 }
 
 func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage {

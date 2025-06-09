@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -22,16 +23,20 @@ func (c *Consumer) ConsumeMessage(m *commands.SendMessage) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
-		wMsg := fmt.Sprintf("Could not dial %s", c.Address)
-		utils.WarningPrint(wMsg)
+		utils.SprintfLnIndent("Could not dial %s", 2, c.Address)
 		return
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte(m.Body))
+	payload, err := json.Marshal(m.Body)
 	if err != nil {
-		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
-		utils.ErrorPrint(eMsg)
+		utils.MessageIfError("Error marshaling mesasge body", err)
+		return
+	}
+	_, err = conn.Write([]byte(payload))
+	if err != nil {
+		msg := fmt.Sprintf("Error sending to %s", c.Address)
+		fmt.Println(msg, ": ", err)
 		return
 	}
 	m.Status = commands.StatusResolved
