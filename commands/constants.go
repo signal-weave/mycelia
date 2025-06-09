@@ -13,3 +13,13 @@ const (
 	// A message whose source string could not be properly decoded.
 	StatusInvalid
 )
+
+// What to map the incoming raw data to.
+type PacketType string
+
+const (
+	// Intent to subscribe to a route or channel.
+	TypeSubscriber = "subscribe"
+	// A message that needs to be sent through a route.
+	TypeMessage = "message"
+)

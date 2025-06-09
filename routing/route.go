@@ -41,7 +41,7 @@ func (r *Route) AddChannel(c *commands.AddChannel) *Channel {
 		channel = NewChannel(c.Name)
 		r.Channels = append(r.Channels, *channel)
 		m := fmt.Sprintf("Adding channel: [%s] to route: [%s]", c.Name, r.Name)
-		utils.ActionPrint(m)
+		utils.SprintfLnIndent(m, 2)
 	}
 
 	return channel
@@ -53,8 +53,7 @@ func (r *Route) AddSubscriber(s *commands.AddSubscriber) {
 	channel, err := r.GetChannel(s.Channel)
 	if err != nil {
 		msg := "Error adding subscriber on route: [%s], channel not found: [%s]"
-		eMsg := fmt.Sprintf(msg, s.Route, s.Channel)
-		utils.ErrorPrint(eMsg)
+		utils.SprintfLnIndent(msg, 2, s.Route, s.Channel)
 		return
 	}
 

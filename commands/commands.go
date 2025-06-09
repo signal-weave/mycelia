@@ -1,14 +1,28 @@
 package commands
 
+import (
+	"encoding/json"
+)
+
+// A temporary object that contains the packet type and the data to be handled
+// by the server.
+type Envelope struct {
+	Type PacketType      `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
 // -----------------------------------------------------------------------------
 
 // The Message itself with fields from the incoming tcp stream and various
 // Mycelia used fields.
 type SendMessage struct {
-	ID     string `json:"id"` // Should be some form of UUID.
-	Route  string `json:"route"`
+	// Unsure if I want this - There should be some primary field.
+	Route string `json:"route"`
+
 	Status Status `json:"status"`
-	Body   string `json:"body"` // The primary payload to send to the consumer.
+
+	// The primary payload to send to the consumer.
+	Body map[string]any `json:"body"`
 }
 
 // -----------------------------------------------------------------------------
@@ -16,7 +30,6 @@ type SendMessage struct {
 // Command to add a new route to the router. Routes are the boxes where channels
 // are organized.
 type RegisterRoute struct {
-	ID   string `json:"id"` // Should be some form of UUID.
 	Name string `json:"name"`
 }
 
@@ -26,7 +39,6 @@ type RegisterRoute struct {
 // to have all messages traveling along a route forwarded to it.
 // From there a Consumer is made and registered to the end channel of a route.
 type AddSubscriber struct {
-	ID      string `json:"id"`      // Should be some form of UUID.
 	Route   string `json:"route"`   // Which route to subscribe to.
 	Channel string `json:"channel"` // Which chnl on the route to subscribe to.
 	Address string `json:"address"` // Where to forward the message.
@@ -35,7 +47,6 @@ type AddSubscriber struct {
 // -----------------------------------------------------------------------------
 
 type AddChannel struct {
-	ID    string `json:"id"` // Should be some form of UUID.
 	Route string `json:"route"`
 	Name  string `json:"name"`
 }

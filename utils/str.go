@@ -4,6 +4,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 )
 
 func SprintfLn(formatStr string, args ...string) {
@@ -11,22 +12,21 @@ func SprintfLn(formatStr string, args ...string) {
 	fmt.Println(msg)
 }
 
-func ActionPrint(s string) {
-	msg := fmt.Sprintf("[ACTION] - %s", s)
-	fmt.Println(msg)
-}
+// Same as utils.SprintfLn but will add "  - " to the start of the string with
+// spaces equal to the indent number.
+func SprintfLnIndent(formatStr string, indent int, args ...string) {
+	imsg := strings.Repeat(" ", indent) + "- " + formatStr
 
-func ErrorPrint(s string) {
-	msg := fmt.Sprintf("[ERROR] - %s", s)
-	fmt.Println(msg)
-}
+	var anyArgs []any = make([]any, len(args))
+	for i, v := range args {
+		anyArgs[i] = v
+	}
 
-func WarningPrint(s string) {
-	msg := fmt.Sprintf("[WARNING] - %s", s)
+	msg := fmt.Sprintf(imsg, anyArgs...)
 	fmt.Println(msg)
 }
 
 func DebugPrintLn(s string) {
-	msg := fmt.Sprintf("[DEBUG] - %s", s)
+	msg := fmt.Sprintf("[DEBUG] %s", s)
 	fmt.Println(msg)
 }
