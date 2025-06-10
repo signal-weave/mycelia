@@ -4,23 +4,39 @@ import (
 	"flag"
 	"os"
 	"testing"
+
+	"mycelia/environ"
 )
 
 func TestParseCLIArgs(t *testing.T) {
-	// Save original os.Args and reset after test
-	origArgs := os.Args
-	defer func() { os.Args = origArgs }()
-	
+	// Save and restore original os.Args
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	// Reset the flag.CommandLine to allow re-parsing
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	os.Args = []string{"cmd", "-address=10.0.0.1", "-port=9000"}
+	// Simulate CLI input
+	os.Args = []string{"cmd", "-address=10.1.2.3", "-port=9999", "-verbosity=2"}
 
+	// Clear the env var before testing
+	os.Unsetenv(environ.VERBOSITY_ENV)
+
+	// Run the function
 	ParseCLIArgs()
 
-	if Address != "10.0.0.1" {
-		t.Errorf("expected Address to be '10.0.0.1', got '%s'", Address)
+	// Check parsed values
+	if Address != "10.1.2.3" {
+		t.Errorf("Expected Address to be '10.1.2.3', got '%s'", Address)
 	}
-	if Port != 9000 {
-		t.Errorf("expected Port to be 9000, got %d", Port)
+
+	if Port != 9999 {
+		t.Errorf("Expected Port to be 9999, got %d", Port)
+	}
+
+	expectedVerb := environ.VerbosityStatusMap[2]
+	envVerb := os.Getenv(environ.VERBOSITY_ENV)
+	if envVerb != expectedVerb {
+		t.Errorf("Expected VERBOSITY_ENV to be '%s', got '%s'", expectedVerb, envVerb)
 	}
 }
