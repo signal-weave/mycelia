@@ -8,32 +8,32 @@ import (
 	"mycelia/environ"
 )
 
-var Address string = "127.0.0.1"
-var Port int = 5000
+var (
+	Address = "127.0.0.1"
+	Port    = 5000
+)
 
 func ParseCLIArgs() {
-	addressHelp := fmt.Sprintf("The TCP address, without port, defaults to %s",
-		Address)
-	addressArg := flag.String("address", Address, addressHelp)
+	flag.StringVar(&Address, "address", Address,
+		fmt.Sprintf("The TCP address, without port. Defaults to %s.", Address))
 
-	portHelp := fmt.Sprintf("The port to listen to, defaults to %d.", Port)
-	portArg := flag.Int("port", Port, portHelp)
+	flag.IntVar(&Port, "port", Port,
+		fmt.Sprintf("The port to listen to. Defaults to %d.", Port))
 
-	verbosityHelp := "The verbosity level for various console print functions."
-	verbosityHelp += "\nThe following will enable each plus the lower values."
-	verbosityHelp += "\n0 - None, 1 - Actions, 2 - Warnings, 3 - Errors."
-	verbArg := flag.Int("verbosity", 0, verbosityHelp)
+	var verbosityLevel int
+	verbosityHelp := `The verbosity level for console output:
+  0 - None
+  1 - Actions
+  2 - Warnings
+  3 - Errors`
+	flag.IntVar(&verbosityLevel, "verbosity", 0, verbosityHelp)
 
 	flag.Parse()
 
-	Address = *addressArg
-	Port = *portArg
-
-	verbosity, ok := environ.VerbosityStatusMap[*verbArg]
-	if !ok {
+	if verbosity, ok := environ.VerbosityStatusMap[verbosityLevel]; ok {
+		os.Setenv(environ.VERBOSITY_ENV, verbosity)
+	} else {
 		fmt.Println("Invalid verbosity specified, defaulting to NONE!")
 		os.Setenv(environ.VERBOSITY_ENV, environ.VerbosityStatusMap[0])
-		return
 	}
-	os.Setenv(environ.VERBOSITY_ENV, verbosity)
 }
