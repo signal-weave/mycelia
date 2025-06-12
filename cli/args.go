@@ -23,8 +23,8 @@ func ParseCLIArgs() {
 	var verbosityLevel int
 	verbosityHelp := `The verbosity level for console output:
     0 - None
-    1 - Actions
-    2 - Warnings + Actions
+    1 - Errors
+    2 - Warnings + Errors
     3 - Errors + Warnings + Actions`
 	flag.IntVar(&verbosityLevel, "verbosity", 0, verbosityHelp)
 

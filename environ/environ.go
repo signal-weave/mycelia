@@ -9,17 +9,17 @@ const VERBOSITY_ENV string = "VERBOSITY"
 // A map of verbosity level to its corresponding string status.
 var VerbosityStatusMap = map[int]string{
 	0: "NONE",
-	1: "ACTION",
+	1: "ERROR",
 	2: "WARNING",
-	3: "ERROR",
+	3: "ACTION",
 }
 
 // A map of verbosity status to its corresponding integer level.
 var VerbosityLevelMap = map[string]int{
 	"NONE":    0,
-	"ACTION":  1,
+	"ERROR":   1,
 	"WARNING": 2,
-	"ERROR":   3,
+	"ACTION":  3,
 }
 
 // Gets the integer verbosity level from the status in the environ var.
