@@ -2,7 +2,9 @@
 
 package utils
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Panics if the error of a function that returns a tuple (val, err)
 // returned a non-nil error, otherwise will return the value.
@@ -21,14 +23,5 @@ func PanicIfError(err error) {
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
-	}
-}
-
-// Boilerplate reduction for the err != nil check for prints.
-// Adds newline.
-func MessageIfError(msg string, err error) {
-	if err != nil {
-		formatted := fmt.Sprintf("%s: %s\n", msg, err)
-		fmt.Println(formatted)
 	}
 }
