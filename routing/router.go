@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"mycelia/cli"
 	"mycelia/commands"
 	"mycelia/utils"
 )
@@ -111,6 +112,7 @@ func (r *Router) AddRoute(tokens []string) {
 
 	wMsg := fmt.Sprintf("Route %s already exists.", reg.Name)
 	utils.WarningPrint(wMsg)
+	r.PrintRouterStructure()
 }
 
 func (r *Router) AddChannel(tokens []string) {
@@ -133,6 +135,7 @@ func (r *Router) AddChannel(tokens []string) {
 		return
 	}
 	route.AddChannel(&ch)
+	r.PrintRouterStructure()
 }
 
 func (r *Router) AddSubscriber(tokens []string) {
@@ -156,4 +159,31 @@ func (r *Router) AddSubscriber(tokens []string) {
 		return
 	}
 	route.AddSubscriber(&sub)
+	r.PrintRouterStructure()
+}
+
+// -------Debug-----------------------------------------------------------------
+
+// PrintRouterStructure prints the router, routes, channels, and subscribers.
+func (r *Router) PrintRouterStructure() {
+	if !cli.PrintTree {
+		return
+	}
+
+	routeExpr := "  | - [route] %s\n"
+	channelExpr := "  |     | - [channel] %s\n"
+	subscriberExpr := "  |     |     | - [subscriber] %s\n"
+
+	fmt.Println("\n[router]")
+	for routeName, route := range r.Routes {
+		fmt.Printf(routeExpr, routeName)
+		for _, channel := range route.Channels {
+			fmt.Printf(channelExpr, channel.Name)
+			for _, subscriber := range channel.Subscribers {
+				fmt.Printf(subscriberExpr, subscriber.Address)
+			}
+		}
+	}
+
+	fmt.Println()
 }
