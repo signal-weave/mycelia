@@ -171,8 +171,8 @@ func (r *Router) PrintRouterStructure() {
 	}
 
 	routeExpr := "  | - [route] %s\n"
-	channelExpr := "  |     | - [channel] %s\n"
-	subscriberExpr := "  |     |     | - [subscriber] %s\n"
+	channelExpr := "        | - [channel] %s\n"
+	subscriberExpr := "              | - [subscriber] %s\n"
 
 	fmt.Println("\n[router]")
 	for routeName, route := range r.Routes {
