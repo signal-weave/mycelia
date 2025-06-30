@@ -23,10 +23,10 @@ type Channel struct {
 func (c *Channel) alreadySubscribed(subscriber *Consumer) bool {
 	for _, v := range c.Subscribers {
 		if v.Address == subscriber.Address {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // Stores the consumer as a subscriber of the channel and will forward all
