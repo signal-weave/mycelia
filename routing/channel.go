@@ -20,9 +20,22 @@ type Channel struct {
 	Subscribers []Consumer
 }
 
+func (c *Channel) alreadySubscribed(subscriber *Consumer) bool {
+	for _, v := range c.Subscribers {
+		if v.Address == subscriber.Address {
+			return false
+		}
+	}
+	return true
+}
+
 // Stores the consumer as a subscriber of the channel and will forward all
 // processed messages to the consumer.
 func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
+	if c.alreadySubscribed(subscriber) {
+		return
+	}
+
 	// Temp setup of single array of subscribers.
 	c.Subscribers = append(c.Subscribers, *subscriber)
 	aMsg := fmt.Sprintf("Added Subscriber %s", subscriber.Address)
