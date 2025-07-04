@@ -11,9 +11,9 @@ func TestGetVerbosityLevel(t *testing.T) {
 		expected int
 	}{
 		{"NONE", 0},
-		{"ACTION", 1},
+		{"ERROR", 1},
 		{"WARNING", 2},
-		{"ERROR", 3},
+		{"ACTION", 3},
 	}
 
 	for _, tc := range testCases {

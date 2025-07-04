@@ -1,14 +1,12 @@
-package error_test
+package error
 
 import (
 	"errors"
 	"testing"
-
-	myerror "mycelia/error" // alias to avoid conflict with built-in "error"
 )
 
 func TestValueOrPanic_ReturnsValue(t *testing.T) {
-	val := myerror.ValueOrPanic("ok", nil)
+	val := ValueOrPanic("ok", nil)
 	if val != "ok" {
 		t.Errorf("Expected 'ok', got: %v", val)
 	}
@@ -21,12 +19,12 @@ func TestValueOrPanic_PanicsOnError(t *testing.T) {
 		}
 	}()
 
-	_ = myerror.ValueOrPanic("fail", errors.New("some error"))
+	_ = ValueOrPanic("fail", errors.New("some error"))
 }
 
 func TestPanicIfError_NoPanicOnNil(t *testing.T) {
 	// should not panic
-	myerror.PanicIfError(nil)
+	PanicIfError(nil)
 }
 
 func TestPanicIfError_PanicsOnError(t *testing.T) {
@@ -36,5 +34,5 @@ func TestPanicIfError_PanicsOnError(t *testing.T) {
 		}
 	}()
 
-	myerror.PanicIfError(errors.New("fatal"))
+	PanicIfError(errors.New("fatal"))
 }
