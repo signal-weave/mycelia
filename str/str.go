@@ -1,6 +1,6 @@
 // * String handling utilities
 
-package utils
+package str
 
 import (
 	"fmt"

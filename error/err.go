@@ -1,6 +1,6 @@
 // * Error handling utilities
 
-package utils
+package error
 
 import (
 	"fmt"

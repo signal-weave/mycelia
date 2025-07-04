@@ -9,7 +9,8 @@ import (
 	"strconv"
 
 	"mycelia/routing"
-	"mycelia/utils"
+	"mycelia/error"
+	"mycelia/str"
 )
 
 func NewServer(address string, port int) *Server {
@@ -32,9 +33,9 @@ type Server struct {
 func (server *Server) Run() {
 	strPort := strconv.Itoa(server.port)
 	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
-	utils.SprintfLn("TCP server on %s", fullAddress)
+	str.SprintfLn("TCP server on %s", fullAddress)
 
-	listener := utils.ValueOrPanic(net.Listen("tcp", fullAddress))
+	listener := error.ValueOrPanic(net.Listen("tcp", fullAddress))
 	defer listener.Close()
 
 	for {
@@ -64,13 +65,13 @@ func (server *Server) handleConnection(conn net.Conn) {
 		}
 
 		if err == io.EOF {
-			utils.SprintfLn("Client disconnected: %s",
+			str.SprintfLn("Client disconnected: %s",
 				conn.RemoteAddr().String())
 			return // EOF is expected, not an error
 		}
 
 		fmt.Println("Error handling message:", err)
-		utils.SprintfLn("Client disconnected: %s",
+		str.SprintfLn("Client disconnected: %s",
 			conn.RemoteAddr().String())
 	}
 }
