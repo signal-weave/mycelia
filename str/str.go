@@ -9,32 +9,33 @@ import (
 )
 
 func SprintfLn(formatStr string, args ...string) {
-	msg := fmt.Sprintf(formatStr, args)
+	interfaceArgs := make([]interface{}, len(args))
+	for i, v := range args {
+		interfaceArgs[i] = v
+	}
+	msg := fmt.Sprintf(formatStr, interfaceArgs...)
 	fmt.Println(msg)
 }
 
 func ActionPrint(s string) {
-	if 1 > environ.GetVerbosityLevel() {
+	if environ.GetVerbosityLevel() < 3 {
 		return
 	}
-	msg := fmt.Sprintf("[ACTION] - %s", s)
-	fmt.Println(msg)
+	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if 2 > environ.GetVerbosityLevel() {
+	if environ.GetVerbosityLevel() < 2 {
 		return
 	}
-	msg := fmt.Sprintf("[WARNING] - %s", s)
-	fmt.Println(msg)
+	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if 3 > environ.GetVerbosityLevel() {
+	if environ.GetVerbosityLevel() < 1 {
 		return
 	}
-	msg := fmt.Sprintf("[ERROR] - %s", s)
-	fmt.Println(msg)
+	fmt.Println("[ERROR] - " + s)
 }
 
 func DebugPrintLn(s string) {
