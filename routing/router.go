@@ -6,7 +6,7 @@ import (
 
 	"mycelia/cli"
 	"mycelia/commands"
-	"mycelia/utils"
+	"mycelia/str"
 )
 
 const (
@@ -58,7 +58,7 @@ func (r *Router) HandleCommand(input []byte) {
 	cmd, ok := r.commandRegistry[cmd_type]
 	if !ok {
 		msg := fmt.Sprintf("Unknown command type: %s", cmd_type)
-		utils.WarningPrint(msg)
+		str.WarningPrint(msg)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (r *Router) SendMessage(tokens []string) {
 	if len(tokens) != 4 {
 		msg := "send_message command failed, expected 4 args, got %v"
 		errMsg := fmt.Sprintf(msg, len(tokens))
-		utils.WarningPrint(errMsg)
+		str.WarningPrint(errMsg)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (r *Router) SendMessage(tokens []string) {
 	route, exists := r.Routes[msg.Route]
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found: %s", msg.Route)
-		utils.WarningPrint(wMsg)
+		str.WarningPrint(wMsg)
 		return
 	}
 	route.ProcessMessage(&msg)
@@ -94,7 +94,7 @@ func (r *Router) AddRoute(tokens []string) {
 	if len(tokens) != 3 {
 		msg := "add_route command failed, expected 3 args, got %v"
 		errMsg := fmt.Sprintf(msg, len(tokens))
-		utils.WarningPrint(errMsg)
+		str.WarningPrint(errMsg)
 		return
 	}
 
@@ -106,12 +106,12 @@ func (r *Router) AddRoute(tokens []string) {
 	if !exists {
 		route := NewRoute(reg.Name)
 		r.Routes[reg.Name] = route
-		utils.SprintfLn("Route %s registered!", reg.Name)
+		str.SprintfLn("Route %s registered!", reg.Name)
 		return
 	}
 
 	wMsg := fmt.Sprintf("Route %s already exists.", reg.Name)
-	utils.WarningPrint(wMsg)
+	str.WarningPrint(wMsg)
 	r.PrintRouterStructure()
 }
 
@@ -119,7 +119,7 @@ func (r *Router) AddChannel(tokens []string) {
 	if len(tokens) != 4 {
 		msg := "add_channel command failed, expected 4 args, got %v"
 		errMsg := fmt.Sprintf(msg, len(tokens))
-		utils.WarningPrint(errMsg)
+		str.WarningPrint(errMsg)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (r *Router) AddChannel(tokens []string) {
 	route, exists := r.Routes[ch.Route]
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found %s", ch.Route)
-		utils.WarningPrint(wMsg)
+		str.WarningPrint(wMsg)
 		return
 	}
 	route.AddChannel(&ch)
@@ -142,7 +142,7 @@ func (r *Router) AddSubscriber(tokens []string) {
 	if len(tokens) != 5 {
 		msg := "add_channel command failed, expected 5 args, got %v"
 		errMsg := fmt.Sprintf(msg, len(tokens))
-		utils.WarningPrint(errMsg)
+		str.WarningPrint(errMsg)
 		return
 	}
 
@@ -155,7 +155,7 @@ func (r *Router) AddSubscriber(tokens []string) {
 	route, exists := r.Routes[sub.Route]
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found %s", sub.Route)
-		utils.WarningPrint(wMsg)
+		str.WarningPrint(wMsg)
 		return
 	}
 	route.AddSubscriber(&sub)

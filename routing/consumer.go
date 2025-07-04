@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"mycelia/commands"
-	"mycelia/utils"
+	"mycelia/str"
 )
 
 func NewConsumer(address string) *Consumer {
@@ -23,7 +23,7 @@ func (c *Consumer) ConsumeMessage(m *commands.SendMessage) {
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial %s", c.Address)
-		utils.WarningPrint(wMsg)
+		str.WarningPrint(wMsg)
 		return
 	}
 	defer conn.Close()
@@ -31,7 +31,7 @@ func (c *Consumer) ConsumeMessage(m *commands.SendMessage) {
 	_, err = conn.Write([]byte(m.Body))
 	if err != nil {
 		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
-		utils.ErrorPrint(eMsg)
+		str.ErrorPrint(eMsg)
 		return
 	}
 	m.Status = commands.StatusResolved

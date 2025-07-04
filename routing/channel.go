@@ -3,7 +3,7 @@ package routing
 import (
 	"fmt"
 	"mycelia/commands"
-	"mycelia/utils"
+	"mycelia/str"
 )
 
 func NewChannel(name string) *Channel {
@@ -39,7 +39,7 @@ func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
 	// Temp setup of single array of subscribers.
 	c.Subscribers = append(c.Subscribers, *subscriber)
 	aMsg := fmt.Sprintf("Added Subscriber %s", subscriber.Address)
-	utils.ActionPrint(aMsg)
+	str.ActionPrint(aMsg)
 }
 
 func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage {

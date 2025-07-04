@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"mycelia/commands"
-	"mycelia/utils"
+	"mycelia/str"
 )
 
 func NewRoute(name string) *Route {
@@ -42,7 +42,7 @@ func (r *Route) AddChannel(c *commands.AddChannel) *Channel {
 		channel = NewChannel(c.Name)
 		r.Channels = append(r.Channels, *channel)
 		m := fmt.Sprintf("Adding channel: [%s] to route: [%s]", c.Name, r.Name)
-		utils.ActionPrint(m)
+		str.ActionPrint(m)
 	}
 
 	return channel
@@ -55,7 +55,7 @@ func (r *Route) AddSubscriber(s *commands.AddSubscriber) {
 	if err != nil {
 		msg := "Error adding subscriber on route: [%s], channel not found: [%s]"
 		eMsg := fmt.Sprintf(msg, s.Route, s.Channel)
-		utils.ErrorPrint(eMsg)
+		str.ErrorPrint(eMsg)
 		return
 	}
 
