@@ -14,7 +14,7 @@ import (
 
 func NewServer(address string, port int) *Server {
 	server := &Server{}
-	server.router = routing.NewRouter()
+	server.Router = routing.NewRouter()
 	server.address = address
 	server.port = port
 	return server
@@ -23,7 +23,7 @@ func NewServer(address string, port int) *Server {
 // Servers are responsible for translating raw TCP string input into routable
 // messages.
 type Server struct {
-	router  *routing.Router
+	Router  *routing.Router
 	address string
 	port    int
 }
@@ -56,7 +56,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 		message, err := reader.ReadString('\n')
 
 		if len(message) > 0 {
-			go server.router.HandleCommand([]byte(message))
+			go server.Router.HandleCommand([]byte(message))
 		}
 
 		if err == nil {

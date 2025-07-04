@@ -9,18 +9,27 @@ import (
 )
 
 var (
-	Address = "127.0.0.1"
-	Port    = 5000
+	Address   = "127.0.0.1"
+	Port      = 5000
+	PrintTree = false
+
+	verbosityLevel = 0
 )
 
 func ParseCLIArgs() {
+	setupCliArgs()
+	flag.Parse()
+	parseEnvironment()
+}
+
+// Register each CLI arg for parsing.
+func setupCliArgs() {
 	flag.StringVar(&Address, "address", Address,
 		fmt.Sprintf("The TCP address, without port. Defaults to %s.", Address))
 
 	flag.IntVar(&Port, "port", Port,
 		fmt.Sprintf("The port to listen to. Defaults to %d.", Port))
 
-	var verbosityLevel int
 	verbosityHelp := `The verbosity level for console output:
     0 - None
     1 - Errors
@@ -28,8 +37,12 @@ func ParseCLIArgs() {
     3 - Errors + Warnings + Actions`
 	flag.IntVar(&verbosityLevel, "verbosity", 0, verbosityHelp)
 
-	flag.Parse()
+	flag.BoolVar(&PrintTree, "printTree", PrintTree,
+		"Print an ascii map after each registration.")
+}
 
+// Parse each variable that will get stored in the environment.
+func parseEnvironment() {
 	if verbosity, ok := environ.VerbosityStatusMap[verbosityLevel]; ok {
 		os.Setenv(environ.VERBOSITY_ENV, verbosity)
 	} else {
