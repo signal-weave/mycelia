@@ -14,6 +14,10 @@ const (
 	StatusInvalid
 )
 
+type Command interface {
+	GetID() string
+}
+
 // -----------------------------------------------------------------------------
 
 // The Message itself with fields from the incoming tcp stream and various
@@ -25,13 +29,21 @@ type SendMessage struct {
 	Body   string `json:"body"` // The primary payload to send to the consumer.
 }
 
+func (cmd *SendMessage) GetID() string {
+	return cmd.ID
+}
+
 // -----------------------------------------------------------------------------
 
 // Command to add a new route to the router. Routes are the boxes where channels
 // are organized.
-type RegisterRoute struct {
+type AddRoute struct {
 	ID   string `json:"id"` // Should be some form of UUID.
 	Name string `json:"name"`
+}
+
+func (cmd *AddRoute) GetID() string {
+	return cmd.ID
 }
 
 // -----------------------------------------------------------------------------
@@ -46,12 +58,20 @@ type AddSubscriber struct {
 	Address string `json:"address"` // Where to forward the message.
 }
 
+func (cmd *AddSubscriber) GetID() string {
+	return cmd.ID
+}
+
 // -----------------------------------------------------------------------------
 
 type AddChannel struct {
 	ID    string `json:"id"` // Should be some form of UUID.
 	Route string `json:"route"`
 	Name  string `json:"name"`
+}
+
+func (cmd *AddChannel) GetID() string {
+	return cmd.ID
 }
 
 // -----------------------------------------------------------------------------
@@ -63,4 +83,8 @@ type AddTransformer struct {
 	Route   string `json:"route"`   // Which route the channel belongs to.
 	Channel string `json:"channel"` // Which channel to add transformer to.
 	Address string `json:"address"` // Where to send message for transformation.
+}
+
+func (cmd *AddTransformer) GetID() string {
+	return cmd.ID
 }

@@ -35,7 +35,7 @@ func TestSendMessageStruct(t *testing.T) {
 }
 
 func TestRegisterRouteStruct(t *testing.T) {
-	route := RegisterRoute{
+	route := AddRoute{
 		ID:   "abc",
 		Name: "customer",
 	}
