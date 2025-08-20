@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"mycelia/commands"
+	"mycelia/environ"
 	"mycelia/str"
 )
 
@@ -42,7 +43,9 @@ func (t *Transformer) TransformMessage(m *commands.SendMessage) (*commands.SendM
 	}
 
 	// Read the transformed response with a timeout
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(
+		time.Duration(environ.GetXformTimeout()) * time.Second))
+
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
 	if err != nil {
