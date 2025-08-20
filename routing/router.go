@@ -119,7 +119,6 @@ func (r *Router) AddRoute(tokens []string) {
 	}
 
 	var reg commands.RegisterRoute
-	reg.ID = tokens[1]
 	reg.Name = tokens[2]
 
 	_, exists := r.getRoute(reg.Name)
