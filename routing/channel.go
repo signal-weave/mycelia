@@ -9,8 +9,8 @@ import (
 func NewChannel(name string) *Channel {
 	channel := Channel{
 		Name:         name,
-		Subscribers:  []Consumer{},
-		Transformers: []Transformer{},
+		Subscribers:  []*Consumer{},
+		Transformers: []*Transformer{},
 	}
 	return &channel
 }
@@ -19,8 +19,8 @@ func NewChannel(name string) *Channel {
 // that modify messages before they reach subscribers.
 type Channel struct {
 	Name         string
-	Subscribers  []Consumer
-	Transformers []Transformer
+	Subscribers  []*Consumer
+	Transformers []*Transformer
 }
 
 func (c *Channel) alreadySubscribed(subscriber *Consumer) bool {
@@ -47,9 +47,7 @@ func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
 	if c.alreadySubscribed(subscriber) {
 		return
 	}
-
-	// Temp setup of single array of subscribers.
-	c.Subscribers = append(c.Subscribers, *subscriber)
+	c.Subscribers = append(c.Subscribers, subscriber)
 	aMsg := fmt.Sprintf("Added Subscriber %s", subscriber.Address)
 	str.ActionPrint(aMsg)
 }
@@ -60,7 +58,7 @@ func (c *Channel) RegisterTransformer(transformer *Transformer) {
 		return
 	}
 
-	c.Transformers = append(c.Transformers, *transformer)
+	c.Transformers = append(c.Transformers, transformer)
 	aMsg := fmt.Sprintf("Added Transformer %s", transformer.Address)
 	str.ActionPrint(aMsg)
 }
@@ -73,7 +71,8 @@ func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage 
 		transformedMsg, err := transformer.TransformMessage(result)
 		if err != nil {
 			// Log error but continue with original message
-			eMsg := fmt.Sprintf("Transformer %s failed: %v", transformer.Address, err)
+			eMsg := fmt.Sprintf(
+				"Transformer %s failed: %v", transformer.Address, err)
 			str.ErrorPrint(eMsg)
 			continue
 		}
