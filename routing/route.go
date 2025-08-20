@@ -73,3 +73,17 @@ func (r *Route) ProcessMessage(m *commands.SendMessage) {
 	}
 	result.Status = commands.StatusResolved
 }
+
+// Adds a transformer to a channel from the AddTransformer command data.
+func (r *Route) AddTransformer(t *commands.AddTransformer) {
+	channel, err := r.GetChannel(t.Channel)
+	if err != nil {
+		msg := "Error adding transformer on route: [%s], channel not found: [%s]"
+		eMsg := fmt.Sprintf(msg, t.Route, t.Channel)
+		str.ErrorPrint(eMsg)
+		return
+	}
+
+	transformer := NewTransformer(t.Address)
+	channel.RegisterTransformer(transformer)
+}

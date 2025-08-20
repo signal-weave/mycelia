@@ -4,12 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 
-	"mycelia/routing"
 	"mycelia/error"
+	"mycelia/routing"
 	"mycelia/str"
 )
 
@@ -41,7 +40,9 @@ func (server *Server) Run() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatal(err) // Unsure if I want this or to log and continue.
+			// TODO: Print values for address of sender.
+			str.ErrorPrint("Listener could not accept message.")
+			continue
 		}
 		go server.handleConnection(conn)
 	}
