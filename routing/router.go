@@ -3,6 +3,7 @@ package routing
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"mycelia/cli"
 	"mycelia/commands"
@@ -50,6 +51,23 @@ type Router struct {
 	// The map of envelope type strings to runnable commands.
 	// The data field of the envolope is passed through to the command handler.
 	commandRegistry map[string]CommandHandler
+
+	mutex sync.RWMutex
+}
+
+// Thread-safe route lookup
+func (r *Router) getRoute(name string) (*Route, bool) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	route, exists := r.Routes[name]
+	return route, exists
+}
+
+// Thread-safe route addition
+func (r *Router) addRoute(name string, route *Route) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.Routes[name] = route
 }
 
 func (r *Router) HandleCommand(input []byte) {
@@ -83,7 +101,7 @@ func (r *Router) SendMessage(tokens []string) {
 	msg.Route = tokens[2]
 	msg.Body = tokens[3]
 
-	route, exists := r.Routes[msg.Route]
+	route, exists := r.getRoute(msg.Route)
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found: %s", msg.Route)
 		str.WarningPrint(wMsg)
@@ -104,17 +122,18 @@ func (r *Router) AddRoute(tokens []string) {
 	reg.ID = tokens[1]
 	reg.Name = tokens[2]
 
-	_, exists := r.Routes[reg.Name]
-	if !exists {
-		route := NewRoute(reg.Name)
-		r.Routes[reg.Name] = route
-		str.SprintfLn("Route %s registered!", reg.Name)
+	_, exists := r.getRoute(reg.Name)
+	if exists {
+		wMsg := fmt.Sprintf("Route %s already exists.", reg.Name)
+		str.WarningPrint(wMsg)
+		r.PrintRouterStructure()
 		return
 	}
 
-	wMsg := fmt.Sprintf("Route %s already exists.", reg.Name)
-	str.WarningPrint(wMsg)
-	r.PrintRouterStructure()
+	route := NewRoute(reg.Name)
+	r.addRoute(reg.Name, route)
+	str.SprintfLn("Route %s registered!", reg.Name)
+
 }
 
 func (r *Router) AddChannel(tokens []string) {
@@ -130,7 +149,7 @@ func (r *Router) AddChannel(tokens []string) {
 	ch.Route = tokens[2]
 	ch.Name = tokens[3]
 
-	route, exists := r.Routes[ch.Route]
+	route, exists := r.getRoute(ch.Route)
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found %s", ch.Route)
 		str.WarningPrint(wMsg)
@@ -154,7 +173,7 @@ func (r *Router) AddSubscriber(tokens []string) {
 	sub.Channel = tokens[3]
 	sub.Address = tokens[4]
 
-	route, exists := r.Routes[sub.Route]
+	route, exists := r.getRoute(sub.Route)
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found %s", sub.Route)
 		str.WarningPrint(wMsg)
@@ -178,7 +197,7 @@ func (r *Router) AddTransformer(tokens []string) {
 	transformer.Channel = tokens[3]
 	transformer.Address = tokens[4]
 
-	route, exists := r.Routes[transformer.Route]
+	route, exists := r.getRoute(transformer.Route)
 	if !exists {
 		wMsg := fmt.Sprintf("Route not found %s", transformer.Route)
 		str.WarningPrint(wMsg)
@@ -195,6 +214,9 @@ func (r *Router) PrintRouterStructure() {
 	if !cli.PrintTree {
 		return
 	}
+
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 
 	routeExpr := "  | - [route] %s\n"
 	channelExpr := "        | - [channel] %s\n"
