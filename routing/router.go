@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	CMD_SEND_MESSAGE   = "send_message"
-	CMD_ADD_SUBSCRIBER = "add_subscriber"
-	CMD_ADD_CHANNEL    = "add_channel"
-	CMD_ADD_ROUTE      = "add_route"
+	CMD_SEND_MESSAGE    = "send_message"
+	CMD_ADD_SUBSCRIBER  = "add_subscriber"
+	CMD_ADD_CHANNEL     = "add_channel"
+	CMD_ADD_ROUTE       = "add_route"
+	CMD_ADD_TRANSFORMER = "add_transformer"
 )
 
 // What function gets run, passing in the data field of a command envelope.
@@ -27,10 +28,11 @@ func NewRouter() *Router {
 		"main": NewRoute("main"),
 	}
 	router.commandRegistry = map[string]CommandHandler{
-		CMD_SEND_MESSAGE:   router.SendMessage,
-		CMD_ADD_SUBSCRIBER: router.AddSubscriber,
-		CMD_ADD_CHANNEL:    router.AddChannel,
-		CMD_ADD_ROUTE:      router.AddRoute,
+		CMD_SEND_MESSAGE:    router.SendMessage,
+		CMD_ADD_SUBSCRIBER:  router.AddSubscriber,
+		CMD_ADD_CHANNEL:     router.AddChannel,
+		CMD_ADD_ROUTE:       router.AddRoute,
+		CMD_ADD_TRANSFORMER: router.AddTransformer,
 	}
 
 	return &router
@@ -162,6 +164,30 @@ func (r *Router) AddSubscriber(tokens []string) {
 	r.PrintRouterStructure()
 }
 
+func (r *Router) AddTransformer(tokens []string) {
+	if len(tokens) != 6 {
+		msg := "add_transformer command failed, expected 6 args, got %v"
+		errMsg := fmt.Sprintf(msg, len(tokens))
+		str.WarningPrint(errMsg)
+		return
+	}
+
+	var transformer commands.AddTransformer
+	transformer.ID = tokens[1]
+	transformer.Route = tokens[2]
+	transformer.Channel = tokens[3]
+	transformer.Address = tokens[4]
+
+	route, exists := r.Routes[transformer.Route]
+	if !exists {
+		wMsg := fmt.Sprintf("Route not found %s", transformer.Route)
+		str.WarningPrint(wMsg)
+		return
+	}
+	route.AddTransformer(&transformer)
+	r.PrintRouterStructure()
+}
+
 // -------Debug-----------------------------------------------------------------
 
 // PrintRouterStructure prints the router, routes, channels, and subscribers.
@@ -172,6 +198,7 @@ func (r *Router) PrintRouterStructure() {
 
 	routeExpr := "  | - [route] %s\n"
 	channelExpr := "        | - [channel] %s\n"
+	transformerExpr := "              | - [transformer] %s (order: %d)\n"
 	subscriberExpr := "              | - [subscriber] %s\n"
 
 	fmt.Println("\n[router]")
@@ -179,6 +206,13 @@ func (r *Router) PrintRouterStructure() {
 		fmt.Printf(routeExpr, routeName)
 		for _, channel := range route.Channels {
 			fmt.Printf(channelExpr, channel.Name)
+
+			// Print transformers first
+			for _, transformer := range channel.Transformers {
+				fmt.Printf(transformerExpr, transformer.Address)
+			}
+
+			// Then print subscribers
 			for _, subscriber := range channel.Subscribers {
 				fmt.Printf(subscriberExpr, subscriber.Address)
 			}

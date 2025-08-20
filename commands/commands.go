@@ -53,3 +53,14 @@ type AddChannel struct {
 	Route string `json:"route"`
 	Name  string `json:"name"`
 }
+
+// -----------------------------------------------------------------------------
+
+// Command to add a transformer to a channel. Transformers intercept and modify
+// messages before they reach subscribers.
+type AddTransformer struct {
+	ID      string `json:"id"`      // Should be some form of UUID.
+	Route   string `json:"route"`   // Which route the channel belongs to.
+	Channel string `json:"channel"` // Which channel to add transformer to.
+	Address string `json:"address"` // Where to send message for transformation.
+}
