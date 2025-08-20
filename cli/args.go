@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	"mycelia/environ"
 )
@@ -13,7 +14,8 @@ var (
 	Port      = 5000
 	PrintTree = false
 
-	verbosityLevel = 0
+	verbosityLevel      = 0
+	xformTimeoutSeconds = 5
 )
 
 func ParseCLIArgs() {
@@ -39,14 +41,21 @@ func setupCliArgs() {
 
 	flag.BoolVar(&PrintTree, "printTree", PrintTree,
 		"Print an ascii map after each registration.")
+
+	flag.IntVar(&xformTimeoutSeconds, "xformTimeout", xformTimeoutSeconds,
+		"Transformer response timeout in seconds.")
 }
 
 // Parse each variable that will get stored in the environment.
 func parseEnvironment() {
+	// ----------Verbosity----------
 	if verbosity, ok := environ.VerbosityStatusMap[verbosityLevel]; ok {
 		os.Setenv(environ.VERBOSITY_ENV, verbosity)
 	} else {
 		fmt.Println("Invalid verbosity specified, defaulting to NONE!")
 		os.Setenv(environ.VERBOSITY_ENV, environ.VerbosityStatusMap[0])
 	}
+
+	// ----------XForm Timeout----------
+	os.Setenv(environ.XFORM_TIMEOUT_ENV, strconv.Itoa(xformTimeoutSeconds))
 }
