@@ -135,7 +135,7 @@ func (b *Broker) AddTransformer(cmd commands.AddTransformer) {
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
-	if !cli.PrintTree {
+	if !cli.RuntimeCfg.PrintTree {
 		return
 	}
 

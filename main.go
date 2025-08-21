@@ -1,12 +1,18 @@
 package main
 
 import (
-	"mycelia/server"
+	"fmt"
 	"mycelia/cli"
+	"mycelia/server"
+	"os"
 )
 
 func main() {
-	cli.ParseCLIArgs()
-	server := server.NewServer(cli.Address, cli.Port)
+	err := cli.ParseRuntimeArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	server := server.NewServer(cli.RuntimeCfg.Address, cli.RuntimeCfg.Port)
 	server.Run()
 }
