@@ -5,7 +5,7 @@ package str
 import (
 	"fmt"
 
-	"mycelia/environ"
+	"mycelia/cli"
 )
 
 func SprintfLn(formatStr string, args ...string) {
@@ -18,21 +18,21 @@ func SprintfLn(formatStr string, args ...string) {
 }
 
 func ActionPrint(s string) {
-	if environ.GetVerbosityLevel() < 3 {
+	if cli.RuntimeCfg.Verbosity < 3 {
 		return
 	}
 	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if environ.GetVerbosityLevel() < 2 {
+	if cli.RuntimeCfg.Verbosity < 2 {
 		return
 	}
 	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if environ.GetVerbosityLevel() < 1 {
+	if cli.RuntimeCfg.Verbosity < 1 {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)
