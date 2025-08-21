@@ -42,19 +42,12 @@ func ParseRuntimeArgs(argv []string) error {
 	return nil
 }
 
-// ParseRuntimeArgs parses only runtime flags, applies env overrides, validates,
-// and returns (config, remainingArgs, error).
-//
-// Env variables (optional):
-//
-//	MYC_ADDR, MYC_PORT, MYC_VERBOSITY, MYC_PRINT_TREE, MYC_XFORM_TIMEOUT
+// ParseRuntimeArgs parses only runtime flags validates, and returns
+// (config, error).
 //
 // Duration examples: 500ms, 3s, 2m, 1h.
 func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 	cfg := defaultRuntimeConfig()
-
-	// Start with env overrides before flags (flags take precedence).
-	applyEnvOverrides(&cfg, getEnvMap(os.Environ()))
 
 	fs := flag.NewFlagSet("runtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
@@ -63,7 +56,8 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "Bind port (1-65535)")
 	fs.BoolVar(&cfg.PrintTree, "print-tree", cfg.PrintTree, "Print router tree at startup")
 	fs.DurationVar(&cfg.TransformTimeout, "xform-timeout", cfg.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
-	fs.IntVar(&cfg.Verbosity, "verbosity", cfg.Verbosity, `0 - None
+	fs.IntVar(&cfg.Verbosity, "verbosity", cfg.Verbosity,
+		`0 - None
     1 - Errors
     2 - Warnings + Errors
     3 - Errors + Warnings + Actions`)
@@ -71,14 +65,14 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
 
-  -addr string         Bind address (IP or hostname)  (env: MYC_ADDR)
-  -port int            Bind port (1-65535)            (env: MYC_PORT)
-  -v[=N]               Verbosity, cumulative or N     (env: MYC_VERBOSITY)
-  -print-tree          Print router tree at startup   (env: MYC_PRINT_TREE)
-  -xform-timeout dur   Transformer timeout            (env: MYC_XFORM_TIMEOUT)
+  -addr string         Bind address (IP or hostname)
+  -port int            Bind port (1-65535)
+  -v int               0, 1, 2, or 3
+  -print-tree          Print router tree at startup
+  -xform-timeout dur   Transformer timeout
 
 Examples:
-  mycelia -addr 0.0.0.0 -port 8080 -vv -print-tree -xform-timeout 45s
+  mycelia -addr 0.0.0.0 -port 8080 -verbosity 2 -print-tree -xform-timeout 45s
   MYC_ADDR=0.0.0.0 MYC_PORT=8080 mycelia -v
 `)
 	}
@@ -123,43 +117,4 @@ func looksLikeIP(s string) bool {
 		}
 	}
 	return true
-}
-
-func applyEnvOverrides(c *runtimeConfig, env map[string]string) {
-	if v, ok := env["MYC_ADDR"]; ok && v != "" {
-		c.Address = v
-	}
-	if v, ok := env["MYC_PORT"]; ok && v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			c.Port = n
-		}
-	}
-	if v, ok := env["MYC_VERBOSITY"]; ok && v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			c.Verbosity = n
-		}
-	}
-	if v, ok := env["MYC_PRINT_TREE"]; ok && v != "" {
-		switch strings.ToLower(v) {
-		case "1", "true", "yes", "on":
-			c.PrintTree = true
-		case "0", "false", "no", "off":
-			c.PrintTree = false
-		}
-	}
-	if v, ok := env["MYC_XFORM_TIMEOUT"]; ok && v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			c.TransformTimeout = d
-		}
-	}
-}
-
-func getEnvMap(env []string) map[string]string {
-	m := make(map[string]string, len(env))
-	for _, kv := range env {
-		if i := strings.IndexByte(kv, '='); i >= 0 {
-			m[kv[:i]] = kv[i+1:]
-		}
-	}
-	return m
 }
