@@ -41,6 +41,11 @@ func (r *Route) GetChannel(name string) (*Channel, bool) {
 // If the channel already exists on the route, the action is skipped and returns
 // the existing channel instead.
 func (r *Route) AddChannel(cmd *commands.AddChannel) {
+	_, exists := r.GetChannel(cmd.Name)
+	if exists {
+		return
+	}
+
 	ch := NewChannel(cmd.Name)
 	r.mutex.Lock()
 	r.Channels = append(r.Channels, ch)
