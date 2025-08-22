@@ -1,5 +1,7 @@
 package commands
 
+import "github.com/google/uuid"
+
 // Status of the current message describing its life cycle or validity.
 type Status int
 
@@ -46,6 +48,13 @@ func (cmd *AddRoute) GetID() string {
 	return cmd.ID
 }
 
+func NewAddRoute(name string) *AddRoute {
+	return &AddRoute{
+		ID:   uuid.New().String(),
+		Name: name,
+	}
+}
+
 // -----------------------------------------------------------------------------
 
 // A subscriber is a message that informs the system of a client that wishes
@@ -62,6 +71,15 @@ func (cmd *AddSubscriber) GetID() string {
 	return cmd.ID
 }
 
+func NewAddSubscriber(route, channel, address string) *AddSubscriber {
+	return &AddSubscriber{
+		ID: uuid.New().String(),
+		Route: route,
+		Channel: channel,
+		Address: address,
+	}
+}
+
 // -----------------------------------------------------------------------------
 
 type AddChannel struct {
@@ -72,6 +90,14 @@ type AddChannel struct {
 
 func (cmd *AddChannel) GetID() string {
 	return cmd.ID
+}
+
+func NewAddChannel(route, name string) *AddChannel {
+	return &AddChannel{
+		ID: uuid.New().String(),
+		Route: route,
+		Name: name,
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -87,4 +113,13 @@ type AddTransformer struct {
 
 func (cmd *AddTransformer) GetID() string {
 	return cmd.ID
+}
+
+func NewAddTransformer(route, channel, address string) *AddTransformer {
+	return &AddTransformer{
+		ID: uuid.New().String(),
+		Route: route,
+		Channel: channel,
+		Address: address,
+	}
 }
