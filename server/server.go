@@ -7,7 +7,7 @@ import (
 	"net"
 	"strconv"
 
-	"mycelia/error"
+	"mycelia/errgo"
 	"mycelia/routing"
 	"mycelia/str"
 )
@@ -34,7 +34,7 @@ func (server *Server) Run() {
 	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
 	str.SprintfLn("TCP server on %s", fullAddress)
 
-	listener := error.ValueOrPanic(net.Listen("tcp", fullAddress))
+	listener := errgo.ValueOrPanic(net.Listen("tcp", fullAddress))
 	defer listener.Close()
 
 	for {
@@ -58,7 +58,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 		message, err := reader.ReadString('\n')
 
 		if len(message) > 0 {
-			go server.Broker.HandleCommand([]byte(message))
+			go server.Broker.HandleBytes([]byte(message))
 		}
 
 		if err == nil {
