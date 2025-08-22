@@ -14,6 +14,8 @@ import (
 
 	"mycelia/commands"
 	"mycelia/errgo"
+
+	"github.com/google/uuid"
 )
 
 // ------Arg Parsing------------------------------------------------------------
@@ -216,7 +218,8 @@ var CommandList = []commands.Command{}
 func parseRouteCmds(routeData []map[string]any) {
 	for _, route := range routeData {
 		routeName := route["name"].(string)
-		addRouteCmd := commands.NewAddRoute(routeName)
+		id := uuid.New().String()
+		addRouteCmd := commands.NewAddRoute(id, routeName)
 		CommandList = append(CommandList, addRouteCmd)
 
 		channelData, exists := route["channels"].([]map[string]any)
@@ -230,7 +233,8 @@ func parseRouteCmds(routeData []map[string]any) {
 func parseChannelCmds(route string, channelData []map[string]any) {
 	for _, channel := range channelData {
 		channelName := channel["name"].(string)
-		addChannelCmd := commands.NewAddChannel(route, channelName)
+		id := uuid.New().String()
+		addChannelCmd := commands.NewAddChannel(id, route, channelName)
 		CommandList = append(CommandList, addChannelCmd)
 
 		transformers, exists := channel["transformers"].([]map[string]string)
@@ -248,8 +252,9 @@ func parseChannelCmds(route string, channelData []map[string]any) {
 func parseXformCmds(route, channel string, transformData []map[string]string) {
 	for _, transformer := range transformData {
 		addr := transformer["address"]
+		id := uuid.New().String()
 		addTransformerCmd := commands.NewAddTransformer(
-			route, channel, addr,
+			id, route, channel, addr,
 		)
 		CommandList = append(CommandList, addTransformerCmd)
 	}
@@ -258,8 +263,9 @@ func parseXformCmds(route, channel string, transformData []map[string]string) {
 func parseSubscriberCmds(route, channel string, subData []map[string]string) {
 	for _, subscriber := range subData {
 		addr := subscriber["address"]
+		id := uuid.New().String()
 		addSubscriberCmd := commands.NewAddSubscriber(
-			route, channel, addr,
+			id, route, channel, addr,
 		)
 		CommandList = append(CommandList, addSubscriberCmd)
 	}

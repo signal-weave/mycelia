@@ -75,13 +75,12 @@ func parseSendMsgV1(tokens []string) (string, commands.Command) {
 		return "send_message", nil
 	}
 
-	var msg commands.SendMessage
-	msg.Status = commands.StatusCreated
-	msg.ID = tokens[0]
-	msg.Route = tokens[1]
-	msg.Body = tokens[2]
-
-	return "send_message", &msg
+	sm := commands.NewSendMessage(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Body
+	)
+	return "send_message", sm
 }
 
 func parseAddRouteV1(tokens []string) (string, commands.Command) {
@@ -90,10 +89,11 @@ func parseAddRouteV1(tokens []string) (string, commands.Command) {
 		return "add_route", nil
 	}
 
-	var route commands.AddRoute
-	route.ID = tokens[0]
-	route.Name = tokens[1]
-	return "add_route", &route
+	ar := commands.NewAddRoute(
+		tokens[0], // ID
+		tokens[1], // Name
+	)
+	return "add_route", ar
 }
 
 func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
@@ -101,12 +101,13 @@ func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 		return "add_subscriber", nil
 	}
 
-	var sub commands.AddSubscriber
-	sub.ID = tokens[0]
-	sub.Route = tokens[1]
-	sub.Channel = tokens[2]
-	sub.Address = tokens[3]
-	return "add_subscriber", &sub
+	as := commands.NewAddSubscriber(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Channel
+		tokens[3], // Address
+	)
+	return "add_subscriber", as
 }
 
 func parseAddChannelV1(tokens []string) (string, commands.Command) {
@@ -114,11 +115,12 @@ func parseAddChannelV1(tokens []string) (string, commands.Command) {
 		return "add_channel", nil
 	}
 
-	var channel commands.AddChannel
-	channel.ID = tokens[0]
-	channel.Route = tokens[1]
-	channel.Name = tokens[2]
-	return "add_channel", &channel
+	ac := commands.NewAddChannel(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Name
+	)
+	return "add_channel", ac
 }
 
 func parseAddTransformerV1(tokens []string) (string, commands.Command) {
@@ -126,10 +128,11 @@ func parseAddTransformerV1(tokens []string) (string, commands.Command) {
 		return "add_transformer", nil
 	}
 
-	var transformer commands.AddTransformer
-	transformer.ID = tokens[0]
-	transformer.Route = tokens[1]
-	transformer.Channel = tokens[2]
-	transformer.Address = tokens[3]
-	return "add_transformer", &transformer
+	at := commands.NewAddTransformer(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Channel
+		tokens[3], // Address
+	)
+	return "add_transformer", at
 }
