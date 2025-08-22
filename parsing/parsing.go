@@ -1,14 +1,15 @@
-package commands
+package parsing
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
+	"mycelia/commands"
 	"mycelia/str"
 )
 
-func ParseData(data []byte) (string, Command) {
+func ParseData(data []byte) (string, commands.Command) {
 	rawString := string(data)
 	tokens := strings.Split(rawString, ";;")
 	version, err := strconv.Atoi(tokens[0])
@@ -19,7 +20,7 @@ func ParseData(data []byte) (string, Command) {
 
 	cmdTokens := tokens[1:] // prune off protocol version token.
 	var s string
-	var cmd Command
+	var cmd commands.Command
 
 	switch version {
 	case 1:
@@ -41,11 +42,11 @@ func verifyTokenLength(tokens []string, length int, cmdName string) bool {
 
 // ------Version 1--------------------------------------------------------------
 
-func parseDataV1(tokens []string) (string, Command) {
+func parseDataV1(tokens []string) (string, commands.Command) {
 	cmdType := tokens[0]
 	cmdTokens := tokens[1:] // prune off command type token
 	var s string
-	var cmd Command
+	var cmd commands.Command
 
 	switch cmdType {
 	case "send_message":
@@ -60,18 +61,22 @@ func parseDataV1(tokens []string) (string, Command) {
 		s, cmd = parseAddTransformerV1(cmdTokens)
 	}
 
-	// fmt.Println("command type: ", s)
-	// fmt.Println("command: ", cmd)
 	return s, cmd
 }
 
-func parseSendMsgV1(tokens []string) (string, Command) {
+// -----------------------------------------------------------------------------
+// A fair amount of command generation shoves the decoded tokens straigt into a
+// var declared command. This is done rather than useing the NewCommand() funcs
+// so that we can pass the ID in along with and the code looks uniform.
+// -----------------------------------------------------------------------------
+
+func parseSendMsgV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 3, "send_message") {
 		return "send_message", nil
 	}
 
-	var msg SendMessage
-	msg.Status = StatusCreated
+	var msg commands.SendMessage
+	msg.Status = commands.StatusCreated
 	msg.ID = tokens[0]
 	msg.Route = tokens[1]
 	msg.Body = tokens[2]
@@ -79,24 +84,24 @@ func parseSendMsgV1(tokens []string) (string, Command) {
 	return "send_message", &msg
 }
 
-func parseAddRouteV1(tokens []string) (string, Command) {
+func parseAddRouteV1(tokens []string) (string, commands.Command) {
 	fmt.Println(tokens)
 	if !verifyTokenLength(tokens, 2, "add_route") {
 		return "add_route", nil
 	}
 
-	var route AddRoute
+	var route commands.AddRoute
 	route.ID = tokens[0]
 	route.Name = tokens[1]
 	return "add_route", &route
 }
 
-func parseAddSubscriberV1(tokens []string) (string, Command) {
+func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 4, "add_subscriber") {
 		return "add_subscriber", nil
 	}
 
-	var sub AddSubscriber
+	var sub commands.AddSubscriber
 	sub.ID = tokens[0]
 	sub.Route = tokens[1]
 	sub.Channel = tokens[2]
@@ -104,24 +109,24 @@ func parseAddSubscriberV1(tokens []string) (string, Command) {
 	return "add_subscriber", &sub
 }
 
-func parseAddChannelV1(tokens []string) (string, Command) {
+func parseAddChannelV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 3, "add_channel") {
 		return "add_channel", nil
 	}
 
-	var channel AddChannel
+	var channel commands.AddChannel
 	channel.ID = tokens[0]
 	channel.Route = tokens[1]
 	channel.Name = tokens[2]
 	return "add_channel", &channel
 }
 
-func parseAddTransformerV1(tokens []string) (string, Command) {
+func parseAddTransformerV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 4, "add_transformer") {
 		return "add_transformer", nil
 	}
 
-	var transformer AddTransformer
+	var transformer commands.AddTransformer
 	transformer.ID = tokens[0]
 	transformer.Route = tokens[1]
 	transformer.Channel = tokens[2]
