@@ -1,7 +1,5 @@
 package commands
 
-import "github.com/google/uuid"
-
 // Status of the current message describing its life cycle or validity.
 type Status int
 
@@ -35,6 +33,15 @@ func (cmd *SendMessage) GetID() string {
 	return cmd.ID
 }
 
+func NewSendMessage(id, route, body string) *SendMessage {
+	return &SendMessage{
+		ID: id,
+		Route: route,
+		Status: StatusCreated,
+		Body: body,
+	}
+}
+
 // -----------------------------------------------------------------------------
 
 // Command to add a new route to the router. Routes are the boxes where channels
@@ -48,9 +55,9 @@ func (cmd *AddRoute) GetID() string {
 	return cmd.ID
 }
 
-func NewAddRoute(name string) *AddRoute {
+func NewAddRoute(id, name string) *AddRoute {
 	return &AddRoute{
-		ID:   uuid.New().String(),
+		ID:   id,
 		Name: name,
 	}
 }
@@ -71,10 +78,10 @@ func (cmd *AddSubscriber) GetID() string {
 	return cmd.ID
 }
 
-func NewAddSubscriber(route, channel, address string) *AddSubscriber {
+func NewAddSubscriber(id, route, channel, address string) *AddSubscriber {
 	return &AddSubscriber{
-		ID: uuid.New().String(),
-		Route: route,
+		ID:      id,
+		Route:   route,
 		Channel: channel,
 		Address: address,
 	}
@@ -92,11 +99,11 @@ func (cmd *AddChannel) GetID() string {
 	return cmd.ID
 }
 
-func NewAddChannel(route, name string) *AddChannel {
+func NewAddChannel(id, route, name string) *AddChannel {
 	return &AddChannel{
-		ID: uuid.New().String(),
+		ID:    id,
 		Route: route,
-		Name: name,
+		Name:  name,
 	}
 }
 
@@ -115,10 +122,10 @@ func (cmd *AddTransformer) GetID() string {
 	return cmd.ID
 }
 
-func NewAddTransformer(route, channel, address string) *AddTransformer {
+func NewAddTransformer(id, route, channel, address string) *AddTransformer {
 	return &AddTransformer{
-		ID: uuid.New().String(),
-		Route: route,
+		ID:      id,
+		Route:   route,
 		Channel: channel,
 		Address: address,
 	}
