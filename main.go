@@ -18,9 +18,8 @@ var startupBanner string = `
           ██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║
           ╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝`
 
-var disclaimer string = ("Mycelia is a work-in-progress concurrent message broker.")
+var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
-// Run...
 func main() {
 	displayStartupText()
 	readArgs()
