@@ -10,17 +10,8 @@ import (
 	"time"
 
 	"mycelia/routing"
+	"mycelia/test"
 )
-
-func getPort(t *testing.T) int {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen(0) failed: %v", err)
-	}
-	defer ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port
-}
 
 // captureStdout captures os.Stdout during fn and returns everything printed.
 func captureStdout(t *testing.T, fn func()) string {
@@ -62,10 +53,9 @@ func TestNewServer_InitializesBrokerAndFields(t *testing.T) {
 }
 
 func TestServer_Run_AcceptsMultipleConnections(t *testing.T) {
-	port := getPort(t)
+	port := test.FirstFreeTCPPort(t)
 	s := NewServer("127.0.0.1", port)
 
-	// Start the server in the background.
 	started := make(chan struct{})
 	go func() {
 		// Small delay so we can detect start without fragile sleeps:
