@@ -1,13 +1,14 @@
 package routing
 
 import (
+	"errors"
 	"fmt"
 	"sync"
-	"errors"
 
 	"mycelia/boot"
 	"mycelia/commands"
 	"mycelia/parsing"
+	"mycelia/routing/route"
 	"mycelia/str"
 )
 
@@ -15,8 +16,8 @@ import (
 // contain a route named 'main' that contains no channels.
 func NewBroker() *Broker {
 	broker := Broker{}
-	broker.Routes = map[string]*Route{
-		"main": NewRoute("main"),
+	broker.Routes = map[string]*route.Route{
+		"main": route.NewRoute("main"),
 	}
 
 	return &broker
@@ -29,13 +30,13 @@ func NewBroker() *Broker {
 type Broker struct {
 	// Route names to list of channels the route is comprised of.
 	// Mesasges will travel through all channels on the route.
-	Routes map[string]*Route
+	Routes map[string]*route.Route
 
 	mutex sync.RWMutex
 }
 
 // Thread-safe route lookup
-func (b *Broker) getRoute(name string) (*Route, bool) {
+func (b *Broker) getRoute(name string) (*route.Route, bool) {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 	route, exists := b.Routes[name]
@@ -43,7 +44,7 @@ func (b *Broker) getRoute(name string) (*Route, bool) {
 }
 
 // Thread-safe route addition
-func (b *Broker) addRoute(name string, route *Route) {
+func (b *Broker) addRoute(name string, route *route.Route) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	b.Routes[name] = route
@@ -105,7 +106,7 @@ func (b *Broker) AddRoute(cmd commands.AddRoute) {
 		return
 	}
 
-	route := NewRoute(cmd.Name)
+	route := route.NewRoute(cmd.Name)
 	b.addRoute(cmd.Name, route)
 	str.SprintfLn("Route %s registered!", cmd.Name)
 }

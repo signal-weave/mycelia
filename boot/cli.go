@@ -29,6 +29,7 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
     1 - Errors
     2 - Warnings + Errors
     3 - Errors + Warnings + Actions`)
+	os.Setenv("VERBOSITY", strconv.Itoa(cfg.Verbosity))
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
