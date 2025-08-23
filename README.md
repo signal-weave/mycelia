@@ -28,6 +28,8 @@ Routes are like topics in other messaging services. A route can contain multiple
 channels for messages to travel through. Data is passed through each channel
 sequentially in their creation order.
 
+By default, a route named "main" will always be created on broker startup.
+
 ### Channels
 
 A channel is like a sub-route which contains transformers and subscribers. Data
