@@ -1,6 +1,7 @@
 # Mycelia
 
-A lightweight, extensible message broker.
+A lightweight, extensible message broker leveraging Go's concurrency model for
+speedy message delivery.
 
 You can find the currently supported APIs for your client services to interact
 with the broker [here](https://github.com/orgs/SignalWeave/repositories).
