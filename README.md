@@ -28,7 +28,7 @@ Routes are like topics in other messaging services. A route can contain multiple
 channels for messages to travel through. Data is passed through each channel
 sequentially in their creation order.
 
-By default, a route named "main" will always be created on broker startup.
+By default, a route named `"main"` will always be created on broker startup.
 
 ### Channels
 
@@ -97,7 +97,7 @@ This file can specify any of the CLI args in the `"runtime"` field - these will
 overwrite any piped cli args.
 
 Pre-defined routing structures can also be defined within the file for the
-broker to use on startup.
+broker to use on startup using the `"routes"` field.
 
 Example PreInit.json file:
 ```json
