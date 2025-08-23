@@ -2,117 +2,133 @@ package str
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
+
+	"mycelia/boot"
 )
 
-// captureOutput captures stdout during a function's execution.
 func captureOutput(f func()) string {
-	old := os.Stdout
 	r, w, _ := os.Pipe()
+	orig := os.Stdout
 	os.Stdout = w
+	defer func() {
+		_ = w.Close()
+		os.Stdout = orig
+	}()
 
 	f()
 
-	_ = w.Close()
-	os.Stdout = old
-
 	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
+	_, _ = io.Copy(&buf, r)
+	_ = r.Close()
 	return buf.String()
 }
 
-// setVerbosity sets the VERBOSITY environment variable.
-func setVerbosity(level string) {
-	_ = os.Setenv("VERBOSITY", level)
+func withVerbosity(v int, f func()) {
+	orig := boot.RuntimeCfg
+	boot.RuntimeCfg.Verbosity = v
+	defer func() { boot.RuntimeCfg = orig }()
+	f()
 }
 
 func TestSprintfLn(t *testing.T) {
-	t.Run("formats and prints message with args", func(t *testing.T) {
-		out := captureOutput(func() {
-			SprintfLn("Hello %s!", "world")
-		})
-		if !strings.Contains(out, "Hello world!") {
-			t.Errorf("Expected output to contain 'Hello world!', got: %s", out)
-		}
+	out := captureOutput(func() {
+		SprintfLn("hello %s %s", "a", "b")
 	})
+	if out != "hello a b\n" {
+		t.Fatalf("unexpected output: %q", out)
+	}
 }
 
-func TestActionPrint(t *testing.T) {
-	t.Run("prints when verbosity is ACTION", func(t *testing.T) {
-		setVerbosity("ACTION")
+func TestActionPrint_VerbosityGate(t *testing.T) {
+	// verbosity < 3 => no output
+	withVerbosity(2, func() {
 		out := captureOutput(func() {
-			ActionPrint("doing something")
-		})
-		if !strings.Contains(out, "[ACTION] - doing something") {
-			t.Errorf("Expected action output, got: %s", out)
-		}
-	})
-
-	t.Run("suppresses output when verbosity is WARNING", func(t *testing.T) {
-		setVerbosity("WARNING")
-		out := captureOutput(func() {
-			ActionPrint("doing something")
+			ActionPrint("did something")
 		})
 		if out != "" {
-			t.Errorf("Expected no output at WARNING level, got: %s", out)
+			t.Fatalf("expected no output at verbosity=2, got: %q", out)
+		}
+	})
+
+	// verbosity >= 3 => prints
+	withVerbosity(3, func() {
+		out := captureOutput(func() {
+			ActionPrint("did something")
+		})
+		if strings.TrimSpace(out) != "[ACTION] - did something" {
+			t.Fatalf("unexpected output at verbosity=3: %q", out)
 		}
 	})
 }
 
-func TestWarningPrint(t *testing.T) {
-	t.Run("prints when verbosity is WARNING", func(t *testing.T) {
-		setVerbosity("WARNING")
+func TestWarningPrint_VerbosityGate(t *testing.T) {
+	// verbosity < 2 => no output
+	withVerbosity(1, func() {
 		out := captureOutput(func() {
-			WarningPrint("be careful")
-		})
-		if !strings.Contains(out, "[WARNING] - be careful") {
-			t.Errorf("Expected warning output, got: %s", out)
-		}
-	})
-
-	t.Run("suppresses output when verbosity is ERROR", func(t *testing.T) {
-		setVerbosity("ERROR")
-		out := captureOutput(func() {
-			WarningPrint("be careful")
+			WarningPrint("careful")
 		})
 		if out != "" {
-			t.Errorf("Expected no output at ERROR level, got: %s", out)
+			t.Fatalf("expected no output at verbosity=1, got: %q", out)
+		}
+	})
+
+	// verbosity >= 2 => prints
+	withVerbosity(2, func() {
+		out := captureOutput(func() {
+			WarningPrint("careful")
+		})
+		if strings.TrimSpace(out) != "[WARNING] - careful" {
+			t.Fatalf("unexpected output at verbosity=2: %q", out)
 		}
 	})
 }
 
-func TestErrorPrint(t *testing.T) {
-	t.Run("prints when verbosity is ERROR", func(t *testing.T) {
-		setVerbosity("ERROR")
+func TestErrorPrint_VerbosityGate(t *testing.T) {
+	// verbosity < 1 => no output
+	withVerbosity(0, func() {
 		out := captureOutput(func() {
-			ErrorPrint("failure")
-		})
-		if !strings.Contains(out, "[ERROR] - failure") {
-			t.Errorf("Expected error output, got: %s", out)
-		}
-	})
-
-	t.Run("suppresses output when verbosity is NONE", func(t *testing.T) {
-		setVerbosity("NONE")
-		out := captureOutput(func() {
-			ErrorPrint("failure")
+			ErrorPrint("oh no")
 		})
 		if out != "" {
-			t.Errorf("Expected no output at NONE level, got: %s", out)
+			t.Fatalf("expected no output at verbosity=0, got: %q", out)
+		}
+	})
+
+	// verbosity >= 1 => prints
+	withVerbosity(1, func() {
+		out := captureOutput(func() {
+			ErrorPrint("oh no")
+		})
+		if strings.TrimSpace(out) != "[ERROR] - oh no" {
+			t.Fatalf("unexpected output at verbosity=1: %q", out)
 		}
 	})
 }
 
-func TestDebugPrintLn(t *testing.T) {
-	t.Run("always prints debug messages", func(t *testing.T) {
-		setVerbosity("NONE") // Should not affect debug output
-		out := captureOutput(func() {
-			DebugPrintLn("checking stuff")
-		})
-		if !strings.Contains(out, "[DEBUG] - checking stuff") {
-			t.Errorf("Expected debug output, got: %s", out)
-		}
+func TestDebugPrintLn_AlwaysPrints(t *testing.T) {
+	out := captureOutput(func() {
+		DebugPrintLn("details")
 	})
+	if strings.TrimSpace(out) != "[DEBUG] - details" {
+		t.Fatalf("unexpected output: %q", out)
+	}
+}
+
+func TestPrettyPrintStrKeyJson_SingleKey(t *testing.T) {
+	// Use a single-key map so key-order isn’t an issue.
+	payload := map[string]any{"a": 1}
+
+	out := captureOutput(func() {
+		PrettyPrintStrKeyJson(payload)
+	})
+
+	// Expect pretty JSON with 4-space indent and trailing newline (fmt.Println).
+	expected := "{\n    \"a\": 1\n}\n"
+	if out != expected {
+		t.Fatalf("unexpected pretty JSON output:\n--- got ---\n%s--- want ---\n%s", out, expected)
+	}
 }
