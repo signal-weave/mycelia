@@ -1,65 +1,14 @@
 package boot
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
-
-	"mycelia/commands"
-	"mycelia/errgo"
-
-	"github.com/google/uuid"
 )
-
-// ------Arg Parsing------------------------------------------------------------
-
-type runtimeConfig struct {
-	Address          string
-	Port             int
-	Verbosity        int // 0=quiet, 1=info, 2=debug, 3=trace...
-	PrintTree        bool
-	TransformTimeout time.Duration
-}
-
-func defaultRuntimeConfig() runtimeConfig {
-	return runtimeConfig{
-		Address:          "127.0.0.1",
-		Port:             5000,
-		Verbosity:        0,
-		PrintTree:        false,
-		TransformTimeout: 5 * time.Second,
-	}
-}
-
-// -----------------------------------------------------------------------------
-// The primary struct for getting cli values. They are stored here rather than
-// environment vars so that they can be stored as non-string types like nubmers
-// or time durations.
-// -----------------------------------------------------------------------------
-var RuntimeCfg = defaultRuntimeConfig()
-
-// Parses and stores the runtime flags in public var.
-func ParseRuntimeArgs(argv []string) error {
-	cfg, err := parseRuntimeArgs(argv)
-	if err != nil {
-		return err
-	}
-	RuntimeCfg = cfg
-
-	_, err = os.Stat(preInitFile)
-	if err == nil {
-		getPreInitData(&cfg)
-	}
-
-	return nil
-}
 
 // ParseRuntimeArgs parses only runtime flags validates, and returns
 // (config, error).
@@ -84,7 +33,7 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
 
-  -address string         Bind address (IP or hostname)
+  -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
   -v int               0, 1, 2, or 3
   -print-tree          Print router tree at startup
@@ -92,7 +41,6 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 
 Examples:
   mycelia -addr 0.0.0.0 -port 8080 -verbosity 2 -print-tree -xform-timeout 45s
-  MYC_ADDR=0.0.0.0 MYC_PORT=8080 mycelia -v
 `)
 	}
 
@@ -136,137 +84,4 @@ func looksLikeIP(s string) bool {
 		}
 	}
 	return true
-}
-
-// ------Pre-Init File Handling-------------------------------------------------
-
-func getExecDirectory() string {
-	exePath := errgo.ValueOrPanic(os.Executable())
-	exeDir := filepath.Dir(exePath)
-	return exeDir
-}
-
-var exeDir = getExecDirectory()
-var preInitFile = fmt.Sprintf("%s/PreInit.json", exeDir)
-
-func getPreInitData(cfg *runtimeConfig) {
-	data := importPreInitData()
-	if data == nil {
-		fmt.Println("Could not import PreInit JSon data - Skipping Pre-Init.")
-		return
-	}
-
-	cfg.Address = data["address"].(string)
-	cfg.Port = data["port"].(int)
-	cfg.Verbosity = data["verbosity"].(int)
-	cfg.PrintTree = data["print-tree"].(bool)
-	xFormerDur, err := time.ParseDuration(data["xform-timeout"].(string))
-	if err != nil {
-		cfg.TransformTimeout = xFormerDur
-	}
-
-	routeData, exists := data["routes"].([]map[string]any)
-	if exists {
-		parseRouteCmds(routeData)
-	}
-}
-
-func importPreInitData() map[string]interface{} {
-	data := errgo.ValueOrPanic(os.ReadFile(preInitFile))
-	var obj map[string]any
-	errgo.PanicIfError(json.Unmarshal(data, &obj))
-
-	return obj
-}
-
-/* -----------------------------------------------------------------------------
-Expected PreInit.json.
-the "routes" field, or children of it, could not exist.
---------------------------------------------------------------------------------
-{
-  "runtime": {
-    "address": "0.0.0.0",
-    "port": 8080,
-    "verbosity": 2,
-    "print-tree": true,
-    "xform-timeout": "45s"
-  },
-  "routes": [
-    {
-      "name": "default",
-      "channels": [
-        {
-          "name": "inmem",
-          "transformers": [
-            { "address": "127.0.0.1:7010" },
-            { "address": "10.0.0.52:8008" }
-          ],
-          "subscribers": [
-         { "address": "127.0.0.1:1234" },
-            { "address": "16.70.18.1:9999" }
-          ]
-        }
-      ]
-    }
-  ]
-}
------------------------------------------------------------------------------ */
-
-// Parse command type funcs append their command to this list.
-var CommandList = []commands.Command{}
-
-func parseRouteCmds(routeData []map[string]any) {
-	for _, route := range routeData {
-		routeName := route["name"].(string)
-		id := uuid.New().String()
-		addRouteCmd := commands.NewAddRoute(id, routeName)
-		CommandList = append(CommandList, addRouteCmd)
-
-		channelData, exists := route["channels"].([]map[string]any)
-		if exists {
-			parseChannelCmds(routeName, channelData)
-		}
-
-	}
-}
-
-func parseChannelCmds(route string, channelData []map[string]any) {
-	for _, channel := range channelData {
-		channelName := channel["name"].(string)
-		id := uuid.New().String()
-		addChannelCmd := commands.NewAddChannel(id, route, channelName)
-		CommandList = append(CommandList, addChannelCmd)
-
-		transformers, exists := channel["transformers"].([]map[string]string)
-		if exists {
-			parseXformCmds(route, channelName, transformers)
-		}
-
-		subscribers, exists := channel["subscribres"].([]map[string]string)
-		if exists {
-			parseSubscriberCmds(route, channelName, subscribers)
-		}
-	}
-}
-
-func parseXformCmds(route, channel string, transformData []map[string]string) {
-	for _, transformer := range transformData {
-		addr := transformer["address"]
-		id := uuid.New().String()
-		addTransformerCmd := commands.NewAddTransformer(
-			id, route, channel, addr,
-		)
-		CommandList = append(CommandList, addTransformerCmd)
-	}
-}
-
-func parseSubscriberCmds(route, channel string, subData []map[string]string) {
-	for _, subscriber := range subData {
-		addr := subscriber["address"]
-		id := uuid.New().String()
-		addSubscriberCmd := commands.NewAddSubscriber(
-			id, route, channel, addr,
-		)
-		CommandList = append(CommandList, addSubscriberCmd)
-	}
 }

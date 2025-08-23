@@ -156,7 +156,7 @@ func (b *Broker) PrintBrokerStructure() {
 
 	routeExpr := "  | - [route] %s\n"
 	channelExpr := "        | - [channel] %s\n"
-	transformerExpr := "              | - [transformer] %s (order: %d)\n"
+	transformerExpr := "              | - [transformer] %s\n"
 	subscriberExpr := "              | - [subscriber] %s\n"
 
 	fmt.Println("\n[broker]")

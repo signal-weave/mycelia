@@ -30,7 +30,7 @@ func TestParseRuntimeArgs_Defaults(t *testing.T) {
 
 func TestParseRuntimeArgs_WithFlags(t *testing.T) {
 	args := []string{
-		"-addr", "0.0.0.0",
+		"-address", "0.0.0.0",
 		"-port", "8080",
 		"-verbosity", "2",
 		"-print-tree",
@@ -61,7 +61,7 @@ func TestParseRuntimeArgs_WithFlags(t *testing.T) {
 
 func TestParseRuntimeArgs_HostnameAllowed(t *testing.T) {
 	// Hostnames are allowed; only reject strings that *look like* IPs but aren't valid IPs.
-	args := []string{"-addr", "myhost.local"}
+	args := []string{"-address", "myhost.local"}
 
 	_, err := parseRuntimeArgs(args)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestParseRuntimeArgs_HostnameAllowed(t *testing.T) {
 
 func TestParseRuntimeArgs_InvalidIP(t *testing.T) {
 	// "999.168.1.1" looks like an IP, but is invalid; should be rejected.
-	args := []string{"-addr", "999.168.1.1"}
+	args := []string{"-address", "999.168.1.1"}
 
 	_, err := parseRuntimeArgs(args)
 	if err == nil {
@@ -138,13 +138,13 @@ func TestLooksLikeIP(t *testing.T) {
 	}{
 		{"127.0.0.1", true},
 		{"192.168.1.10", true},
-		{"...1", true},              // has 4 parts and empties -> treated as IP-like by current logic
-		{"1..2.3", true},            // empty part -> true
-		{"abc.def.ghi.jkl", true},   // non-numeric parts but 4 segments -> true
-		{"localhost", false},        // not 4 parts
-		{"myhost.local", false},     // not 4 parts
-		{"10.0.0", false},           // only 3 parts
-		{"10.0.0.1.5", false},       // 5 parts
+		{"...1", true},            // has 4 parts and empties -> treated as IP-like by current logic
+		{"1..2.3", true},          // empty part -> true
+		{"abc.def.ghi.jkl", true}, // non-numeric parts but 4 segments -> true
+		{"localhost", false},      // not 4 parts
+		{"myhost.local", false},   // not 4 parts
+		{"10.0.0", false},         // only 3 parts
+		{"10.0.0.1.5", false},     // 5 parts
 	}
 
 	for _, tt := range tests {
@@ -161,7 +161,7 @@ func TestParseRuntimeArgs_UpdatesGlobalViaWrapper(t *testing.T) {
 	defer func() { RuntimeCfg = orig }()
 
 	args := []string{
-		"-addr", "0.0.0.0",
+		"-address", "0.0.0.0",
 		"-port", "6001",
 		"-verbosity", "3",
 		"-xform-timeout", "3s",
