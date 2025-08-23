@@ -3,9 +3,11 @@ package routing
 import (
 	"fmt"
 	"sync"
+	"errors"
 
-	"mycelia/cli"
+	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/parsing"
 	"mycelia/str"
 )
 
@@ -47,14 +49,24 @@ func (b *Broker) addRoute(name string, route *Route) {
 	b.Routes[name] = route
 }
 
-func (b *Broker) HandleCommand(input []byte) {
-	cmdType, cmd := commands.ParseData(input)
+// Handles the raw byte form of a command, hot off a socket.
+func (b *Broker) HandleBytes(input []byte) {
+	cmdType, cmd := parsing.ParseData(input)
 	if cmd == nil || cmdType == "err" {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
 		return
 	}
 
+	err := b.HandleCommand(cmd)
+	if err != nil {
+		msg := fmt.Sprintf("Unknown command type: %s", cmdType)
+		str.WarningPrint(msg)
+	}
+}
+
+// Handle the decoded command object.
+func (b *Broker) HandleCommand(cmd commands.Command) error {
 	switch t := cmd.(type) {
 	case *commands.SendMessage:
 		b.SendMessage(*t)
@@ -67,9 +79,9 @@ func (b *Broker) HandleCommand(input []byte) {
 	case *commands.AddTransformer:
 		b.AddTransformer(*t)
 	default:
-		msg := fmt.Sprintf("Unknown command type: %s", cmdType)
-		str.WarningPrint(msg)
+		return errors.New("Unknown command type")
 	}
+	return nil
 }
 
 // -------Message Handlers------------------------------------------------------
@@ -135,7 +147,7 @@ func (b *Broker) AddTransformer(cmd commands.AddTransformer) {
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
-	if !cli.RuntimeCfg.PrintTree {
+	if !boot.RuntimeCfg.PrintTree {
 		return
 	}
 
@@ -144,7 +156,7 @@ func (b *Broker) PrintBrokerStructure() {
 
 	routeExpr := "  | - [route] %s\n"
 	channelExpr := "        | - [channel] %s\n"
-	transformerExpr := "              | - [transformer] %s (order: %d)\n"
+	transformerExpr := "              | - [transformer] %s\n"
 	subscriberExpr := "              | - [subscriber] %s\n"
 
 	fmt.Println("\n[broker]")

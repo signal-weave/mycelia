@@ -33,6 +33,15 @@ func (cmd *SendMessage) GetID() string {
 	return cmd.ID
 }
 
+func NewSendMessage(id, route, body string) *SendMessage {
+	return &SendMessage{
+		ID: id,
+		Route: route,
+		Status: StatusCreated,
+		Body: body,
+	}
+}
+
 // -----------------------------------------------------------------------------
 
 // Command to add a new route to the router. Routes are the boxes where channels
@@ -44,6 +53,13 @@ type AddRoute struct {
 
 func (cmd *AddRoute) GetID() string {
 	return cmd.ID
+}
+
+func NewAddRoute(id, name string) *AddRoute {
+	return &AddRoute{
+		ID:   id,
+		Name: name,
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -62,6 +78,15 @@ func (cmd *AddSubscriber) GetID() string {
 	return cmd.ID
 }
 
+func NewAddSubscriber(id, route, channel, address string) *AddSubscriber {
+	return &AddSubscriber{
+		ID:      id,
+		Route:   route,
+		Channel: channel,
+		Address: address,
+	}
+}
+
 // -----------------------------------------------------------------------------
 
 type AddChannel struct {
@@ -72,6 +97,14 @@ type AddChannel struct {
 
 func (cmd *AddChannel) GetID() string {
 	return cmd.ID
+}
+
+func NewAddChannel(id, route, name string) *AddChannel {
+	return &AddChannel{
+		ID:    id,
+		Route: route,
+		Name:  name,
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -87,4 +120,13 @@ type AddTransformer struct {
 
 func (cmd *AddTransformer) GetID() string {
 	return cmd.ID
+}
+
+func NewAddTransformer(id, route, channel, address string) *AddTransformer {
+	return &AddTransformer{
+		ID:      id,
+		Route:   route,
+		Channel: channel,
+		Address: address,
+	}
 }

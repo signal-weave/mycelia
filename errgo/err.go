@@ -1,6 +1,6 @@
 // * Error handling utilities
 
-package error
+package errgo
 
 import (
 	"fmt"

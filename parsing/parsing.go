@@ -1,14 +1,15 @@
-package commands
+package parsing
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
+	"mycelia/commands"
 	"mycelia/str"
 )
 
-func ParseData(data []byte) (string, Command) {
+func ParseData(data []byte) (string, commands.Command) {
 	rawString := string(data)
 	tokens := strings.Split(rawString, ";;")
 	version, err := strconv.Atoi(tokens[0])
@@ -19,7 +20,7 @@ func ParseData(data []byte) (string, Command) {
 
 	cmdTokens := tokens[1:] // prune off protocol version token.
 	var s string
-	var cmd Command
+	var cmd commands.Command
 
 	switch version {
 	case 1:
@@ -41,11 +42,11 @@ func verifyTokenLength(tokens []string, length int, cmdName string) bool {
 
 // ------Version 1--------------------------------------------------------------
 
-func parseDataV1(tokens []string) (string, Command) {
+func parseDataV1(tokens []string) (string, commands.Command) {
 	cmdType := tokens[0]
 	cmdTokens := tokens[1:] // prune off command type token
 	var s string
-	var cmd Command
+	var cmd commands.Command
 
 	switch cmdType {
 	case "send_message":
@@ -60,71 +61,78 @@ func parseDataV1(tokens []string) (string, Command) {
 		s, cmd = parseAddTransformerV1(cmdTokens)
 	}
 
-	// fmt.Println("command type: ", s)
-	// fmt.Println("command: ", cmd)
 	return s, cmd
 }
 
-func parseSendMsgV1(tokens []string) (string, Command) {
+// -----------------------------------------------------------------------------
+// A fair amount of command generation shoves the decoded tokens straigt into a
+// var declared command. This is done rather than useing the NewCommand() funcs
+// so that we can pass the ID in along with and the code looks uniform.
+// -----------------------------------------------------------------------------
+
+func parseSendMsgV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 3, "send_message") {
 		return "send_message", nil
 	}
 
-	var msg SendMessage
-	msg.Status = StatusCreated
-	msg.ID = tokens[0]
-	msg.Route = tokens[1]
-	msg.Body = tokens[2]
-
-	return "send_message", &msg
+	sm := commands.NewSendMessage(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Body
+	)
+	return "send_message", sm
 }
 
-func parseAddRouteV1(tokens []string) (string, Command) {
+func parseAddRouteV1(tokens []string) (string, commands.Command) {
 	fmt.Println(tokens)
 	if !verifyTokenLength(tokens, 2, "add_route") {
 		return "add_route", nil
 	}
 
-	var route AddRoute
-	route.ID = tokens[0]
-	route.Name = tokens[1]
-	return "add_route", &route
+	ar := commands.NewAddRoute(
+		tokens[0], // ID
+		tokens[1], // Name
+	)
+	return "add_route", ar
 }
 
-func parseAddSubscriberV1(tokens []string) (string, Command) {
+func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 4, "add_subscriber") {
 		return "add_subscriber", nil
 	}
 
-	var sub AddSubscriber
-	sub.ID = tokens[0]
-	sub.Route = tokens[1]
-	sub.Channel = tokens[2]
-	sub.Address = tokens[3]
-	return "add_subscriber", &sub
+	as := commands.NewAddSubscriber(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Channel
+		tokens[3], // Address
+	)
+	return "add_subscriber", as
 }
 
-func parseAddChannelV1(tokens []string) (string, Command) {
+func parseAddChannelV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 3, "add_channel") {
 		return "add_channel", nil
 	}
 
-	var channel AddChannel
-	channel.ID = tokens[0]
-	channel.Route = tokens[1]
-	channel.Name = tokens[2]
-	return "add_channel", &channel
+	ac := commands.NewAddChannel(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Name
+	)
+	return "add_channel", ac
 }
 
-func parseAddTransformerV1(tokens []string) (string, Command) {
+func parseAddTransformerV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 4, "add_transformer") {
 		return "add_transformer", nil
 	}
 
-	var transformer AddTransformer
-	transformer.ID = tokens[0]
-	transformer.Route = tokens[1]
-	transformer.Channel = tokens[2]
-	transformer.Address = tokens[3]
-	return "add_transformer", &transformer
+	at := commands.NewAddTransformer(
+		tokens[0], // ID
+		tokens[1], // Route
+		tokens[2], // Channel
+		tokens[3], // Address
+	)
+	return "add_transformer", at
 }
