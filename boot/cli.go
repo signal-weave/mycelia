@@ -35,7 +35,7 @@ func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
 
   -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
-  -v int               0, 1, 2, or 3
+  -verbosity int       0, 1, 2, or 3
   -print-tree          Print router tree at startup
   -xform-timeout dur   Transformer timeout
 

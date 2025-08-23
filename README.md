@@ -66,3 +66,63 @@ client -> broker ->       -> service A -> broker -> client
 
 Subscribers are the address end point for services that subscribe to data passed
 over a route + channel.
+
+## CLI
+
+Mycelia supports serveral CLI args:
+
+```
+-address string      Bind address (IP or hostname)
+-port int            Bind port (1-65535)
+-verbosity int       0, 1, 2, or 3
+-print-tree          Print router tree at startup
+-xform-timeout dur   Transformer timeout (e.g. 30s, 2m)
+```
+
+with verbosity values relating to
+```
+0 - None
+1 - Errors
+2 - Warnings + Errors
+3 - Errors + Warnings + Actions
+```
+
+## Pre Init
+
+Additionally, Mycelia will check the exe's directory for a `PreInit.json` file.
+This file can specify any of the CLI args in the `"runtime"` field - these will
+overwrite any piped cli args.
+
+Pre-defined routing structures can also be defined within the file for the
+broker to use on startup.
+
+Example PreInit.json file:
+```json
+{
+  "runtime": {
+    "address": "0.0.0.0",
+    "port": 8080,
+    "verbosity": 2,
+    "print-tree": true,
+    "xform-timeout": "45s"
+  },
+  "routes": [
+    {
+      "name": "default",
+      "channels": [
+        {
+          "name": "inmem",
+          "transformers": [
+            { "address": "127.0.0.1:7010" },
+            { "address": "10.0.0.52:8008" }
+          ],
+          "subscribers": [
+         { "address": "127.0.0.1:1234" },
+            { "address": "16.70.18.1:9999" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
