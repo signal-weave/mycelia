@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -17,7 +18,8 @@ import (
 // Listens on 127.0.0.1:0 with an 8192 buffer size.
 func MockOneWayServer(t *testing.T) (addr string, gotBody <-chan string, stop func()) {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	rawAddr := fmt.Sprintf("127.0.0.1:%d", FirstFreeTCPPort(t))
+	ln, err := net.Listen("tcp", rawAddr)
 	if err != nil {
 		t.Fatalf("listen failed: %v", err)
 	}
@@ -57,7 +59,8 @@ func MockOneWayServer(t *testing.T) (addr string, gotBody <-chan string, stop fu
 // Listens on 127.0.0.1:0 with an 8192 buffer size.
 func MockTwoWayServer(t *testing.T, prefix string) (addr string, stop func()) {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	rawAddr := fmt.Sprintf("127.0.0.1:%d", FirstFreeTCPPort(t))
+	ln, err := net.Listen("tcp", rawAddr)
 	if err != nil {
 		t.Fatalf("listen failed: %v", err)
 	}
