@@ -17,8 +17,8 @@ func FirstFreeTCPPort(t *testing.T) int {
 	if err != nil {
 		t.Fatalf("listen(0) failed: %v", err)
 	}
-	port := ln.Addr().(*net.TCPAddr).Port
-	return port
+	defer ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port
 }
 
 // FirstFreeUDPPort asks the OS for an ephemeral UDP port and returns it.
@@ -28,6 +28,6 @@ func FirstFreeUDPPort(t *testing.T) int {
 	if err != nil {
 		t.Fatalf("listen(0) failed: %v", err)
 	}
-	port := pc.LocalAddr().(*net.UDPAddr).Port
-	return port
+	defer pc.Close()
+	return pc.LocalAddr().(*net.UDPAddr).Port
 }
