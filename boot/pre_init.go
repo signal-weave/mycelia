@@ -150,7 +150,7 @@ the "routes" field, or children of it, could not exist.
             { "address": "10.0.0.52:8008" }
           ],
           "subscribers": [
-         { "address": "127.0.0.1:1234" },
+            { "address": "127.0.0.1:1234" },
             { "address": "16.70.18.1:9999" }
           ]
         }
