@@ -75,11 +75,27 @@ over a route + channel.
 Mycelia supports serveral CLI args:
 
 ```
--address string      Bind address (IP or hostname)
--port int            Bind port (1-65535)
--verbosity int       0, 1, 2, or 3
--print-tree          Print router tree at startup
--xform-timeout dur   Transformer timeout (e.g. 30s, 2m)
+--------------------------------------------------------------------------------
+
+            ███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗
+            ████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗
+            ██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║
+            ██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║
+            ██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║
+            ╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝
+--------------------------------------------------------------------------------
+Mycelia is a work-in-progress concurrent message broker.
+--------------------------------------------------------------------------------
+Mycelia runtime options:
+
+  -address string      Bind address (IP or hostname)
+  -port int            Bind port (1-65535)
+  -verbosity int       0, 1, 2, or 3
+  -print-tree          Print router tree at startup
+  -xform-timeout dur   Transformer timeout
+
+Examples:
+  mycelia -addr 0.0.0.0 -port 8080 -verbosity 2 -print-tree -xform-timeout 45s
 ```
 
 with verbosity values relating to
