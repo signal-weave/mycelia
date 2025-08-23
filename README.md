@@ -10,6 +10,17 @@ with the broker [here](https://github.com/orgs/SignalWeave/repositories).
 Mycelia orchestrates message routing through 4 primary concepts: routes,
 channels, transformers, and subscribers.
 
+```
+[broker]
+  | - [route] main
+  | - [route] default
+        | - [channel] my_new_channel
+              | - [transformer] 127.0.0.1:7010
+              | - [transformer] 10.0.0.52:8008
+              | - [subscriber] 127.0.0.1:1234
+              | - [subscriber] 16.70.18.1:9999
+```
+
 ### Routes
 
 Routes are like topics in other messaging services. A route can contain multiple
@@ -55,16 +66,3 @@ client -> broker ->       -> service A -> broker -> client
 
 Subscribers are the address end point for services that subscribe to data passed
 over a route + channel.
-
-### Example Hierarchy
-
-```
-[broker]
-  | - [route] main
-  | - [route] default
-        | - [channel] my_new_channel
-              | - [transformer] 127.0.0.1:7010
-              | - [transformer] 10.0.0.52:8008
-              | - [subscriber] 127.0.0.1:1234
-              | - [subscriber] 16.70.18.1:9999
-```
