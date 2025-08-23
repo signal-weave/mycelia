@@ -5,12 +5,17 @@ package str
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 
-	"mycelia/boot"
+	"mycelia/errgo"
 )
 
-// TODO: Its pretty painful that the mycelia/boot package cannot use this the
-// str package because its a circular import. Fix this.
+func getVerbosity() int {
+	s := os.Getenv("VERBOSITY")
+	i := errgo.ValueOrPanic(strconv.Atoi(s))
+	return i
+}
 
 func SprintfLn(formatStr string, args ...string) {
 	interfaceArgs := make([]interface{}, len(args))
@@ -22,21 +27,21 @@ func SprintfLn(formatStr string, args ...string) {
 }
 
 func ActionPrint(s string) {
-	if boot.RuntimeCfg.Verbosity < 3 {
+	if getVerbosity() < 3 {
 		return
 	}
 	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if boot.RuntimeCfg.Verbosity < 2 {
+	if getVerbosity() < 2 {
 		return
 	}
 	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if boot.RuntimeCfg.Verbosity < 1 {
+	if getVerbosity() < 1 {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)
