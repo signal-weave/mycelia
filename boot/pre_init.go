@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"mycelia/commands"
@@ -29,34 +30,25 @@ import (
 
 // ------Pre-Init File Handling-------------------------------------------------
 
-func printJson(data map[string]any) {
-	b, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		fmt.Println("Could not pretty print json data")
+func getPreInitData(cfg *runtimeConfig) {
+	data := importPreInitData()
+	if data == nil {
+		fmt.Println("Could not import PreInit JSON data - Skipping Pre-Init.")
 		return
 	}
-	fmt.Println(string(b))
-}
+	parseRuntimeConfigurable(cfg, data)
 
-func getPreInitData(cfg *runtimeConfig) {
-    data := importPreInitData()
-    if data == nil {
-        fmt.Println("Could not import PreInit JSON data - Skipping Pre-Init.")
-        return
-    }
-    parseRuntimeConfigurable(cfg, data)
-
-    routesAny, ok := data["routes"].([]any)
-    if !ok {
-        return
-    }
-    routes := make([]map[string]any, 0, len(routesAny))
-    for _, r := range routesAny {
-        if m, ok := r.(map[string]any); ok {
-            routes = append(routes, m)
-        }
-    }
-    parseRouteCmds(routes)
+	routesAny, ok := data["routes"].([]any)
+	if !ok {
+		return
+	}
+	routes := make([]map[string]any, 0, len(routesAny))
+	for _, r := range routesAny {
+		if m, ok := r.(map[string]any); ok {
+			routes = append(routes, m)
+		}
+	}
+	parseRouteCmds(routes)
 }
 
 func importPreInitData() map[string]any {
@@ -116,6 +108,7 @@ func parseRuntimeConfigurable(cfg *runtimeConfig, data map[string]any) {
 	}
 	if rd.Verbosity != nil {
 		cfg.Verbosity = *rd.Verbosity
+		os.Setenv("VERBOSITY", strconv.Itoa(cfg.Verbosity))
 	}
 	if rd.PrintTree != nil {
 		cfg.PrintTree = *rd.PrintTree
@@ -161,72 +154,72 @@ the "routes" field, or children of it, could not exist.
 ----------------------------------------------------------------------------- */
 
 func parseRouteCmds(routeData []map[string]any) {
-    for _, route := range routeData {
-        routeName, _ := route["name"].(string)
-        id := uuid.New().String()
-        addRouteCmd := commands.NewAddRoute(id, routeName)
-        CommandList = append(CommandList, addRouteCmd)
+	for _, route := range routeData {
+		routeName, _ := route["name"].(string)
+		id := uuid.New().String()
+		addRouteCmd := commands.NewAddRoute(id, routeName)
+		CommandList = append(CommandList, addRouteCmd)
 
-        chansAny, ok := route["channels"].([]any)
-        if !ok {
-            continue
-        }
-        chans := make([]map[string]any, 0, len(chansAny))
-        for _, c := range chansAny {
-            if m, ok := c.(map[string]any); ok {
-                chans = append(chans, m)
-            }
-        }
-        parseChannelCmds(routeName, chans)
-    }
+		chansAny, ok := route["channels"].([]any)
+		if !ok {
+			continue
+		}
+		chans := make([]map[string]any, 0, len(chansAny))
+		for _, c := range chansAny {
+			if m, ok := c.(map[string]any); ok {
+				chans = append(chans, m)
+			}
+		}
+		parseChannelCmds(routeName, chans)
+	}
 }
 
 func parseChannelCmds(route string, channelData []map[string]any) {
-    for _, channel := range channelData {
-        channelName, _ := channel["name"].(string)
+	for _, channel := range channelData {
+		channelName, _ := channel["name"].(string)
 
-        id := uuid.New().String()
-        addChannelCmd := commands.NewAddChannel(id, route, channelName)
-        CommandList = append(CommandList, addChannelCmd)
+		id := uuid.New().String()
+		addChannelCmd := commands.NewAddChannel(id, route, channelName)
+		CommandList = append(CommandList, addChannelCmd)
 
-        // transformers: []any → []map[string]any
-        if xAny, ok := channel["transformers"].([]any); ok {
-            x := make([]map[string]any, 0, len(xAny))
-            for _, t := range xAny {
-                if m, ok := t.(map[string]any); ok {
-                    x = append(x, m)
-                }
-            }
-            parseXformCmds(route, channelName, x)
-        }
+		// transformers: []any → []map[string]any
+		if xAny, ok := channel["transformers"].([]any); ok {
+			x := make([]map[string]any, 0, len(xAny))
+			for _, t := range xAny {
+				if m, ok := t.(map[string]any); ok {
+					x = append(x, m)
+				}
+			}
+			parseXformCmds(route, channelName, x)
+		}
 
-        // subscribers: []any → []map[string]any
-        if sAny, ok := channel["subscribers"].([]any); ok {
-            s := make([]map[string]any, 0, len(sAny))
-            for _, v := range sAny {
-                if m, ok := v.(map[string]any); ok {
-                    s = append(s, m)
-                }
-            }
-            parseSubscriberCmds(route, channelName, s)
-        }
-    }
+		// subscribers: []any → []map[string]any
+		if sAny, ok := channel["subscribers"].([]any); ok {
+			s := make([]map[string]any, 0, len(sAny))
+			for _, v := range sAny {
+				if m, ok := v.(map[string]any); ok {
+					s = append(s, m)
+				}
+			}
+			parseSubscriberCmds(route, channelName, s)
+		}
+	}
 }
 
 func parseXformCmds(route, channel string, transformData []map[string]any) {
-    for _, t := range transformData {
-        addr, _ := t["address"].(string)
-        id := uuid.New().String()
-        addTransformerCmd := commands.NewAddTransformer(id, route, channel, addr)
-        CommandList = append(CommandList, addTransformerCmd)
-    }
+	for _, t := range transformData {
+		addr, _ := t["address"].(string)
+		id := uuid.New().String()
+		addTransformerCmd := commands.NewAddTransformer(id, route, channel, addr)
+		CommandList = append(CommandList, addTransformerCmd)
+	}
 }
 
 func parseSubscriberCmds(route, channel string, subData []map[string]any) {
-    for _, s := range subData {
-        addr, _ := s["address"].(string)
-        id := uuid.New().String()
-        addSubscriberCmd := commands.NewAddSubscriber(id, route, channel, addr)
-        CommandList = append(CommandList, addSubscriberCmd)
-    }
+	for _, s := range subData {
+		addr, _ := s["address"].(string)
+		id := uuid.New().String()
+		addSubscriberCmd := commands.NewAddSubscriber(id, route, channel, addr)
+		CommandList = append(CommandList, addSubscriberCmd)
+	}
 }
