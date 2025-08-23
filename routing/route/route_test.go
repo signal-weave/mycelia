@@ -1,85 +1,13 @@
 package route
 
 import (
-	"net"
 	"testing"
 	"time"
 
 	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/test"
 )
-
-// ------tiny TCP helpers-------------------------------------------------------
-
-func startRecorderServer(t *testing.T) (addr string, gotBody <-chan string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-
-	bodyCh := make(chan string, 1)
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		bodyCh <- string(buf[:n])
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, bodyCh, stop
-}
-
-func startTransformerServer(t *testing.T, prefix string) (addr string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		_, _ = conn.Write([]byte(prefix + string(buf[:n])))
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, stop
-}
-
-// ------tests------------------------------------------------------------------
 
 func TestRoute_AddChannel_DeduplicatesByName(t *testing.T) {
 	rt := NewRoute("orders")
@@ -109,7 +37,7 @@ func TestRoute_AddSubscriber_ToExistingChannel_AndProcess(t *testing.T) {
 	rt := NewRoute("orders")
 	rt.AddChannel(&commands.AddChannel{Name: "primary"})
 
-	recvAddr, got, stop := startRecorderServer(t)
+	recvAddr, got, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
 	// Add the subscriber to the existing channel.
@@ -181,8 +109,8 @@ func TestRoute_ProcessMessage_ChainsAcrossChannels_AndFansOut(t *testing.T) {
 	rt.AddChannel(&commands.AddChannel{Name: "c2"})
 
 	// Transformers: c1 adds "A:", c2 adds "B:".
-	addrA, stopA := startTransformerServer(t, "A:")
-	addrB, stopB := startTransformerServer(t, "B:")
+	addrA, stopA := test.MockTwoWayServer(t, "A:")
+	addrB, stopB := test.MockTwoWayServer(t, "B:")
 	t.Cleanup(stopA)
 	t.Cleanup(stopB)
 
@@ -198,8 +126,8 @@ func TestRoute_ProcessMessage_ChainsAcrossChannels_AndFansOut(t *testing.T) {
 	})
 
 	// Subscribers: one on each channel, capture exactly what arrives.
-	addr1, got1, stop1 := startRecorderServer(t)
-	addr2, got2, stop2 := startRecorderServer(t)
+	addr1, got1, stop1 := test.MockOneWayServer(t)
+	addr2, got2, stop2 := test.MockOneWayServer(t)
 	t.Cleanup(stop1)
 	t.Cleanup(stop2)
 

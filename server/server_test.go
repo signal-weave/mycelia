@@ -12,8 +12,7 @@ import (
 	"mycelia/routing"
 )
 
-// pickFreePort asks the OS for an available port and returns it.
-func pickFreePort(t *testing.T) int {
+func getPort(t *testing.T) int {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -63,7 +62,7 @@ func TestNewServer_InitializesBrokerAndFields(t *testing.T) {
 }
 
 func TestServer_Run_AcceptsMultipleConnections(t *testing.T) {
-	port := pickFreePort(t)
+	port := getPort(t)
 	s := NewServer("127.0.0.1", port)
 
 	// Start the server in the background.
@@ -101,7 +100,8 @@ func TestServer_Run_AcceptsMultipleConnections(t *testing.T) {
 
 func TestHandleConnection_ReadsFramesAndStopsOnEOF(t *testing.T) {
 	s := &Server{
-		Broker:  routing.NewBroker(), // real broker; we only exercise connection handling
+		// real broker; we only exercise connection handling
+		Broker:  routing.NewBroker(),
 		address: "ignored",
 		port:    0,
 	}

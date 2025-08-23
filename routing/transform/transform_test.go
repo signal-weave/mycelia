@@ -2,53 +2,13 @@ package transform
 
 import (
 	"net"
-	"strings"
 	"testing"
 	"time"
 
 	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/test"
 )
-
-// startTestTransformer spins up a tiny TCP server that reads once then
-// writes back "transformed:<UPPER(msg)>" and closes.
-func startTestTransformer(t *testing.T) (addr string, stop func()) {
-	t.Helper()
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 4096)
-		n, _ := conn.Read(buf)
-		in := string(buf[:n])
-		out := "transformed:" + strings.ToUpper(in)
-
-		_, _ = conn.Write([]byte(out))
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(100 * time.Millisecond):
-		}
-	}
-	return addr, stop
-}
 
 func TestTransformMessage_Success(t *testing.T) {
 	// Keep timeouts short in tests.
@@ -56,7 +16,7 @@ func TestTransformMessage_Success(t *testing.T) {
 	boot.RuntimeCfg.TransformTimeout = 1
 	t.Cleanup(func() { boot.RuntimeCfg.TransformTimeout = old })
 
-	addr, stop := startTestTransformer(t)
+	addr, stop := test.MockTwoWayServer(t, "transformed:")
 	t.Cleanup(stop)
 
 	tr := NewTransformer(addr)
@@ -79,7 +39,7 @@ func TestTransformMessage_Success(t *testing.T) {
 		t.Fatalf("metadata not preserved: got ID=%q Route=%q",
 			out.ID, out.Route)
 	}
-	wantBody := "transformed:HELLO WORLD"
+	wantBody := "transformed:hello world"
 	if out.Body != wantBody {
 		t.Fatalf("body mismatch: want %q, got %q", wantBody, out.Body)
 	}

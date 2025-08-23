@@ -1,7 +1,6 @@
 package channel
 
 import (
-	"net"
 	"testing"
 	"time"
 
@@ -9,77 +8,12 @@ import (
 	"mycelia/commands"
 	"mycelia/routing/consumer"
 	"mycelia/routing/transform"
+	"mycelia/test"
 )
-
-func startRecorderServer(t *testing.T) (addr string, gotBody <-chan string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-	bodyCh := make(chan string, 1)
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		bodyCh <- string(buf[:n])
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, bodyCh, stop
-}
-
-func startTransformerServer(t *testing.T, prefix string) (addr string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		out := []byte(prefix + string(buf[:n]))
-		_, _ = conn.Write(out)
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, stop
-}
 
 func TestChannel_RegisterSubscriber_DeduplicatesByAddress(t *testing.T) {
 	ch := NewChannel("test")
-	addr, _, stop := startRecorderServer(t)
+	addr, _, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
 	s1 := consumer.NewConsumer(addr)
@@ -95,7 +29,7 @@ func TestChannel_RegisterSubscriber_DeduplicatesByAddress(t *testing.T) {
 
 func TestChannel_RegisterTransformer_DeduplicatesByAddress(t *testing.T) {
 	ch := NewChannel("test")
-	addr, stop := startTransformerServer(t, "A:")
+	addr, stop := test.MockTwoWayServer(t, "A:")
 	t.Cleanup(stop)
 
 	tf1 := transform.NewTransformer(addr)
@@ -116,14 +50,14 @@ func TestChannel_ProcessMessage_AppliesTransformersInOrder_AndFansOut(t *testing
 	t.Cleanup(func() { boot.RuntimeCfg.TransformTimeout = oldTO })
 
 	// Two transformers, applied in order: payload -> "A:payload" -> "B:A:payload"
-	addrA, stopA := startTransformerServer(t, "A:")
-	addrB, stopB := startTransformerServer(t, "B:")
+	addrA, stopA := test.MockTwoWayServer(t, "A:")
+	addrB, stopB := test.MockTwoWayServer(t, "B:")
 	t.Cleanup(stopA)
 	t.Cleanup(stopB)
 
 	// Two subscribers (consumers) that record the bytes they receive.
-	addr1, got1, stop1 := startRecorderServer(t)
-	addr2, got2, stop2 := startRecorderServer(t)
+	addr1, got1, stop1 := test.MockOneWayServer(t)
+	addr2, got2, stop2 := test.MockOneWayServer(t)
 	t.Cleanup(stop1)
 	t.Cleanup(stop2)
 
@@ -182,10 +116,10 @@ func TestChannel_ProcessMessage_ContinuesOnTransformerFailure(t *testing.T) {
 
 	// First transformer will fail to dial (port 0), second will succeed and prefix "OK:".
 	badAddr := "127.0.0.1:0"
-	okAddr, stopOK := startTransformerServer(t, "OK:")
+	okAddr, stopOK := test.MockTwoWayServer(t, "OK:")
 	t.Cleanup(stopOK)
 
-	recvAddr, got, stopRecv := startRecorderServer(t)
+	recvAddr, got, stopRecv := test.MockOneWayServer(t)
 	t.Cleanup(stopRecv)
 
 	ch := NewChannel("orders")
