@@ -1,4 +1,4 @@
-package routing
+package consumer
 
 import (
 	"fmt"

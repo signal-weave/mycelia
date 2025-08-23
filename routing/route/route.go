@@ -1,17 +1,20 @@
-package routing
+package route
 
 import (
 	"fmt"
 	"sync"
 
 	"mycelia/commands"
+	"mycelia/routing/channel"
+	"mycelia/routing/consumer"
+	"mycelia/routing/transform"
 	"mycelia/str"
 )
 
 func NewRoute(name string) *Route {
 	return &Route{
 		Name:     name,
-		Channels: []*Channel{},
+		Channels: []*channel.Channel{},
 	}
 }
 
@@ -20,12 +23,12 @@ func NewRoute(name string) *Route {
 // message through each channel.
 type Route struct {
 	Name     string
-	Channels []*Channel
+	Channels []*channel.Channel
 	mutex    sync.RWMutex
 }
 
 // Look up channel by name if one can be found else return nil.
-func (r *Route) GetChannel(name string) (*Channel, bool) {
+func (r *Route) GetChannel(name string) (*channel.Channel, bool) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -46,7 +49,7 @@ func (r *Route) AddChannel(cmd *commands.AddChannel) {
 		return
 	}
 
-	ch := NewChannel(cmd.Name)
+	ch := channel.NewChannel(cmd.Name)
 	r.mutex.Lock()
 	r.Channels = append(r.Channels, ch)
 	r.mutex.Unlock()
@@ -63,7 +66,7 @@ func (r *Route) AddSubscriber(s *commands.AddSubscriber) {
 		return
 	}
 
-	consumer := NewConsumer(s.Address)
+	consumer := consumer.NewConsumer(s.Address)
 	channel.RegisterSubscriber(consumer)
 }
 
@@ -72,11 +75,12 @@ func (r *Route) AddSubscriber(s *commands.AddSubscriber) {
 func (r *Route) ProcessMessage(m *commands.SendMessage) {
 	r.mutex.RLock()
 	// copy slice for minimal mutex lock time
-	channels := append([]*Channel(nil), r.Channels...)
+	channels := append([]*channel.Channel(nil), r.Channels...)
 	r.mutex.RUnlock()
 
+	cur := m
 	for _, ch := range channels {
-		ch.ProcessMessage(m)
+		cur = ch.ProcessMessage(cur)
 	}
 }
 
@@ -91,6 +95,6 @@ func (r *Route) AddTransformer(t *commands.AddTransformer) {
 		return
 	}
 
-	transformer := NewTransformer(t.Address)
+	transformer := transform.NewTransformer(t.Address)
 	channel.RegisterTransformer(transformer)
 }

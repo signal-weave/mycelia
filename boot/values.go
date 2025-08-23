@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"mycelia/commands"
@@ -39,13 +40,19 @@ type runtimeConfig struct {
 	TransformTimeout time.Duration
 }
 
+// Returns the default values for a runtimeConfig object.
+// Also sets the environ VERBOSITY variable in the event that no cli or PreInit
+// value was given.
 func defaultRuntimeConfig() runtimeConfig {
+	timeout := 5
+	os.Setenv("VERBOSITY", strconv.Itoa(timeout))
+
 	return runtimeConfig{
 		Address:          "127.0.0.1",
 		Port:             5000,
 		Verbosity:        0,
 		PrintTree:        false,
-		TransformTimeout: 5 * time.Second,
+		TransformTimeout: time.Duration(timeout) * time.Second,
 	}
 }
 

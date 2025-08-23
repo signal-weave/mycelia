@@ -1,4 +1,4 @@
-package routing
+package channel
 
 import (
 	"fmt"
@@ -6,14 +6,16 @@ import (
 	"sync"
 
 	"mycelia/commands"
+	"mycelia/routing/consumer"
+	"mycelia/routing/transform"
 	"mycelia/str"
 )
 
 func NewChannel(name string) *Channel {
 	channel := Channel{
 		Name:         name,
-		Subscribers:  []*Consumer{},
-		Transformers: []*Transformer{},
+		Subscribers:  []*consumer.Consumer{},
+		Transformers: []*transform.Transformer{},
 	}
 	return &channel
 }
@@ -22,14 +24,14 @@ func NewChannel(name string) *Channel {
 // that modify messages before they reach subscribers.
 type Channel struct {
 	Name         string
-	Subscribers  []*Consumer
-	Transformers []*Transformer
+	Subscribers  []*consumer.Consumer
+	Transformers []*transform.Transformer
 	mutex        sync.RWMutex
 }
 
 // Stores the consumer as a subscriber of the channel and will forward all
 // processed messages to the consumer.
-func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
+func (c *Channel) RegisterSubscriber(subscriber *consumer.Consumer) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -46,7 +48,7 @@ func (c *Channel) RegisterSubscriber(subscriber *Consumer) {
 }
 
 // Adds a transformer to the channel. Transformers are sorted by order.
-func (c *Channel) RegisterTransformer(transformer *Transformer) {
+func (c *Channel) RegisterTransformer(transformer *transform.Transformer) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
