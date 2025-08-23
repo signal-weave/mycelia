@@ -1,55 +1,18 @@
 package consumer
 
 import (
-	"net"
 	"testing"
 	"time"
 
 	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/test"
 )
 
 var _ = boot.RuntimeCfg // REQUIRED for global config values.
 
-// startConsumerServer starts a tiny TCP server that records exactly one message body.
-func startConsumerServer(t *testing.T) (addr string, gotBody <-chan string, stop func()) {
-	t.Helper()
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-
-	bodyCh := make(chan string, 1)
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 4096)
-		n, _ := conn.Read(buf)
-		bodyCh <- string(buf[:n])
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, bodyCh, stop
-}
-
 func TestConsumer_ConsumeMessage_SetsResolvedAndSendsBody(t *testing.T) {
-	addr, gotBody, stop := startConsumerServer(t)
+	addr, gotBody, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
 	c := NewConsumer(addr)

@@ -1,86 +1,14 @@
 package routing_test
 
 import (
-	"net"
 	"testing"
 	"time"
 
 	"mycelia/boot"
 	"mycelia/commands"
 	"mycelia/routing"
+	"mycelia/test"
 )
-
-// ------helpers: tiny TCP servers----------------------------------------------
-
-// records exactly one message body sent to it.
-func startRecorderServer(t *testing.T) (addr string, gotBody <-chan string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-
-	bodyCh := make(chan string, 1)
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		bodyCh <- string(buf[:n])
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, bodyCh, stop
-}
-
-// echoes back prefix+body as a transformer would.
-func startTransformerServer(t *testing.T, prefix string) (addr string, stop func()) {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr = ln.Addr().String()
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		defer ln.Close()
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		buf := make([]byte, 8192)
-		n, _ := conn.Read(buf)
-		_, _ = conn.Write([]byte(prefix + string(buf[:n])))
-	}()
-
-	stop = func() {
-		_ = ln.Close()
-		select {
-		case <-done:
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return addr, stop
-}
-
-// ------tests------------------------------------------------------------------
 
 func TestNewBroker_HasMainRoute(t *testing.T) {
 	b := routing.NewBroker()
@@ -115,7 +43,7 @@ func TestBroker_AddRoute_AddChannel_AddSubscriber_AddTransformer_And_SendMessage
 	b.AddChannel(commands.AddChannel{Route: "orders", Name: "primary"})
 
 	// plug a transformer that prefixes "X:"
-	tAddr, tStop := startTransformerServer(t, "X:")
+	tAddr, tStop := test.MockTwoWayServer(t, "X:")
 	t.Cleanup(tStop)
 	b.AddTransformer(commands.AddTransformer{
 		Route:   "orders",
@@ -124,7 +52,7 @@ func TestBroker_AddRoute_AddChannel_AddSubscriber_AddTransformer_And_SendMessage
 	})
 
 	// plug a subscriber that records what it receives
-	rcvAddr, gotBody, rStop := startRecorderServer(t)
+	rcvAddr, gotBody, rStop := test.MockOneWayServer(t)
 	t.Cleanup(rStop)
 	b.AddSubscriber(commands.AddSubscriber{
 		Route:   "orders",
