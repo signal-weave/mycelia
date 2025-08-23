@@ -12,7 +12,7 @@ import (
 // packages that require talking to an external node.
 // -----------------------------------------------------------------------------
 
-// A mock TCP server for testing components that communicate with an external
+// A mock TCP server for testing components that communicate to an external
 // machine or source.
 // This server only listens, does not respond.
 // Listens on 127.0.0.1:0 with an 8192 buffer size.
@@ -52,10 +52,10 @@ func MockOneWayServer(t *testing.T) (addr string, gotBody <-chan string, stop fu
 	return addr, bodyCh, stop
 }
 
-// A mock TCP server for testing components that communicate with an external
-// machine or source.
-// To differentiate servers, specify a unique prefix.
+// A mock TCP server for testing components that communicates back and forth
+// with an external machine or source.
 // Echoes back with prefix + message body.
+// To differentiate servers, specify a unique prefix.
 // Listens on 127.0.0.1:0 with an 8192 buffer size.
 func MockTwoWayServer(t *testing.T, prefix string) (addr string, stop func()) {
 	t.Helper()
