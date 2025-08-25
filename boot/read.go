@@ -26,5 +26,3 @@ func ParseRuntimeArgs(argv []string) error {
 
 	return nil
 }
-// ----------
-// ---------------
