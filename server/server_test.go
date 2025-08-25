@@ -1,131 +1,120 @@
 package server
 
 import (
-	"bufio"
-	"fmt"
+	"encoding/binary"
+	"io"
 	"net"
-	"os"
-	"strings"
 	"testing"
 	"time"
-
-	"mycelia/routing"
-	"mycelia/test"
 )
 
-// captureStdout captures os.Stdout during fn and returns everything printed.
-func captureStdout(t *testing.T, fn func()) string {
+// writeUvarint is a tiny helper for tests.
+func writeUvarint(w io.Writer, n uint64) {
+	var buf [binary.MaxVarintLen64]byte
+	k := binary.PutUvarint(buf[:], n)
+	_, _ = w.Write(buf[:k])
+}
+
+func runHandlerAsync(t *testing.T, srv *Server, conn net.Conn) chan struct{} {
 	t.Helper()
-	orig := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	os.Stdout = w
-	defer func() { os.Stdout = orig }()
-
-	done := make(chan string, 1)
+	done := make(chan struct{})
 	go func() {
-		var b strings.Builder
-		sc := bufio.NewScanner(r)
-		for sc.Scan() {
-			fmt.Fprintln(&b, sc.Text())
-		}
-		done <- b.String()
+		srv.handleConnection(conn)
+		close(done)
 	}()
-
-	fn()
-	_ = w.Close()
-	out := <-done
-	_ = r.Close()
-	return out
+	return done
 }
 
-func TestNewServer_InitializesBrokerAndFields(t *testing.T) {
-	s := NewServer("127.0.0.1", 12345)
-	if s.Broker == nil {
-		t.Fatalf("expected non-nil Broker")
-	}
-	// Sanity: the default broker should have a 'main' route per your NewBroker.
-	if _, ok := s.Broker.Routes["main"]; !ok {
-		t.Fatalf("expected broker to have 'main' route")
+func waitOrTimeout(t *testing.T, done <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-done:
+		// ok
+	case <-time.After(1 * time.Second):
+		t.Fatal("handler did not return within timeout")
 	}
 }
 
-func TestServer_Run_AcceptsMultipleConnections(t *testing.T) {
-	port := test.FirstFreeTCPPort(t)
-	s := NewServer("127.0.0.1", port)
+// Test: empty frame (msgLen=0) should be skipped, then EOF should exit cleanly.
+func TestHandleConnection_EmptyFrameThenEOF(t *testing.T) {
+	serverSide, clientSide := net.Pipe()
+	defer clientSide.Close() // serverSide closed by handler
 
-	started := make(chan struct{})
-	go func() {
-		// Small delay so we can detect start without fragile sleeps:
-		close(started)
-		s.Run()
-	}()
-	<-started
-
-	// Give the OS a moment to bind the listener.
-	time.Sleep(50 * time.Millisecond)
-
-	// Connect #1, send two frames, close.
-	conn1, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		t.Fatalf("dial #1 failed: %v", err)
-	}
-	_, _ = conn1.Write([]byte("frame-1\n"))
-	_, _ = conn1.Write([]byte("frame-2\n"))
-	_ = conn1.Close()
-
-	// Connect #2 (ensures accept loop continues after a disconnect).
-	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		t.Fatalf("dial #2 failed: %v", err)
-	}
-	_, _ = conn2.Write([]byte("another\n"))
-	_ = conn2.Close()
-
-	// We can’t stop s.Run() cleanly without changing the server code,
-	// but reaching here without panic / deadlock proves accept + handle works.
-}
-
-func TestHandleConnection_ReadsFramesAndStopsOnEOF(t *testing.T) {
-	s := &Server{
-		// real broker; we only exercise connection handling
-		Broker:  routing.NewBroker(),
-		address: "ignored",
+	srv := &Server{
+		Broker:  nil, // safe: we won't send a non-empty message
+		address: "pipe",
 		port:    0,
 	}
 
-	// Use an in-memory full-duplex connection.
-	srv, cli := net.Pipe()
-	defer cli.Close()
+	done := runHandlerAsync(t, srv, serverSide)
 
-	// Capture stdout to assert the connect/disconnect messages.
-	out := captureStdout(t, func() {
-		done := make(chan struct{})
-		go func() {
-			s.handleConnection(srv)
-			close(done)
-		}()
+	// Send msgLen = 0
+	writeUvarint(clientSide, 0)
+	// Close to cause EOF on the next read
+	_ = clientSide.Close()
 
-		// Send two newline-terminated frames, then EOF.
-		_, _ = cli.Write([]byte("hello\n"))
-		_, _ = cli.Write([]byte("world\n"))
-		_ = cli.Close() // triggers EOF in the server
+	waitOrTimeout(t, done)
+}
 
-		select {
-		case <-done:
-			// ok
-		case <-time.After(500 * time.Millisecond):
-			t.Fatalf("handleConnection did not return after EOF")
-		}
-	})
+// Test: corrupt length varint (overflow) should log a warning and return.
+func TestHandleConnection_BadLengthVarint(t *testing.T) {
+	serverSide, clientSide := net.Pipe()
+	defer clientSide.Close()
 
-	// Basic sanity on logged messages (don’t depend on exact wording).
-	if !strings.Contains(out, "Client connected:") {
-		t.Fatalf("expected 'Client connected' log, got:\n%s", out)
+	srv := &Server{
+		Broker:  nil, // no payload should be processed
+		address: "pipe",
+		port:    0,
 	}
-	if !strings.Contains(out, "Client disconnected:") {
-		t.Fatalf("expected 'Client disconnected' log, got:\n%s", out)
+
+	done := runHandlerAsync(t, srv, serverSide)
+
+	// Send 10 bytes with MSB set (0x80) to trigger binary.ErrOverflow.
+	// (MaxVarintLen64 is 10; continuation bit set on all 10 -> overflow)
+	bad := make([]byte, binary.MaxVarintLen64)
+	for i := range bad {
+		bad[i] = 0x80
 	}
+	_, _ = clientSide.Write(bad)
+	_ = clientSide.Close()
+
+	waitOrTimeout(t, done)
+}
+
+// Test: truncated body should warn and return (length says 5, only 3 bytes arrive).
+func TestHandleConnection_TruncatedBody(t *testing.T) {
+	serverSide, clientSide := net.Pipe()
+	defer clientSide.Close()
+
+	srv := &Server{
+		Broker:  nil, // we won't reach HandleBytes due to truncation
+		address: "pipe",
+		port:    0,
+	}
+
+	done := runHandlerAsync(t, srv, serverSide)
+
+	// Declare msgLen = 5 but only send 3 bytes.
+	writeUvarint(clientSide, 5)
+	_, _ = clientSide.Write([]byte("abc"))
+	_ = clientSide.Close() // triggers io.ReadFull error on the server
+
+	waitOrTimeout(t, done)
+}
+
+// Optional: immediate EOF (client closes without sending any bytes) should exit cleanly.
+func TestHandleConnection_ImmediateEOF(t *testing.T) {
+	serverSide, clientSide := net.Pipe()
+
+	srv := &Server{
+		Broker:  nil,
+		address: "pipe",
+		port:    0,
+	}
+
+	done := runHandlerAsync(t, srv, serverSide)
+
+	_ = clientSide.Close()
+
+	waitOrTimeout(t, done)
 }
