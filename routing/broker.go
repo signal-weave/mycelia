@@ -52,7 +52,7 @@ func (b *Broker) addRoute(name string, route *route.Route) {
 
 // Handles the raw byte form of a command, hot off a socket.
 func (b *Broker) HandleBytes(input []byte) {
-	cmdType, cmd := parsing.ParseData(input)
+	cmdType, cmd := parsing.ParseLine(input)
 	if cmd == nil || cmdType == "err" {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
