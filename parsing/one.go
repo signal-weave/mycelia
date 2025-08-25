@@ -6,6 +6,16 @@ import (
 	"mycelia/commands"
 )
 
+// Version 1 of the command API does not support sub-command parsing.
+// The <object>.<action> syntax is the conform to future version feature syntax.
+const (
+	CMD_MESSAGE_SEND    = "MESSAGE.SEND"
+	CMD_ROUTE_ADD       = "ROUTE.ADD"
+	CMD_CHANNEL_ADD     = "CHANNEL.ADD"
+	CMD_SUBSCRIBER_ADD  = "SUBSCRIBER.ADD"
+	CMD_TRANSFORMER_ADD = "TRANSFORMER.ADD"
+)
+
 // -----------------------------------------------------------------------------
 // Version 1 command decoding.
 // Currently handles arrays of string tokens - will convert to byte array and
@@ -19,15 +29,15 @@ func parseDataV1(tokens []string) (string, commands.Command) {
 	var cmd commands.Command
 
 	switch cmdType {
-	case "send_message":
+	case CMD_MESSAGE_SEND:
 		s, cmd = parseSendMsgV1(cmdTokens)
-	case "add_route":
+	case CMD_ROUTE_ADD:
 		s, cmd = parseAddRouteV1(cmdTokens)
-	case "add_subscriber":
-		s, cmd = parseAddSubscriberV1(cmdTokens)
-	case "add_channel":
+	case CMD_CHANNEL_ADD:
 		s, cmd = parseAddChannelV1(cmdTokens)
-	case "add_transformer":
+	case CMD_SUBSCRIBER_ADD:
+		s, cmd = parseAddSubscriberV1(cmdTokens)
+	case CMD_TRANSFORMER_ADD:
 		s, cmd = parseAddTransformerV1(cmdTokens)
 	}
 

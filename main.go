@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"mycelia/boot"
 	"mycelia/server"
@@ -20,21 +19,32 @@ var startupBanner string = `
 
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
+var majorVersion int = 0
+var minorVersion int = 5
+var patchVersion int = 0
+var brokerVersion string = fmt.Sprintf(
+	"%d.%d.%d", majorVersion, minorVersion, patchVersion,
+)
+var verNotice string = fmt.Sprintf(
+	"Running verison: %s", brokerVersion,
+)
+
 func main() {
 	displayStartupText()
 	readArgs()
+
 	startServer() // Must be last, contains infinite for loop.
 }
 
 // Prints ascii banner, disclaimer text, and any misc info.
 func displayStartupText() {
-	line := strings.Repeat("-", 80)
-
-	fmt.Println(line)
+	str.PrintAsciiLine()
 	fmt.Println(startupBanner)
-	fmt.Println(line)
+	str.PrintAsciiLine()
+	fmt.Println(verNotice)
+	str.PrintAsciiLine()
 	fmt.Println(disclaimer)
-	fmt.Println(line)
+	str.PrintAsciiLine()
 }
 
 func readArgs() {

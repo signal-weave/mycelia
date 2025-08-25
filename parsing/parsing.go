@@ -37,6 +37,18 @@ func ParseLine(line []byte) (string, commands.Command) {
 
 	args := parts[1:] // prune off protocol version token.
 
+	// The broker always works off of the same types of command objects.
+	// Command objects may evolve over time, adding new fields for new
+	// functionality, but the broker should remain compatible with previous
+	// client side API versions.
+
+	// If a client is using API ver 1 to communicate with Broker ver 2, then the
+	// client should be able to still communicate.
+	// This first token of a message is the API version, and this switch runs
+	// the corresponding parsing logic.
+
+	// This is mainly because early on there was uncertainty if the protocol and
+	// command structure was done right.
 	switch version {
 	case 1:
 		return parseDataV1(args)

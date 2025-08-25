@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"mycelia/errgo"
+
+	"golang.org/x/term"
 )
 
 func getVerbosity() int {
@@ -59,4 +62,20 @@ func PrettyPrintStrKeyJson(data map[string]any) {
 		return
 	}
 	fmt.Println(string(b))
+}
+
+// Prints "-" repeated to fill the terminal lenght if a terminal is being used
+// for Stdout, otherwise repeats 80 times.
+func PrintAsciiLine() {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			fmt.Println(strings.Repeat("-", 80))
+			return
+		} else {
+			fmt.Println(strings.Repeat("-", width))
+		}
+	} else {
+		fmt.Println(strings.Repeat("-", 80))
+	}
 }
