@@ -7,11 +7,11 @@ import (
 )
 
 func TestParseDataV1_SendMessage_OK(t *testing.T) {
-	tokens := []string{"send_message", "id-1", "orders.created", "hello"}
+	tokens := []string{"MESSAGE.SEND", "id-1", "orders.created", "hello"}
 	typ, cmd := parseDataV1(tokens)
 
-	if typ != "send_message" {
-		t.Fatalf("type mismatch: want %q, got %q", "send_message", typ)
+	if typ != "MESSAGE.SEND" {
+		t.Fatalf("type mismatch: want %q, got %q", "MESSAGE.SEND", typ)
 	}
 	if cmd == nil {
 		t.Fatalf("expected non-nil command")
@@ -27,11 +27,11 @@ func TestParseDataV1_SendMessage_OK(t *testing.T) {
 }
 
 func TestParseDataV1_AddRoute_OK(t *testing.T) {
-	tokens := []string{"add_route", "id-2", "orders"}
+	tokens := []string{"ROUTE.ADD", "id-2", "orders"}
 	typ, cmd := parseDataV1(tokens)
 
-	if typ != "add_route" || cmd == nil {
-		t.Fatalf("want add_route non-nil, got typ=%q cmd=%v", typ, cmd)
+	if typ != "ROUTE.ADD" || cmd == nil {
+		t.Fatalf("want ROUTE.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
 	}
 	ar, ok := cmd.(*commands.AddRoute)
 	if !ok {
@@ -44,12 +44,12 @@ func TestParseDataV1_AddRoute_OK(t *testing.T) {
 
 func TestParseDataV1_AddSubscriber_OK(t *testing.T) {
 	tokens := []string{
-		"add_subscriber", "id-3", "orders", "primary", "127.0.0.1:7001",
+		"SUBSCRIBER.ADD", "id-3", "orders", "primary", "127.0.0.1:7001",
 	}
 	typ, cmd := parseDataV1(tokens)
 
-	if typ != "add_subscriber" || cmd == nil {
-		t.Fatalf("want add_subscriber non-nil, got typ=%q cmd=%v", typ, cmd)
+	if typ != "SUBSCRIBER.ADD" || cmd == nil {
+		t.Fatalf("want SUBSCRIBER.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
 	}
 	as, ok := cmd.(*commands.AddSubscriber)
 	if !ok {
@@ -61,11 +61,11 @@ func TestParseDataV1_AddSubscriber_OK(t *testing.T) {
 }
 
 func TestParseDataV1_AddChannel_OK(t *testing.T) {
-	tokens := []string{"add_channel", "id-4", "orders", "primary"}
+	tokens := []string{"CHANNEL.ADD", "id-4", "orders", "primary"}
 	typ, cmd := parseDataV1(tokens)
 
-	if typ != "add_channel" || cmd == nil {
-		t.Fatalf("want add_channel non-nil, got typ=%q cmd=%v", typ, cmd)
+	if typ != "CHANNEL.ADD" || cmd == nil {
+		t.Fatalf("want CHANNEL.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
 	}
 	ac, ok := cmd.(*commands.AddChannel)
 	if !ok {
@@ -78,12 +78,12 @@ func TestParseDataV1_AddChannel_OK(t *testing.T) {
 
 func TestParseDataV1_AddTransformer_OK(t *testing.T) {
 	tokens := []string{
-		"add_transformer", "id-5", "orders", "primary", "127.0.0.1:7100",
+		"TRANSFORMER.ADD", "id-5", "orders", "primary", "127.0.0.1:7100",
 	}
 	typ, cmd := parseDataV1(tokens)
 
-	if typ != "add_transformer" || cmd == nil {
-		t.Fatalf("want add_transformer non-nil, got typ=%q cmd=%v", typ, cmd)
+	if typ != "TRANSFORMER.ADD" || cmd == nil {
+		t.Fatalf("want TRANSFORMER.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
 	}
 	at, ok := cmd.(*commands.AddTransformer)
 	if !ok {
@@ -106,8 +106,8 @@ func TestParseDataV1_Unknown_ReturnsEmptyAndNil(t *testing.T) {
 
 func TestParseSendMsgV1_BadLength_ReturnsNil(t *testing.T) {
 	typ, cmd := parseSendMsgV1([]string{"only-two", "tokens"})
-	if typ != "send_message" {
-		t.Fatalf("want type 'send_message', got %q", typ)
+	if typ != "MESSAGE.SEND" {
+		t.Fatalf("want type 'MESSAGE.SEND', got %q", typ)
 	}
 	if cmd != nil {
 		t.Fatalf("expected nil cmd for bad length, got %T", cmd)
@@ -116,33 +116,33 @@ func TestParseSendMsgV1_BadLength_ReturnsNil(t *testing.T) {
 
 func TestParseAddRouteV1_BadLength_ReturnsNil(t *testing.T) {
 	typ, cmd := parseAddRouteV1([]string{"only-one"})
-	if typ != "add_route" || cmd != nil {
-		t.Fatalf("expected add_route + nil cmd, got typ=%q cmd=%v", typ, cmd)
+	if typ != "ROUTE.ADD" || cmd != nil {
+		t.Fatalf("expected ROUTE.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd)
 	}
 }
 
 func TestParseAddSubscriberV1_BadLength_ReturnsNil(t *testing.T) {
 	typ, cmd := parseAddSubscriberV1([]string{"id", "route", "only-three"})
-	if typ != "add_subscriber" || cmd != nil {
+	if typ != "SUBSCRIBER.ADD" || cmd != nil {
 		t.Fatalf(
-			"expected add_subscriber + nil cmd, got typ=%q cmd=%v", typ, cmd,
+			"expected SUBSCRIBER.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd,
 		)
 	}
 }
 
 func TestParseAddChannelV1_BadLength_ReturnsNil(t *testing.T) {
 	typ, cmd := parseAddChannelV1([]string{"id", "route"})
-	if typ != "add_channel" || cmd != nil {
-		t.Fatalf("expected add_channel + nil cmd, got typ=%q cmd=%v", typ, cmd)
+	if typ != "CHANNEL.ADD" || cmd != nil {
+		t.Fatalf("expected CHANNEL.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd)
 	}
 }
 
 func TestParseAddTransformerV1_BadLength_ReturnsNil(t *testing.T) {
 	typ, cmd := parseAddTransformerV1([]string{"id", "route", "channel"})
 	// missing address
-	if typ != "add_transformer" || cmd != nil {
+	if typ != "TRANSFORMER.ADD" || cmd != nil {
 		t.Fatalf(
-			"expected add_transformer + nil cmd, got typ=%q cmd=%v", typ, cmd,
+			"expected TRANSFORMER.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd,
 		)
 	}
 }

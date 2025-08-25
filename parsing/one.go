@@ -51,8 +51,8 @@ func parseDataV1(tokens []string) (string, commands.Command) {
 // -----------------------------------------------------------------------------
 
 func parseSendMsgV1(tokens []string) (string, commands.Command) {
-	if !verifyTokenLength(tokens, 3, "send_message") {
-		return "send_message", nil
+	if !verifyTokenLength(tokens, 3, CMD_MESSAGE_SEND) {
+		return CMD_MESSAGE_SEND, nil
 	}
 
 	sm := commands.NewSendMessage(
@@ -60,25 +60,25 @@ func parseSendMsgV1(tokens []string) (string, commands.Command) {
 		tokens[1], // Route
 		tokens[2], // Body
 	)
-	return "send_message", sm
+	return CMD_MESSAGE_SEND, sm
 }
 
 func parseAddRouteV1(tokens []string) (string, commands.Command) {
 	fmt.Println(tokens)
-	if !verifyTokenLength(tokens, 2, "add_route") {
-		return "add_route", nil
+	if !verifyTokenLength(tokens, 2, CMD_ROUTE_ADD) {
+		return CMD_ROUTE_ADD, nil
 	}
 
 	ar := commands.NewAddRoute(
 		tokens[0], // ID
 		tokens[1], // Name
 	)
-	return "add_route", ar
+	return CMD_ROUTE_ADD, ar
 }
 
 func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
-	if !verifyTokenLength(tokens, 4, "add_subscriber") {
-		return "add_subscriber", nil
+	if !verifyTokenLength(tokens, 4, CMD_SUBSCRIBER_ADD) {
+		return CMD_SUBSCRIBER_ADD, nil
 	}
 
 	as := commands.NewAddSubscriber(
@@ -87,12 +87,12 @@ func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 		tokens[2], // Channel
 		tokens[3], // Address
 	)
-	return "add_subscriber", as
+	return CMD_SUBSCRIBER_ADD, as
 }
 
 func parseAddChannelV1(tokens []string) (string, commands.Command) {
-	if !verifyTokenLength(tokens, 3, "add_channel") {
-		return "add_channel", nil
+	if !verifyTokenLength(tokens, 3, CMD_CHANNEL_ADD) {
+		return CMD_CHANNEL_ADD, nil
 	}
 
 	ac := commands.NewAddChannel(
@@ -100,12 +100,12 @@ func parseAddChannelV1(tokens []string) (string, commands.Command) {
 		tokens[1], // Route
 		tokens[2], // Name
 	)
-	return "add_channel", ac
+	return CMD_CHANNEL_ADD, ac
 }
 
 func parseAddTransformerV1(tokens []string) (string, commands.Command) {
-	if !verifyTokenLength(tokens, 4, "add_transformer") {
-		return "add_transformer", nil
+	if !verifyTokenLength(tokens, 4, CMD_TRANSFORMER_ADD) {
+		return CMD_TRANSFORMER_ADD, nil
 	}
 
 	at := commands.NewAddTransformer(
@@ -114,5 +114,5 @@ func parseAddTransformerV1(tokens []string) (string, commands.Command) {
 		tokens[2], // Channel
 		tokens[3], // Address
 	)
-	return "add_transformer", at
+	return CMD_TRANSFORMER_ADD, at
 }
