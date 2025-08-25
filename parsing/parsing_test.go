@@ -72,7 +72,10 @@ func TestParseLine_BadBody_ReturnsUnknown(t *testing.T) {
 	in := append([]byte{}, tmp[:n]...)
 	cmd, c := ParseLine(in)
 	if cmd != unknownCommand || c != nil {
-		t.Fatalf("expected (%q,nil) for bad body, got (%q,%v)", unknownCommand, cmd, c)
+		t.Fatalf(
+			"expected (%q,nil) for bad body, got (%q,%v)",
+			unknownCommand, cmd, c,
+		)
 	}
 }
 
@@ -81,7 +84,10 @@ func TestParseLine_MissingVersionOrCommand(t *testing.T) {
 	in := makeStream("1")
 	cmd, c := ParseLine(in)
 	if cmd != unknownCommand || c != nil {
-		t.Fatalf("expected (%q,nil) for missing command, got (%q,%v)", unknownCommand, cmd, c)
+		t.Fatalf(
+			"expected (%q,nil) for missing command, got (%q,%v)",
+			unknownCommand, cmd, c,
+		)
 	}
 }
 
@@ -90,7 +96,10 @@ func TestParseLine_BadVersionToken(t *testing.T) {
 	in := makeStream("x", "ANY")
 	cmd, c := ParseLine(in)
 	if cmd != unknownCommand || c != nil {
-		t.Fatalf("expected (%q,nil) for bad version token, got (%q,%v)", unknownCommand, cmd, c)
+		t.Fatalf(
+			"expected (%q,nil) for bad version token, got (%q,%v)",
+			unknownCommand, cmd, c,
+		)
 	}
 }
 
@@ -99,7 +108,10 @@ func TestParseLine_UnsupportedVersion(t *testing.T) {
 	in := makeStream("2", "CMD")
 	cmd, c := ParseLine(in)
 	if cmd != unknownCommand || c != nil {
-		t.Fatalf("expected (%q,nil) for unsupported version, got (%q,%v)", unknownCommand, cmd, c)
+		t.Fatalf(
+			"expected (%q,nil) for unsupported version, got (%q,%v)",
+			unknownCommand, cmd, c,
+		)
 	}
 }
 
