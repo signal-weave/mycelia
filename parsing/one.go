@@ -7,7 +7,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Version 1 protocol decoding.
+// Version 1 command decoding.
 // Currently handles arrays of string tokens - will convert to byte array and
 // buffer management in the future.
 // -----------------------------------------------------------------------------

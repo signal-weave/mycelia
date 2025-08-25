@@ -23,7 +23,7 @@ var disclaimer string = "Mycelia is a work-in-progress concurrent message broker
 func main() {
 	displayStartupText()
 	readArgs()
-	startServer()
+	startServer() // Must be last, contains infinite for loop.
 }
 
 // Prints ascii banner, disclaimer text, and any misc info.
