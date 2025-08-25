@@ -83,6 +83,9 @@ func parseTokens(data []byte) ([]string, error) {
 	}
 }
 
+// verifyTokenLength reports if the tokens array len is of the given length.
+// Will print warning explaining that the command type failed because of
+// incorrect argument count.
 func verifyTokenLength(tokens []string, length int, cmdName string) bool {
 	if len(tokens) != length {
 		msg := "%s command failed, expected %d args, got %d isntead"
