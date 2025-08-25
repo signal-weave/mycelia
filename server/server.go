@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -55,24 +56,38 @@ func (server *Server) handleConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 	for {
-		message, err := reader.ReadString('\n')
+		msgLen, err := binary.ReadUvarint(reader)
 
-		if len(message) > 0 {
-			go server.Broker.HandleBytes([]byte(message))
+		if err != nil {
+			if err == io.EOF {
+				str.SprintfLn(
+					"Client disconnected: %s", conn.RemoteAddr().String(),
+				)
+				return
+			}
+			// Any other error => connection/read framing error
+			str.WarningPrint(fmt.Sprintf("Bad message length: %v", err))
+			return
 		}
 
-		if err == nil {
+		if msgLen == 0 {
+			// empty message
 			continue
 		}
 
-		if err == io.EOF {
-			str.SprintfLn("Client disconnected: %s",
-				conn.RemoteAddr().String())
-			return // EOF is expected, not an error
+		msg := make([]byte, msgLen)
+		if _, err := io.ReadFull(reader, msg); err != nil {
+			if err == io.EOF {
+				// EOF is expected, not an error
+				str.SprintfLn(
+					"Client disconnected: %s", conn.RemoteAddr().String(),
+				)
+				return
+			}
+			str.WarningPrint(fmt.Sprintf("Bad message body: %v", err))
+			return
 		}
 
-		fmt.Println("Error handling message:", err)
-		str.SprintfLn("Client disconnected: %s",
-			conn.RemoteAddr().String())
+		go server.Broker.HandleBytes(msg)
 	}
 }
