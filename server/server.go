@@ -71,8 +71,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 		}
 
 		if msgLen == 0 {
-			// empty message
-			continue
+			continue // empty message
 		}
 
 		msg := make([]byte, msgLen)
@@ -88,6 +87,6 @@ func (server *Server) handleConnection(conn net.Conn) {
 			return
 		}
 
-		go server.Broker.HandleBytes(msg)
+		server.Broker.HandleBytes(msg)
 	}
 }

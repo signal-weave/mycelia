@@ -35,30 +35,10 @@ func (cmd *SendMessage) GetID() string {
 
 func NewSendMessage(id, route, body string) *SendMessage {
 	return &SendMessage{
-		ID: id,
-		Route: route,
+		ID:     id,
+		Route:  route,
 		Status: StatusCreated,
-		Body: body,
-	}
-}
-
-// -----------------------------------------------------------------------------
-
-// Command to add a new route to the router. Routes are the boxes where channels
-// are organized.
-type AddRoute struct {
-	ID   string `json:"id"` // Should be some form of UUID.
-	Name string `json:"name"`
-}
-
-func (cmd *AddRoute) GetID() string {
-	return cmd.ID
-}
-
-func NewAddRoute(id, name string) *AddRoute {
-	return &AddRoute{
-		ID:   id,
-		Name: name,
+		Body:   body,
 	}
 }
 
@@ -84,26 +64,6 @@ func NewAddSubscriber(id, route, channel, address string) *AddSubscriber {
 		Route:   route,
 		Channel: channel,
 		Address: address,
-	}
-}
-
-// -----------------------------------------------------------------------------
-
-type AddChannel struct {
-	ID    string `json:"id"` // Should be some form of UUID.
-	Route string `json:"route"`
-	Name  string `json:"name"`
-}
-
-func (cmd *AddChannel) GetID() string {
-	return cmd.ID
-}
-
-func NewAddChannel(id, route, name string) *AddChannel {
-	return &AddChannel{
-		ID:    id,
-		Route: route,
-		Name:  name,
 	}
 }
 

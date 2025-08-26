@@ -1,8 +1,6 @@
 package parsing
 
 import (
-	"fmt"
-
 	"mycelia/commands"
 )
 
@@ -10,8 +8,6 @@ import (
 // The <object>.<action> syntax is the conform to future version feature syntax.
 const (
 	CMD_MESSAGE_SEND    = "MESSAGE.SEND"
-	CMD_ROUTE_ADD       = "ROUTE.ADD"
-	CMD_CHANNEL_ADD     = "CHANNEL.ADD"
 	CMD_SUBSCRIBER_ADD  = "SUBSCRIBER.ADD"
 	CMD_TRANSFORMER_ADD = "TRANSFORMER.ADD"
 )
@@ -31,10 +27,6 @@ func parseDataV1(tokens []string) (string, commands.Command) {
 	switch cmdType {
 	case CMD_MESSAGE_SEND:
 		s, cmd = parseSendMsgV1(cmdTokens)
-	case CMD_ROUTE_ADD:
-		s, cmd = parseAddRouteV1(cmdTokens)
-	case CMD_CHANNEL_ADD:
-		s, cmd = parseAddChannelV1(cmdTokens)
 	case CMD_SUBSCRIBER_ADD:
 		s, cmd = parseAddSubscriberV1(cmdTokens)
 	case CMD_TRANSFORMER_ADD:
@@ -63,19 +55,6 @@ func parseSendMsgV1(tokens []string) (string, commands.Command) {
 	return CMD_MESSAGE_SEND, sm
 }
 
-func parseAddRouteV1(tokens []string) (string, commands.Command) {
-	fmt.Println(tokens)
-	if !verifyTokenLength(tokens, 2, CMD_ROUTE_ADD) {
-		return CMD_ROUTE_ADD, nil
-	}
-
-	ar := commands.NewAddRoute(
-		tokens[0], // ID
-		tokens[1], // Name
-	)
-	return CMD_ROUTE_ADD, ar
-}
-
 func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 	if !verifyTokenLength(tokens, 4, CMD_SUBSCRIBER_ADD) {
 		return CMD_SUBSCRIBER_ADD, nil
@@ -88,19 +67,6 @@ func parseAddSubscriberV1(tokens []string) (string, commands.Command) {
 		tokens[3], // Address
 	)
 	return CMD_SUBSCRIBER_ADD, as
-}
-
-func parseAddChannelV1(tokens []string) (string, commands.Command) {
-	if !verifyTokenLength(tokens, 3, CMD_CHANNEL_ADD) {
-		return CMD_CHANNEL_ADD, nil
-	}
-
-	ac := commands.NewAddChannel(
-		tokens[0], // ID
-		tokens[1], // Route
-		tokens[2], // Name
-	)
-	return CMD_CHANNEL_ADD, ac
 }
 
 func parseAddTransformerV1(tokens []string) (string, commands.Command) {

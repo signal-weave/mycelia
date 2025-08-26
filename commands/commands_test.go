@@ -34,16 +34,6 @@ func TestSendMessageStruct(t *testing.T) {
 	}
 }
 
-func TestRegisterRouteStruct(t *testing.T) {
-	route := AddRoute{
-		ID:   "abc",
-		Name: "customer",
-	}
-	if route.ID != "abc" || route.Name != "customer" {
-		t.Errorf("RegisterRoute fields not assigned correctly: %+v", route)
-	}
-}
-
 func TestAddSubscriberStruct(t *testing.T) {
 	sub := AddSubscriber{
 		ID:      "sub-1",
@@ -54,17 +44,6 @@ func TestAddSubscriberStruct(t *testing.T) {
 	if sub.ID != "sub-1" || sub.Route != "main" || sub.Channel != "ch-1" ||
 		sub.Address != "127.0.0.1:9000" {
 		t.Errorf("AddSubscriber fields not assigned correctly: %+v", sub)
-	}
-}
-
-func TestAddChannelStruct(t *testing.T) {
-	ch := AddChannel{
-		ID:    "ch-1",
-		Route: "main",
-		Name:  "info",
-	}
-	if ch.ID != "ch-1" || ch.Route != "main" || ch.Name != "info" {
-		t.Errorf("AddChannel fields not assigned correctly: %+v", ch)
 	}
 }
 
