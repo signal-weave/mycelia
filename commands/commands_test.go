@@ -1,7 +1,11 @@
 package commands
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -25,11 +29,11 @@ func TestSendMessageStruct(t *testing.T) {
 		ID:     "123",
 		Route:  "main",
 		Status: StatusCreated,
-		Body:   "Hello!",
+		Body:   []byte("Hello!"),
 	}
 
 	if msg.ID != "123" || msg.Route != "main" || msg.Status != StatusCreated ||
-		msg.Body != "Hello!" {
+		!bytes.Equal(msg.Body, []byte("Hello!")) {
 		t.Errorf("SendMessage fields not assigned correctly: %+v", msg)
 	}
 }
@@ -52,7 +56,7 @@ func TestSendMessageJSONTag(t *testing.T) {
 		ID:     "id1",
 		Route:  "route1",
 		Status: StatusResolved,
-		Body:   "some payload",
+		Body:   []byte("some payload"),
 	}
 
 	jsonBytes, err := json.Marshal(msg)
@@ -61,15 +65,17 @@ func TestSendMessageJSONTag(t *testing.T) {
 	}
 
 	jsonStr := string(jsonBytes)
+	encodedBody := base64.StdEncoding.EncodeToString(msg.Body)
+
 	expectedFields := []string{
 		`"id":"id1"`,
 		`"route":"route1"`,
-		`"status":2`,
-		`"body":"some payload"`,
+		fmt.Sprintf(`"status":%d`, int(StatusResolved)),
+		fmt.Sprintf(`"body":"%s"`, encodedBody),
 	}
 
 	for _, field := range expectedFields {
-		if !contains(jsonStr, field) {
+		if !strings.Contains(jsonStr, field) {
 			t.Errorf("Expected JSON to contain: %s\nGot: %s", field, jsonStr)
 		}
 	}

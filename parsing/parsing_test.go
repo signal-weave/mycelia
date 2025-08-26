@@ -1,125 +1,207 @@
 package parsing
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
+	"io"
+	"reflect"
+	"strings"
 	"testing"
 )
 
-// makeStream encodes tokens as [uvarint length][bytes]...
-func makeStream(tokens ...string) []byte {
-	buf := make([]byte, 0, 64)
-	tmp := make([]byte, binary.MaxVarintLen64)
-	for _, s := range tokens {
-		n := binary.PutUvarint(tmp, uint64(len(s)))
-		buf = append(buf, tmp[:n]...)
-		buf = append(buf, []byte(s)...)
+// -------Test helpers (writers)------------------------------------------------
+
+func wrU32(buf *bytes.Buffer, v uint32, t *testing.T) {
+	t.Helper()
+	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
+		t.Fatalf("wrU32 failed: %v", err)
 	}
-	return buf
 }
 
-func TestParseTokens_Basic(t *testing.T) {
-	in := makeStream("1", "SEND", "route", "payload")
-	got, err := parseTokens(in)
+func wrString32(buf *bytes.Buffer, s string, t *testing.T) {
+	t.Helper()
+	wrU32(buf, uint32(len(s)), t)
+	if _, err := buf.Write([]byte(s)); err != nil {
+		t.Fatalf("wrString32 failed: %v", err)
+	}
+}
+
+func wrBytes32(buf *bytes.Buffer, b []byte, t *testing.T) {
+	t.Helper()
+	wrU32(buf, uint32(len(b)), t)
+	if _, err := buf.Write(b); err != nil {
+		t.Fatalf("wrBytes32 failed: %v", err)
+	}
+}
+
+// write an unsigned varint (LEB128) into buf.
+func wrUvarint(buf *bytes.Buffer, x uint64) {
+	var tmp [10]byte
+	n := binary.PutUvarint(tmp[:], x)
+	buf.Write(tmp[:n])
+}
+
+// -------parseProtoVer---------------------------------------------------------
+
+func TestParseProtoVer_OK(t *testing.T) {
+	var buf bytes.Buffer
+	wrU32(&buf, 1, t)                 // version
+	buf.Write([]byte{0xAA, 0xBB, 0xCC}) // rest
+
+	ver, rest, err := parseProtoVer(buf.Bytes())
 	if err != nil {
-		t.Fatalf("parseTokens returned error: %v", err)
+		t.Fatalf("parseProtoVer error: %v", err)
 	}
-	want := []string{"1", "SEND", "route", "payload"}
-	if len(got) != len(want) {
-		t.Fatalf("len mismatch: got %d want %d", len(got), len(want))
+	if ver != 1 {
+		t.Fatalf("expected ver=1, got %d", ver)
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("token %d mismatch: got %q want %q", i, got[i], want[i])
-		}
+	if !bytes.Equal(rest, []byte{0xAA, 0xBB, 0xCC}) {
+		t.Fatalf("unexpected rest: %v", rest)
 	}
 }
 
-func TestParseTokens_ZeroLength_Ignored(t *testing.T) {
-	// Include a zero-length field (should be ignored) between real tokens
-	// Stream: ["1", "", "CMD"]
-	in := append(makeStream("1"), 0 /* uvarint(0) */)
-	in = append(in, makeStream("CMD")...)
-	got, err := parseTokens(in)
+func TestParseProtoVer_ShortBuffer(t *testing.T) {
+	data := []byte{0x00, 0x01, 0x02} // < 4 bytes
+	_, _, err := parseProtoVer(data)
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
+	}
+}
+
+// -------ParseLine (dispatch to v1)--------------------------------------------
+
+func TestParseLine_V1_Success_SendMessage(t *testing.T) {
+	const uid = "uid-123"
+	const route = "topic.route"
+	payload := []byte{0xDE, 0xAD, 0xBE, 0xEF}
+
+	// Build v1 body that decodeV1 understands:
+	// [obj_type][cmd_type][uid][route][payload]
+	var body bytes.Buffer
+	wrU32(&body, OBJ_MESSAGE, t)
+	wrU32(&body, CMD_SEND, t)
+	wrString32(&body, uid, t)
+	wrString32(&body, route, t)
+	wrBytes32(&body, payload, t)
+
+	// Prefix with version
+	var packet bytes.Buffer
+	wrU32(&packet, 1, t)
+	packet.Write(body.Bytes())
+
+	cmd, err := ParseLine(packet.Bytes())
 	if err != nil {
-		t.Fatalf("parseTokens returned error: %v", err)
+		t.Fatalf("ParseLine error: %v", err)
 	}
-	want := []string{"1", "CMD"}
-	if len(got) != len(want) {
-		t.Fatalf("len mismatch: got %d want %d", len(got), len(want))
+	if cmd == nil {
+		t.Fatalf("ParseLine returned nil command")
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("token %d mismatch: got %q want %q", i, got[i], want[i])
-		}
-	}
-}
 
-func TestParseTokens_TruncatedBody(t *testing.T) {
-	// Create a field that declares length 5 but only provide 3 bytes.
-	tmp := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutUvarint(tmp, 5)
-	in := append([]byte{}, tmp[:n]...)
-	in = append(in, []byte("abc")...) // truncated
-	if _, err := parseTokens(in); err == nil {
-		t.Fatalf("expected error for truncated body, got nil")
-	}
-}
-
-func TestParseLine_BadBody_ReturnsUnknown(t *testing.T) {
-	// Malformed: declare 3 bytes then provide none -> parseTokens fails.
-	tmp := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutUvarint(tmp, 3)
-	in := append([]byte{}, tmp[:n]...)
-	cmd, c := ParseLine(in)
-	if cmd != unknownCommand || c != nil {
-		t.Fatalf(
-			"expected (%q,nil) for bad body, got (%q,%v)",
-			unknownCommand, cmd, c,
-		)
-	}
-}
-
-func TestParseLine_MissingVersionOrCommand(t *testing.T) {
-	// Only one token => missing command
-	in := makeStream("1")
-	cmd, c := ParseLine(in)
-	if cmd != unknownCommand || c != nil {
-		t.Fatalf(
-			"expected (%q,nil) for missing command, got (%q,%v)",
-			unknownCommand, cmd, c,
-		)
-	}
-}
-
-func TestParseLine_BadVersionToken(t *testing.T) {
-	// First token not an integer
-	in := makeStream("x", "ANY")
-	cmd, c := ParseLine(in)
-	if cmd != unknownCommand || c != nil {
-		t.Fatalf(
-			"expected (%q,nil) for bad version token, got (%q,%v)",
-			unknownCommand, cmd, c,
-		)
+	// We don't depend on concrete type; just ensure it's the SendMessage variant.
+	typeName := reflect.TypeOf(cmd).String()
+	if !strings.Contains(typeName, "SendMessage") {
+		t.Fatalf("expected command type to contain 'SendMessage', got %q", typeName)
 	}
 }
 
 func TestParseLine_UnsupportedVersion(t *testing.T) {
-	// Version 2 should fall through to unknown (avoids calling parseDataV1)
-	in := makeStream("2", "CMD")
-	cmd, c := ParseLine(in)
-	if cmd != unknownCommand || c != nil {
-		t.Fatalf(
-			"expected (%q,nil) for unsupported version, got (%q,%v)",
-			unknownCommand, cmd, c,
-		)
+	// version 999, empty body
+	var packet bytes.Buffer
+	wrU32(&packet, 999, t)
+
+	cmd, err := ParseLine(packet.Bytes())
+	if !errors.Is(err, ParseCommandErr) {
+		t.Fatalf("expected ParseCommandErr, got %v", err)
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on error, got %T", cmd)
 	}
 }
 
-func TestVerifyTokenLength(t *testing.T) {
-	if !verifyTokenLength([]string{"a", "b"}, 2, "TEST") {
-		t.Fatalf("expected true for matching arg length")
+func TestParseLine_VersionReadError(t *testing.T) {
+	// <4 bytes total
+	data := []byte{0x01, 0x02, 0x03}
+	cmd, err := ParseLine(data)
+	if !errors.Is(err, ParseCommandErr) {
+		t.Fatalf("expected ParseCommandErr, got %v", err)
 	}
-	if verifyTokenLength([]string{"a"}, 2, "TEST") {
-		t.Fatalf("expected false for mismatched arg length")
+	if cmd != nil {
+		t.Fatalf("expected nil cmd, got %T", cmd)
+	}
+}
+
+// -------parseTokens-----------------------------------------------------------
+
+func TestParseTokens_Normal(t *testing.T) {
+	var buf bytes.Buffer
+	wrUvarint(&buf, 3)
+	buf.WriteString("foo")
+	wrUvarint(&buf, 3)
+	buf.WriteString("bar")
+
+	out, err := parseTokens(buf.Bytes())
+	if err != nil {
+		t.Fatalf("parseTokens error: %v", err)
+	}
+	want := []string{"foo", "bar"}
+	if !reflect.DeepEqual(out, want) {
+		t.Fatalf("expected %v, got %v", want, out)
+	}
+}
+
+func TestParseTokens_SkipZeroLength(t *testing.T) {
+	var buf bytes.Buffer
+	wrUvarint(&buf, 3)
+	buf.WriteString("foo")
+	wrUvarint(&buf, 0) // should be skipped
+	wrUvarint(&buf, 3)
+	buf.WriteString("bar")
+
+	out, err := parseTokens(buf.Bytes())
+	if err != nil {
+		t.Fatalf("parseTokens error: %v", err)
+	}
+	want := []string{"foo", "bar"}
+	if !reflect.DeepEqual(out, want) {
+		t.Fatalf("expected %v, got %v", want, out)
+	}
+}
+
+func TestParseTokens_TruncatedFieldBody(t *testing.T) {
+	var buf bytes.Buffer
+	// Declare length 5, provide only 4 bytes.
+	wrUvarint(&buf, 5)
+	buf.Write([]byte{'h', 'e', 'l', 'l'})
+
+	_, err := parseTokens(buf.Bytes())
+	if err == nil || !strings.Contains(err.Error(), "truncated field body") {
+		t.Fatalf("expected truncated body error, got %v", err)
+	}
+}
+
+func TestParseTokens_OverflowVarint(t *testing.T) {
+	var buf bytes.Buffer
+	// Craft an overflowing varint (>10 bytes with continuation bits set)
+	for i := 0; i < 11; i++ {
+		buf.WriteByte(0xFF)
+	}
+
+	_, err := parseTokens(buf.Bytes())
+	if err == nil {
+		t.Fatalf("expected overflow/varint error, got nil")
+	}
+}
+
+// -------verifyTokenLength-----------------------------------------------------
+
+func TestVerifyTokenLength(t *testing.T) {
+	ok := verifyTokenLength([]string{"a", "b"}, 2, "CMD")
+	if !ok {
+		t.Fatalf("expected true for matching length")
+	}
+	ok = verifyTokenLength([]string{"a"}, 2, "CMD")
+	if ok {
+		t.Fatalf("expected false for mismatched length")
 	}
 }

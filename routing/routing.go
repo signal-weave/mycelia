@@ -75,7 +75,7 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
-		Body:   string(buffer[:n]),
+		Body:   buffer[:n],
 	}
 
 	return transformedMessage, nil
@@ -103,7 +103,7 @@ func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte(m.Body))
+	_, err = conn.Write(m.Body)
 	if err != nil {
 		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
 		str.ErrorPrint(eMsg)
@@ -144,17 +144,17 @@ func (b *Broker) Route(name string) *Route {
 // command object, and forwards it to the command handler.
 func (b *Broker) HandleBytes(input []byte) {
 	// Parse byte stream -> command object.
-	cmdType, cmd := parsing.ParseLine(input)
-	if cmd == nil || cmdType == "err" {
+	cmd, err := parsing.ParseLine(input)
+	if err != nil {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
 		return
 	}
 
 	// Handle command object
-	err := b.HandleCommand(cmd)
+	err = b.HandleCommand(cmd)
 	if err != nil {
-		msg := fmt.Sprintf("Unknown command type: %s", cmdType)
+		msg := fmt.Sprintf("Unknown command type %v", cmd)
 		str.WarningPrint(msg)
 	}
 }
