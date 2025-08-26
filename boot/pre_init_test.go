@@ -1,133 +1,105 @@
 package boot
 
 import (
+	"os"
 	"testing"
+	"time"
+
+	"mycelia/commands"
 )
 
-// resetCommandList clears the global CommandList between tests.
-func resetCommandList() {
-	CommandList = CommandList[:0]
-}
+// Test that parseRuntimeConfigurable maps all supported runtime fields
+// and updates the VERBOSITY environment variable.
+func TestParseRuntimeConfigurable_SetsFieldsAndEnv(t *testing.T) {
+	// Save/restore env
+	prevVerbosity := os.Getenv("VERBOSITY")
+	t.Cleanup(func() { _ = os.Setenv("VERBOSITY", prevVerbosity) })
 
-func TestParseRouteCmds_AppendsAddRoute(t *testing.T) {
-	resetCommandList()
+	cfg := &runtimeConfig{
+		Address:          "",
+		Port:             0,
+		Verbosity:        0,
+		PrintTree:        false,
+		TransformTimeout: 0,
+	}
 
-	routeData := []map[string]any{
-		{
-			"name":     "r1",
-			"channels": []map[string]any{}, // empty is fine; just ensures the key exists
+	input := map[string]any{
+		"runtime": map[string]any{
+			"address":       "0.0.0.0",
+			"port":          8080, // will survive via json round-trip
+			"verbosity":     2,    // ditto
+			"print-tree":    true,
+			"xform-timeout": "45s",
 		},
 	}
 
-	base := len(CommandList)
-	parseRouteCmds(routeData)
-	got := len(CommandList) - base
+	parseRuntimeConfigurable(cfg, input)
 
-	if got != 1 {
-		t.Fatalf("expected 1 command appended (AddRoute), got %d", got)
+	if cfg.Address != "0.0.0.0" {
+		t.Fatalf("Address = %q, want %q", cfg.Address, "0.0.0.0")
+	}
+	if cfg.Port != 8080 {
+		t.Fatalf("Port = %d, want %d", cfg.Port, 8080)
+	}
+	if cfg.Verbosity != 2 {
+		t.Fatalf("Verbosity = %d, want %d", cfg.Verbosity, 2)
+	}
+	if !cfg.PrintTree {
+		t.Fatalf("PrintTree = %v, want %v", cfg.PrintTree, true)
+	}
+	if cfg.TransformTimeout != 45*time.Second {
+		t.Fatalf("TransformTimeout = %v, want %v", cfg.TransformTimeout, 45*time.Second)
+	}
+	if got := os.Getenv("VERBOSITY"); got != "2" {
+		t.Fatalf("env VERBOSITY = %q, want %q", got, "2")
 	}
 }
 
-func TestParseChannelCmds_AddsChannelAndTransformers(t *testing.T) {
-    resetCommandList()
+func TestParseRouteCmds_AppendsTransformerAndSubscriberCommands(t *testing.T) {
+	// Reset global CommandList and restore afterwards.
+	old := CommandList
+	CommandList = nil
+	t.Cleanup(func() { CommandList = old })
 
-    chanData := []map[string]any{
-        {
-            "name": "ch1",
-            "transformers": []any{
-                map[string]any{"address": "127.0.0.1:7001"},
-            },
-        },
-    }
-
-    base := len(CommandList)
-    parseChannelCmds("r1", chanData)
-    got := len(CommandList) - base
-
-    // AddChannel + AddTransformer
-    if got != 2 {
-        t.Fatalf("expected 2 commands appended (AddChannel + AddTransformer), got %d", got)
-    }
-}
-
-func TestParseChannelCmds_SubscribersAdded(t *testing.T) {
-    resetCommandList()
-
-    chanData := []map[string]any{
-        {
-            "name": "ch1",
-            "subscribers": []any{
-                map[string]any{"address": "127.0.0.1:9001"},
-            },
-        },
-    }
-
-    base := len(CommandList)
-    parseChannelCmds("r1", chanData)
-    got := len(CommandList) - base
-
-    // AddChannel + 1 AddSubscriber
-    if got != 2 {
-        t.Fatalf("expected 2 commands appended (AddChannel + AddSubscriber), got %d", got)
-    }
-}
-
-func TestParseChannelCmds_NoSubscribersAdded(t *testing.T) {
-	resetCommandList()
-
-	// Intentional: use the CORRECT English key "subscribers".
-	// The implementation looks for "subscribres" (typo), so NO subscriber
-	// commands should be added.
-	chanData := []map[string]any{
+	routeData := []map[string]any{
 		{
-			"name": "ch1",
-			"subscribers": []map[string]string{
-				{"address": "127.0.0.1:9001"},
+			"name": "default",
+			"channels": []map[string]any{
+				{
+					"name": "inmem",
+					// FIXED: use "transformers" (not "transformeres")
+					"transformers": []map[string]any{
+						{"address": "127.0.0.1:7010"},
+						{"address": "10.0.0.52:8008"},
+					},
+					"subscribers": []map[string]any{
+						{"address": "127.0.0.1:1234"},
+						{"address": "16.70.18.1:9999"},
+					},
+				},
 			},
 		},
 	}
 
-	base := len(CommandList)
-	parseChannelCmds("r1", chanData)
-	got := len(CommandList) - base
+	parseRouteCmds(routeData)
 
-	// Only AddChannel should be appended (no subscribers due to key mismatch).
-	if got != 1 {
-		t.Fatalf("expected 1 command appended (AddChannel only), got %d", got)
-	}
-}
-
-func TestParseXformCmds_AppendsOnePerTransformer(t *testing.T) {
-	resetCommandList()
-
-	xforms := []map[string]any{
-		{"address": "127.0.0.1:7100"},
-		{"address": "127.0.0.1:7101"},
-		{"address": "127.0.0.1:7102"},
+	if len(CommandList) != 4 {
+		t.Fatalf("CommandList length = %d, want %d", len(CommandList), 4)
 	}
 
-	base := len(CommandList)
-	parseXformCmds("rX", "cX", xforms)
-	got := len(CommandList) - base
-
-	if got != len(xforms) {
-		t.Fatalf("expected %d AddTransformer commands, got %d", len(xforms), got)
+	var nXforms, nSubs int
+	for _, cmd := range CommandList {
+		switch cmd.(type) {
+		case *commands.AddTransformer:
+			nXforms++
+		case *commands.AddSubscriber:
+			nSubs++
+		}
 	}
-}
-
-func TestParseSubscriberCmds_AppendsOnePerSubscriber(t *testing.T) {
-	resetCommandList()
-
-	subs := []map[string]any{
-		{"address": "127.0.0.1:9200"},
-		{"address": "127.0.0.1:9201"},
+	if nXforms != 2 {
+		t.Fatalf("AddTransformer count = %d, want %d", nXforms, 2)
 	}
-
-	base := len(CommandList)
-	parseSubscriberCmds("rY", "cY", subs)
-	got := len(CommandList) - base
-
-	if got != len(subs) {
-		t.Fatalf("expected %d AddSubscriber commands, got %d", len(subs), got)
+	if nSubs != 2 {
+		t.Fatalf("AddSubscriber count = %d, want %d", nSubs, 2)
 	}
 }

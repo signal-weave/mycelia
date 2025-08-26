@@ -163,10 +163,6 @@ func (b *Broker) HandleCommand(cmd commands.Command) error {
 	switch t := cmd.(type) {
 	case *commands.SendMessage:
 		b.Route(t.Route).ProcessMessage(t)
-	case *commands.AddRoute:
-		b.Route(t.Name)
-	case *commands.AddChannel:
-		b.Route(t.Route).Channel(t.Name)
 	case *commands.AddSubscriber:
 		subscriber := NewSubscriber(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
