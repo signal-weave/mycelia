@@ -44,7 +44,7 @@ func TestRouting_TransformThenFanout(t *testing.T) {
 	msg := &commands.SendMessage{
 		ID:    "test-uuid-123",
 		Route: "default",
-		Body:  "hello",
+		Body:  []byte("hello"),
 	}
 	r.ProcessMessage(msg)
 

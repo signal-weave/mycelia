@@ -75,7 +75,7 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
-		Body:   string(buffer[:n]),
+		Body:   buffer[:n],
 	}
 
 	return transformedMessage, nil
@@ -83,7 +83,8 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 
 // -------Subscriber------------------------------------------------------------
 
-// Object representing the client subscribed to an endpoint.
+// Object representation of the client subscribed to an endpoint, ie. the
+// distributed machine that a message will be forwarded to.
 type Subscriber struct {
 	Address string
 }
@@ -103,7 +104,7 @@ func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte(m.Body))
+	_, err = conn.Write(m.Body)
 	if err != nil {
 		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
 		str.ErrorPrint(eMsg)
@@ -114,6 +115,10 @@ func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
 
 // -------Broker----------------------------------------------------------------
 
+// The primary route orchestrator.
+// Takes the incoming byte stream and runs it through the command parser where
+// a generated command object is created and then runs the command through the
+// route structure.
 type Broker struct {
 	mutex  sync.RWMutex
 	routes map[string]*Route
@@ -144,21 +149,23 @@ func (b *Broker) Route(name string) *Route {
 // command object, and forwards it to the command handler.
 func (b *Broker) HandleBytes(input []byte) {
 	// Parse byte stream -> command object.
-	cmdType, cmd := parsing.ParseLine(input)
-	if cmd == nil || cmdType == "err" {
+	cmd, err := parsing.ParseLine(input)
+	if err != nil {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
 		return
 	}
 
 	// Handle command object
-	err := b.HandleCommand(cmd)
+	err = b.HandleCommand(cmd)
 	if err != nil {
-		msg := fmt.Sprintf("Unknown command type: %s", cmdType)
+		msg := fmt.Sprintf("Unknown command type %v", cmd)
 		str.WarningPrint(msg)
 	}
 }
 
+// Handles the command object generated from the incoming byte stream.
+// Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleCommand(cmd commands.Command) error {
 	switch t := cmd.(type) {
 	case *commands.SendMessage:
@@ -166,19 +173,20 @@ func (b *Broker) HandleCommand(cmd commands.Command) error {
 	case *commands.AddSubscriber:
 		subscriber := NewSubscriber(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
+		b.PrintBrokerStructure()
 	case *commands.AddTransformer:
 		transformer := NewTransformer(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddTransformer(*transformer)
+		b.PrintBrokerStructure()
 	default:
 		return errors.New("Unknown command type")
 	}
 
-	b.printBrokerStructure()
 	return nil
 }
 
-// printBrokerStructure prints the broker, routes, channels, and subscribers.
-func (b *Broker) printBrokerStructure() {
+// PrintBrokerStructure prints the broker, routes, channels, and subscribers.
+func (b *Broker) PrintBrokerStructure() {
 	if !boot.RuntimeCfg.PrintTree {
 		return
 	}
@@ -214,6 +222,13 @@ func (b *Broker) printBrokerStructure() {
 
 // -------Route-----------------------------------------------------------------
 
+// The primary grouping for message traversal. A route can contain multiple
+// channels. Subscribers subscribe to a channel, not a route. Because channels
+// can contain transformers, routes are a way of grouping transformer
+// "categories", in the form of channels, together.
+//
+// When a message is sent through a channel and possibly transformed, the newly
+// transformed message is sent to the next channel in the route.
 type Route struct {
 	mutex    sync.RWMutex
 	name     string
@@ -257,6 +272,13 @@ func (r *Route) ProcessMessage(sm *commands.SendMessage) {
 
 // -------Channel---------------------------------------------------------------
 
+// Channels are the subscription buckets that fill routes. A subscriber
+// specifies a route + channel to subscribe to. The channel will run a message
+// through each of its transformers before forwarding it to the subscriber.
+//
+// More than one channel may exist in a route - Subscribers choose which
+// transform "checkpoint" they wish to subscribe to. i.e. a message transformed
+// by one channel will then be sent to the next channel in a route.
 type Channel struct {
 	mutex        sync.RWMutex
 	name         string
@@ -267,12 +289,22 @@ type Channel struct {
 func (ch *Channel) AddTransformer(t Transformer) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
+	for _, existing := range ch.transformers {
+		if existing.Address == t.Address {
+			return
+		}
+	}
 	ch.transformers = append(ch.transformers, t)
 }
 
 func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
+	for _, existing := range ch.subscribers {
+		if existing.Address == s.Address {
+			return
+		}
+	}
 	ch.subscribers = append(ch.subscribers, s)
 }
 

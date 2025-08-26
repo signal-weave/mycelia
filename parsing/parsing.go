@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"strconv"
+	"io"
 
 	"mycelia/boot"
 	"mycelia/commands"
@@ -15,27 +15,25 @@ import (
 
 var _ = boot.RuntimeCfg // REQUIRED for global config values.
 
-const unknownCommand = "err"
+var ParseCommandErr = errors.New("unable to parse command")
 
-func ParseLine(line []byte) (string, commands.Command) {
-	parts, err := parseTokens(line)
+// parseProtoVer extracts only the protocol version and returns it along with
+// a slice that starts at the next byte (i.e., the remainder of the message).
+func parseProtoVer(data []byte) (uint32, []byte, error) {
+	if len(data) < 4 {
+		return 0, nil, io.ErrUnexpectedEOF
+	}
+	ver := binary.BigEndian.Uint32(data[:4])
+	return ver, data[4:], nil
+}
+
+func ParseLine(line []byte) (commands.Command, error) {
+	version, rest, err := parseProtoVer(line)
 	if err != nil {
-		str.WarningPrint("Could not parse data - bad body.")
-		return unknownCommand, nil
+		wMsg := fmt.Sprintf("Read protocol version: %v", err)
+		str.WarningPrint(wMsg)
+		return nil, ParseCommandErr
 	}
-
-	if len(parts) < 2 {
-		str.WarningPrint("Could not parse data - missing version or command!")
-		return unknownCommand, nil
-	}
-
-	verStr := parts[0]
-	version, err := strconv.Atoi(verStr)
-	if err != nil {
-		return unknownCommand, nil
-	}
-
-	args := parts[1:] // prune off protocol version token.
 
 	// The broker always works off of the same types of command objects.
 	// Command objects may evolve over time, adding new fields for new
@@ -48,12 +46,13 @@ func ParseLine(line []byte) (string, commands.Command) {
 	// the corresponding parsing logic.
 
 	// This is mainly because early on there was uncertainty if the protocol and
-	// command structure was done right.
+	// command structure was done right, and we reserved the ability to update
+	// it as we go.
 	switch version {
 	case 1:
-		return parseDataV1(args)
+		return decodeV1(rest)
 	default:
-		return unknownCommand, nil
+		return nil, ParseCommandErr
 	}
 }
 

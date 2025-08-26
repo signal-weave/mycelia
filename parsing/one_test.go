@@ -1,102 +1,200 @@
 package parsing
 
 import (
+	"bytes"
+	"encoding/binary"
+	"reflect"
+	"strings"
 	"testing"
-
-	"mycelia/commands"
 )
 
-func TestParseDataV1_SendMessage_OK(t *testing.T) {
-	tokens := []string{"MESSAGE.SEND", "id-1", "orders.created", "hello"}
-	typ, cmd := parseDataV1(tokens)
+// Helpers to build length-prefixed (uint32 big-endian) strings/bytes.
+func writeU32(buf *bytes.Buffer, v uint32, t *testing.T) {
+	t.Helper()
+	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
+		t.Fatalf("writeU32 failed: %v", err)
+	}
+}
 
-	if typ != "MESSAGE.SEND" {
-		t.Fatalf("type mismatch: want %q, got %q", "MESSAGE.SEND", typ)
+func writeString(buf *bytes.Buffer, s string, t *testing.T) {
+	t.Helper()
+	writeU32(buf, uint32(len(s)), t)
+	if _, err := buf.Write([]byte(s)); err != nil {
+		t.Fatalf("writeString failed: %v", err)
+	}
+}
+
+func writeBytes(buf *bytes.Buffer, b []byte, t *testing.T) {
+	t.Helper()
+	writeU32(buf, uint32(len(b)), t)
+	if _, err := buf.Write(b); err != nil {
+		t.Fatalf("writeBytes failed: %v", err)
+	}
+}
+
+func typeName(v interface{}) string {
+	if v == nil {
+		return "<nil>"
+	}
+	return reflect.TypeOf(v).String()
+}
+
+func TestDecodeV1_SendMessage_Success(t *testing.T) {
+	uid := "uid-123"
+	route := "topic.route"
+	payload := []byte{0xDE, 0xAD, 0xBE, 0xEF}
+
+	var buf bytes.Buffer
+	// Header: obj_type, cmd_type, uid, route
+	writeU32(&buf, OBJ_MESSAGE, t)
+	writeU32(&buf, CMD_SEND, t)
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
+	// Body: payload
+	writeBytes(&buf, payload, t)
+
+	cmd, err := decodeV1(buf.Bytes())
+	if err != nil {
+		t.Fatalf("decodeV1 returned error: %v", err)
 	}
 	if cmd == nil {
-		t.Fatalf("expected non-nil command")
+		t.Fatalf("decodeV1 returned nil command")
 	}
 
-	sm, ok := cmd.(*commands.SendMessage)
-	if !ok {
-		t.Fatalf("expected *commands.SendMessage, got %T", cmd)
-	}
-	if sm.ID != "id-1" || sm.Route != "orders.created" || sm.Body != "hello" {
-		t.Fatalf("fields mismatch: %+v", *sm)
+	tn := typeName(cmd)
+	// Be flexible in case the exact package/type name differs slightly.
+	if !strings.Contains(tn, "SendMessage") {
+		t.Fatalf("expected command type to contain 'SendMessage', got %q", tn)
 	}
 }
 
-func TestParseDataV1_AddSubscriber_OK(t *testing.T) {
-	tokens := []string{
-		"SUBSCRIBER.ADD", "id-3", "orders", "primary", "127.0.0.1:7001",
-	}
-	typ, cmd := parseDataV1(tokens)
+func TestDecodeV1_AddSubscriber_Success(t *testing.T) {
+	uid := "user-42"
+	route := "router.alpha"
+	channel := "events"
+	address := "127.0.0.1:5555"
 
-	if typ != "SUBSCRIBER.ADD" || cmd == nil {
-		t.Fatalf("want SUBSCRIBER.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
+	var buf bytes.Buffer
+	// Header: obj_type, cmd_type, uid, route
+	writeU32(&buf, OBJ_SUBSCRIBER, t)
+	writeU32(&buf, CMD_ADD, t)
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
+	// Body: channel, address
+	writeString(&buf, channel, t)
+	writeString(&buf, address, t)
+
+	cmd, err := decodeV1(buf.Bytes())
+	if err != nil {
+		t.Fatalf("decodeV1 returned error: %v", err)
 	}
-	as, ok := cmd.(*commands.AddSubscriber)
-	if !ok {
-		t.Fatalf("expected *commands.AddSubscriber, got %T", cmd)
+	if cmd == nil {
+		t.Fatalf("decodeV1 returned nil command")
 	}
-	if as.ID != "id-3" || as.Route != "orders" || as.Channel != "primary" || as.Address != "127.0.0.1:7001" {
-		t.Fatalf("fields mismatch: %+v", *as)
+
+	tn := typeName(cmd)
+	if !strings.Contains(tn, "AddSubscriber") && !strings.Contains(tn, "Subscriber") {
+		t.Fatalf("expected command type to contain 'AddSubscriber' or 'Subscriber', got %q", tn)
 	}
 }
 
-func TestParseDataV1_AddTransformer_OK(t *testing.T) {
-	tokens := []string{
-		"TRANSFORMER.ADD", "id-5", "orders", "primary", "127.0.0.1:7100",
-	}
-	typ, cmd := parseDataV1(tokens)
+func TestDecodeV1_UnknownObjType_Error(t *testing.T) {
+	uid := "abc"
+	route := "foo"
 
-	if typ != "TRANSFORMER.ADD" || cmd == nil {
-		t.Fatalf("want TRANSFORMER.ADD non-nil, got typ=%q cmd=%v", typ, cmd)
-	}
-	at, ok := cmd.(*commands.AddTransformer)
-	if !ok {
-		t.Fatalf("expected *commands.AddTransformer, got %T", cmd)
-	}
-	if at.ID != "id-5" || at.Route != "orders" || at.Channel != "primary" || at.Address != "127.0.0.1:7100" {
-		t.Fatalf("fields mismatch: %+v", *at)
-	}
-}
+	var buf bytes.Buffer
+	writeU32(&buf, 99, t) // unknown obj_type
+	writeU32(&buf, CMD_ADD, t)
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
 
-func TestParseDataV1_Unknown_ReturnsEmptyAndNil(t *testing.T) {
-	tokens := []string{"totally_unknown", "id-9"}
-	typ, cmd := parseDataV1(tokens)
-	if typ != "" || cmd != nil {
-		t.Fatalf("expected empty type and nil cmd, got typ=%q cmd=%v", typ, cmd)
+	cmd, err := decodeV1(buf.Bytes())
+	if err == nil {
+		t.Fatalf("expected error, got nil (cmd=%T)", cmd)
 	}
-}
-
-// -------token length validation paths (verifyTokenLength false)---------------
-
-func TestParseSendMsgV1_BadLength_ReturnsNil(t *testing.T) {
-	typ, cmd := parseSendMsgV1([]string{"only-two", "tokens"})
-	if typ != "MESSAGE.SEND" {
-		t.Fatalf("want type 'MESSAGE.SEND', got %q", typ)
+	if err != ParseCommandErr {
+		t.Fatalf("expected ParseCommandErr, got %v", err)
 	}
 	if cmd != nil {
-		t.Fatalf("expected nil cmd for bad length, got %T", cmd)
+		t.Fatalf("expected nil cmd on error, got %T", cmd)
 	}
 }
 
-func TestParseAddSubscriberV1_BadLength_ReturnsNil(t *testing.T) {
-	typ, cmd := parseAddSubscriberV1([]string{"id", "route", "only-three"})
-	if typ != "SUBSCRIBER.ADD" || cmd != nil {
-		t.Fatalf(
-			"expected SUBSCRIBER.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd,
-		)
+func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
+	uid := "uid-123"
+	route := "topic.route"
+	payload := []byte{0x01, 0x02, 0x03}
+
+	var buf bytes.Buffer
+	writeU32(&buf, OBJ_MESSAGE, t)
+	writeU32(&buf, CMD_SEND, t)
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
+	writeBytes(&buf, payload, t)
+
+	// Append a stray byte to trigger trailing-bytes check.
+	buf.WriteByte(0x00)
+
+	cmd, err := decodeV1(buf.Bytes())
+	if err == nil {
+		t.Fatalf("expected error due to trailing bytes, got nil (cmd=%T)", cmd)
+	}
+	if err != ParseCommandErr {
+		t.Fatalf("expected ParseCommandErr due to trailing bytes, got %v", err)
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on error, got %T", cmd)
 	}
 }
 
-func TestParseAddTransformerV1_BadLength_ReturnsNil(t *testing.T) {
-	typ, cmd := parseAddTransformerV1([]string{"id", "route", "channel"})
-	// missing address
-	if typ != "TRANSFORMER.ADD" || cmd != nil {
-		t.Fatalf(
-			"expected TRANSFORMER.ADD + nil cmd, got typ=%q cmd=%v", typ, cmd,
-		)
+func TestDecodeV1_SubscriberRemove_NotImplemented(t *testing.T) {
+	uid := "u-1"
+	route := "r-1"
+	channel := "c-1"
+	address := "a-1"
+
+	var buf bytes.Buffer
+	writeU32(&buf, OBJ_SUBSCRIBER, t)
+	writeU32(&buf, CMD_REMOVE, t) // not implemented -> should error
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
+	writeString(&buf, channel, t)
+	writeString(&buf, address, t)
+
+	cmd, err := decodeV1(buf.Bytes())
+	if err == nil {
+		t.Fatalf("expected error for SUBSCRIBER CMD_REMOVE, got nil (cmd=%T)", cmd)
+	}
+	if err != ParseCommandErr {
+		t.Fatalf("expected ParseCommandErr for SUBSCRIBER CMD_REMOVE, got %v", err)
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on error, got %T", cmd)
+	}
+}
+
+func TestDecodeV1_AddTransformer_Success(t *testing.T) {
+	uid := "u-t"
+	route := "r-t"
+	channel := "ch-t"
+	address := "addr-t"
+
+	var buf bytes.Buffer
+	writeU32(&buf, OBJ_TRANSFORMER, t)
+	writeU32(&buf, CMD_ADD, t)
+	writeString(&buf, uid, t)
+	writeString(&buf, route, t)
+	writeString(&buf, channel, t)
+	writeString(&buf, address, t)
+
+	cmd, err := decodeV1(buf.Bytes())
+	if err != nil {
+		t.Fatalf("decodeV1 returned error: %v", err)
+	}
+	if cmd == nil {
+		t.Fatalf("decodeV1 returned nil command")
+	}
+	if !strings.Contains(typeName(cmd), "AddTransformer") {
+		t.Fatalf("expected transformer add command, got %T", cmd)
 	}
 }

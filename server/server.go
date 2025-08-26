@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -52,41 +51,38 @@ func (server *Server) Run() {
 // Handle incoming data stream.
 func (server *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	fmt.Printf("Client connected: %s\n", conn.RemoteAddr().String())
+	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
+	str.ActionPrint(aMsg)
 
-	reader := bufio.NewReader(conn)
 	for {
-		msgLen, err := binary.ReadUvarint(reader)
-
+		frame, err := readFrame(conn)
 		if err != nil {
-			if err == io.EOF {
-				str.SprintfLn(
-					"Client disconnected: %s", conn.RemoteAddr().String(),
-				)
-				return
-			}
-			// Any other error => connection/read framing error
-			str.WarningPrint(fmt.Sprintf("Bad message length: %v", err))
+			// EOF or other error—close connection
 			return
 		}
-
-		if msgLen == 0 {
-			continue // empty message
+		if len(frame) == 0 {
+			continue
 		}
 
-		msg := make([]byte, msgLen)
-		if _, err := io.ReadFull(reader, msg); err != nil {
-			if err == io.EOF {
-				// EOF is expected, not an error
-				str.SprintfLn(
-					"Client disconnected: %s", conn.RemoteAddr().String(),
-				)
-				return
-			}
-			str.WarningPrint(fmt.Sprintf("Bad message body: %v", err))
-			return
-		}
-
-		server.Broker.HandleBytes(msg)
+		server.Broker.HandleBytes(frame)
 	}
+}
+
+// Read the frame's byte stream until the message header's worth of bytes have
+// been consumed, then return a buffer of those bytes or error.
+func readFrame(conn net.Conn) ([]byte, error) {
+	var hdr [4]byte
+	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
+		return nil, err
+	}
+	n := binary.BigEndian.Uint32(hdr[:])
+	if n == 0 {
+		return []byte{}, nil
+	}
+
+	buf := make([]byte, n)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		return nil, err
+	}
+	return buf, nil
 }

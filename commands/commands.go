@@ -26,14 +26,14 @@ type SendMessage struct {
 	ID     string `json:"id"` // Should be some form of UUID.
 	Route  string `json:"route"`
 	Status Status `json:"status"`
-	Body   string `json:"body"` // The primary payload to send to the consumer.
+	Body   []byte `json:"body"` // The primary payload to send to the consumer.
 }
 
 func (cmd *SendMessage) GetID() string {
 	return cmd.ID
 }
 
-func NewSendMessage(id, route, body string) *SendMessage {
+func NewSendMessage(id, route string, body []byte) *SendMessage {
 	return &SendMessage{
 		ID:     id,
 		Route:  route,
