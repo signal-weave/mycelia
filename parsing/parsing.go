@@ -15,8 +15,6 @@ import (
 
 var _ = boot.RuntimeCfg // REQUIRED for global config values.
 
-const UnknownCommand = "err"
-
 var ParseCommandErr = errors.New("unable to parse command")
 
 // parseProtoVer extracts only the protocol version and returns it along with
