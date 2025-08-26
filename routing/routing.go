@@ -289,12 +289,22 @@ type Channel struct {
 func (ch *Channel) AddTransformer(t Transformer) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
+	for _, existing := range ch.transformers {
+		if existing.Address == t.Address {
+			return
+		}
+	}
 	ch.transformers = append(ch.transformers, t)
 }
 
 func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
+	for _, existing := range ch.subscribers {
+		if existing.Address == s.Address {
+			return
+		}
+	}
 	ch.subscribers = append(ch.subscribers, s)
 }
 
