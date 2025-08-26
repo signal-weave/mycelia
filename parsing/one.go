@@ -30,9 +30,9 @@ type Message struct {
 	Route   string
 
 	// Optional fields depending on ObjType
-	Channel string
-	Address string
-	Payload []byte
+	Channel string // Subscriber + Transformer
+	Address string // Subscriber + Transformer
+	Payload []byte // Message
 }
 
 func decodeV1(data []byte) (commands.Command, error) {
@@ -154,7 +154,11 @@ func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 	if err != nil {
 		return nil, ParseCommandErr
 	}
-	msg.Payload = payload
+	if payload == nil {
+		msg.Payload = []byte{}
+	} else {
+		msg.Payload = payload
+	}
 
 	cmd := commands.NewSendMessage(
 		msg.UID,

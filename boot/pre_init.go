@@ -9,6 +9,7 @@ import (
 
 	"mycelia/commands"
 	"mycelia/errgo"
+	"mycelia/str"
 
 	"github.com/google/uuid"
 )
@@ -40,6 +41,7 @@ func getPreInitData(cfg *runtimeConfig) {
 
 	routesAny, ok := data["routes"].([]any)
 	if !ok {
+		str.ActionPrint("No PreInit route data found, kipping PreInit Routes.")
 		return
 	}
 	routes := make([]map[string]any, 0, len(routesAny))
@@ -156,29 +158,45 @@ the "routes" field, or children of it, could not exist.
 func parseRouteCmds(routeData []map[string]any) {
 	for _, route := range routeData {
 		routeName, _ := route["name"].(string)
+		fmt.Println("route:", routeName)
 
-		channelData, _ := route["channels"].([]map[string]any)
-		for _, channel := range channelData {
+		rawChannels, exists := route["channels"].([]any)
+		if !exists {
+			continue
+		}
+
+		for _, ch := range rawChannels {
+			channel, ok := ch.(map[string]any)
+			if !ok {
+				continue
+			}
 			channelName, _ := channel["name"].(string)
-			transformers := channel["transformers"].([]map[string]any)
-			for _, t := range transformers {
+
+			rawTransformers, _ := channel["transformers"].([]any)
+			for _, t := range rawTransformers {
+				transformer, ok := t.(map[string]any)
+				if !ok {
+					continue
+				}
 				id := uuid.New().String()
-				addr := t["address"].(string)
+				addr := transformer["address"].(string)
 				cmd := commands.NewAddTransformer(
 					id, routeName, channelName, addr,
 				)
-
 				CommandList = append(CommandList, cmd)
 			}
 
-			subscribers := channel["subscribers"].([]map[string]any)
-			for _, s := range subscribers {
+			rawSubscribers, _ := channel["subscribers"].([]any)
+			for _, s := range rawSubscribers {
+				subscriber, ok := s.(map[string]any)
+				if !ok {
+					continue
+				}
 				id := uuid.New().String()
-				addr := s["address"].(string)
+				addr := subscriber["address"].(string)
 				cmd := commands.NewAddSubscriber(
 					id, routeName, channelName, addr,
 				)
-
 				CommandList = append(CommandList, cmd)
 			}
 		}

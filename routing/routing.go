@@ -166,19 +166,20 @@ func (b *Broker) HandleCommand(cmd commands.Command) error {
 	case *commands.AddSubscriber:
 		subscriber := NewSubscriber(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
+		b.PrintBrokerStructure()
 	case *commands.AddTransformer:
 		transformer := NewTransformer(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddTransformer(*transformer)
+		b.PrintBrokerStructure()
 	default:
 		return errors.New("Unknown command type")
 	}
 
-	b.printBrokerStructure()
 	return nil
 }
 
-// printBrokerStructure prints the broker, routes, channels, and subscribers.
-func (b *Broker) printBrokerStructure() {
+// PrintBrokerStructure prints the broker, routes, channels, and subscribers.
+func (b *Broker) PrintBrokerStructure() {
 	if !boot.RuntimeCfg.PrintTree {
 		return
 	}
