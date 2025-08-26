@@ -83,7 +83,8 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 
 // -------Subscriber------------------------------------------------------------
 
-// Object representing the client subscribed to an endpoint.
+// Object representation of the client subscribed to an endpoint, ie. the
+// distributed machine that a message will be forwarded to.
 type Subscriber struct {
 	Address string
 }
@@ -114,6 +115,10 @@ func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
 
 // -------Broker----------------------------------------------------------------
 
+// The primary route orchestrator.
+// Takes the incoming byte stream and runs it through the command parser where
+// a generated command object is created and then runs the command through the
+// route structure.
 type Broker struct {
 	mutex  sync.RWMutex
 	routes map[string]*Route
@@ -159,6 +164,8 @@ func (b *Broker) HandleBytes(input []byte) {
 	}
 }
 
+// Handles the command object generated from the incoming byte stream.
+// Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleCommand(cmd commands.Command) error {
 	switch t := cmd.(type) {
 	case *commands.SendMessage:
@@ -215,6 +222,13 @@ func (b *Broker) PrintBrokerStructure() {
 
 // -------Route-----------------------------------------------------------------
 
+// The primary grouping for message traversal. A route can contain multiple
+// channels. Subscribers subscribe to a channel, not a route. Because channels
+// can contain transformers, routes are a way of grouping transformer
+// "categories", in the form of channels, together.
+//
+// When a message is sent through a channel and possibly transformed, the newly
+// transformed message is sent to the next channel in the route.
 type Route struct {
 	mutex    sync.RWMutex
 	name     string
@@ -258,6 +272,13 @@ func (r *Route) ProcessMessage(sm *commands.SendMessage) {
 
 // -------Channel---------------------------------------------------------------
 
+// Channels are the subscription buckets that fill routes. A subscriber
+// specifies a route + channel to subscribe to. The channel will run a message
+// through each of its transformers before forwarding it to the subscriber.
+//
+// More than one channel may exist in a route - Subscribers choose which
+// transform "checkpoint" they wish to subscribe to. i.e. a message transformed
+// by one channel will then be sent to the next channel in a route.
 type Channel struct {
 	mutex        sync.RWMutex
 	name         string
