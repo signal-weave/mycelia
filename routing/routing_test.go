@@ -2,6 +2,11 @@ package routing
 
 import (
 	"testing"
+	"time"
+
+	"mycelia/boot"
+	"mycelia/commands"
+	"mycelia/test"
 )
 
 // helper: check if a route exists on the broker (with lock)
@@ -44,12 +49,15 @@ func TestRemoveOnlySubscriberRemovesChannelAndRoute(t *testing.T) {
 		t.Fatalf("expected channel c1 to exist on route r1")
 	}
 
-	// remove that subscriber -> channel becomes empty -> channel removed -> route removed
+	// remove that subscriber -> channel becomes empty
+	// -> channel removed -> route removed
 	ch.RemoveSubscriber(Subscriber{Address: "127.0.0.1:7001"})
 
 	// route should be gone (no channels left)
 	if brokerHasRoute(b, "r1") {
-		t.Fatalf("expected route r1 to be removed after its last channel emptied")
+		t.Fatalf(
+			"expected route r1 to be removed after its last channel emptied",
+		)
 	}
 }
 
@@ -69,7 +77,8 @@ func TestRemoveOnlyTransformerRemovesChannelAndRoute(t *testing.T) {
 		t.Fatalf("expected channel c2 to exist on route r2")
 	}
 
-	// remove that transformer -> channel becomes empty -> channel removed -> route removed
+	// remove that transformer -> channel becomes empty
+	// -> channel removed -> route removed
 	ch.RemoveTransformer(Transformer{Address: "127.0.0.1:8008"})
 
 	// route should be gone (no channels left)
@@ -102,5 +111,151 @@ func TestAddDoesNotDuplicateByAddress(t *testing.T) {
 	}
 	if xformCount != 1 {
 		t.Fatalf("expected exactly 1 transformer, got %d", xformCount)
+	}
+}
+
+// tiny helper: read with timeout so tests don't hang
+func recvWithTimeout(
+	t *testing.T,
+	ch <-chan string,
+	d time.Duration,
+) (string, bool) {
+	t.Helper()
+	select {
+	case v := <-ch:
+		return v, true
+	case <-time.After(d):
+		return "", false
+	}
+}
+
+func TestSubscriberReceivesDelivery(t *testing.T) {
+	// Speed up tests that hit the net
+	boot.RuntimeCfg.TransformTimeout = 1
+
+	// Start a one-way mock server that captures what we send to it.
+	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
+	defer stopSub()
+
+	// Wire up route/channel/subscriber
+	b := NewBroker()
+	r := b.Route("r-sub")
+	ch := r.Channel("c-sub")
+	ch.AddSubscriber(Subscriber{Address: subAddr})
+
+	// Send a delivery through the route
+	payload := "hello-subscriber"
+	msg := &commands.Delivery{
+		ID:    "d1",
+		Route: "r-sub",
+		Body:  []byte(payload),
+	}
+
+	// fan-out to subscribers (waits for wg)
+	// :contentReference[oaicite:5]{index=5}
+	r.ProcessDelivery(msg)
+
+	// Verify subscriber got the original body
+	got, ok := recvWithTimeout(t, gotBody, 500*time.Millisecond)
+	if !ok {
+		t.Fatalf("timeout: subscriber did not receive body")
+	}
+	if got != payload {
+		t.Fatalf("expected subscriber body %q, got %q", payload, got)
+	}
+
+	// Ensure ConsumeDelivery marked it resolved
+	// (subscriber writes and flips status) :contentReference[oaicite:6]{index=6}
+	if msg.Status != commands.StatusResolved {
+		t.Fatalf(
+			"expected message status to be StatusResolved, got %v", msg.Status,
+		)
+	}
+}
+
+func TestTransformerThenSubscriber_PathTransformsBody(t *testing.T) {
+	boot.RuntimeCfg.TransformTimeout = 1
+
+	// Transformer echoes back with prefix + body
+	const prefix = "tx:"
+	txAddr, stopTx := test.MockTwoWayServer(t, prefix)
+	defer stopTx()
+
+	// Subscriber captures final body sent
+	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
+	defer stopSub()
+
+	b := NewBroker()
+	r := b.Route("r-tx")
+	ch := r.Channel("c-tx")
+
+	// Add transformer then subscriber
+
+	// will dial, write, read with timeout
+	// :contentReference[oaicite:7]{index=7}
+	ch.AddTransformer(Transformer{Address: txAddr})
+	ch.AddSubscriber(Subscriber{Address: subAddr})
+
+	payload := "hello-transformer"
+	msg := &commands.Delivery{
+		ID:    "d2",
+		Route: "r-tx",
+		Body:  []byte(payload),
+	}
+
+	// Channel runs all transformers (in order), then fans out to subscribers
+	// (wg waits) :contentReference[oaicite:8]{index=8}
+	r.ProcessDelivery(msg)
+
+	// Expect transformed payload at subscriber
+	want := prefix + payload
+	got, ok := recvWithTimeout(t, gotBody, 500*time.Millisecond)
+	if !ok {
+		t.Fatalf("timeout: subscriber did not receive transformed body")
+	}
+	if got != want {
+		t.Fatalf("expected subscriber body %q, got %q", want, got)
+	}
+}
+
+func TestTransformerFailureFallsBackToOriginalBody(t *testing.T) {
+	boot.RuntimeCfg.TransformTimeout = 1
+
+	// Use an address that won't accept connections to force a dial error
+	// When transformer fails, it returns the original delivery, and the channel
+	// continues with the unmodified message.
+	badTransformer := "127.0.0.1:1" // privileged/closed port on localhost
+
+	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
+	defer stopSub()
+
+	b := NewBroker()
+	r := b.Route("r-fail")
+	ch := r.Channel("c-fail")
+	ch.AddTransformer(Transformer{Address: badTransformer})
+	ch.AddSubscriber(Subscriber{Address: subAddr})
+
+	payload := "original-body"
+	msg := &commands.Delivery{
+		ID:    "d3",
+		Route: "r-fail",
+		Body:  []byte(payload),
+	}
+
+	// transformer fails -> proceed with original body
+	// :contentReference[oaicite:10]{index=10}
+	r.ProcessDelivery(msg)
+
+	got, ok := recvWithTimeout(t, gotBody, 500*time.Millisecond)
+	if !ok {
+		t.Fatalf(
+			"timeout: subscriber did not receive body despite transformer failure",
+		)
+	}
+	if got != payload {
+		t.Fatalf(
+			"expected original body %q after transformer failure, got %q",
+			payload, got,
+		)
 	}
 }
