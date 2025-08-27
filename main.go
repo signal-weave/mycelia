@@ -21,7 +21,7 @@ var disclaimer string = "Mycelia is a work-in-progress concurrent message broker
 
 var majorVersion int = 0
 var minorVersion int = 5
-var patchVersion int = 4
+var patchVersion int = 5
 var brokerVersion string = fmt.Sprintf(
 	"%d.%d.%d", majorVersion, minorVersion, patchVersion,
 )
