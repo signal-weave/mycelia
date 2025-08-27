@@ -9,6 +9,14 @@ import (
 )
 
 // Helpers to build length-prefixed (uint32 big-endian) strings/bytes.
+func writeU8(buf *bytes.Buffer, v uint8, t *testing.T) {
+	t.Helper()
+	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
+		t.Fatalf("writeU32 failed: %v", err)
+	}
+}
+
+// Helpers to build length-prefixed (uint32 big-endian) strings/bytes.
 func writeU32(buf *bytes.Buffer, v uint32, t *testing.T) {
 	t.Helper()
 	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
@@ -46,8 +54,8 @@ func TestDecodeV1_SendMessage_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Header: obj_type, cmd_type, uid, route
-	writeU32(&buf, OBJ_MESSAGE, t)
-	writeU32(&buf, CMD_SEND, t)
+	writeU8(&buf, OBJ_MESSAGE, t)
+	writeU8(&buf, CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	// Body: payload
@@ -76,8 +84,8 @@ func TestDecodeV1_AddSubscriber_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Header: obj_type, cmd_type, uid, route
-	writeU32(&buf, OBJ_SUBSCRIBER, t)
-	writeU32(&buf, CMD_ADD, t)
+	writeU8(&buf, OBJ_SUBSCRIBER, t)
+	writeU8(&buf, CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	// Body: channel, address
@@ -104,7 +112,7 @@ func TestDecodeV1_UnknownObjType_Error(t *testing.T) {
 
 	var buf bytes.Buffer
 	writeU32(&buf, 99, t) // unknown obj_type
-	writeU32(&buf, CMD_ADD, t)
+	writeU8(&buf, CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 
@@ -126,8 +134,8 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	payload := []byte{0x01, 0x02, 0x03}
 
 	var buf bytes.Buffer
-	writeU32(&buf, OBJ_MESSAGE, t)
-	writeU32(&buf, CMD_SEND, t)
+	writeU8(&buf, OBJ_MESSAGE, t)
+	writeU8(&buf, CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	writeBytes(&buf, payload, t)
@@ -154,8 +162,8 @@ func TestDecodeV1_SubscriberRemove_NotImplemented(t *testing.T) {
 	address := "a-1"
 
 	var buf bytes.Buffer
-	writeU32(&buf, OBJ_SUBSCRIBER, t)
-	writeU32(&buf, CMD_REMOVE, t) // not implemented -> should error
+	writeU8(&buf, OBJ_SUBSCRIBER, t)
+	writeU8(&buf, CMD_REMOVE, t) // not implemented -> should error
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	writeString(&buf, channel, t)
@@ -180,8 +188,8 @@ func TestDecodeV1_AddTransformer_Success(t *testing.T) {
 	address := "addr-t"
 
 	var buf bytes.Buffer
-	writeU32(&buf, OBJ_TRANSFORMER, t)
-	writeU32(&buf, CMD_ADD, t)
+	writeU8(&buf, OBJ_TRANSFORMER, t)
+	writeU8(&buf, CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	writeString(&buf, channel, t)

@@ -12,20 +12,20 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	OBJ_MESSAGE     uint32 = 1
-	OBJ_TRANSFORMER uint32 = 2
-	OBJ_SUBSCRIBER  uint32 = 3
+	OBJ_MESSAGE     uint8 = 1
+	OBJ_TRANSFORMER uint8 = 2
+	OBJ_SUBSCRIBER  uint8 = 3
 )
 
 const (
-	CMD_SEND   uint32 = 1
-	CMD_ADD    uint32 = 2
-	CMD_REMOVE uint32 = 3
+	CMD_SEND   uint8 = 1
+	CMD_ADD    uint8 = 2
+	CMD_REMOVE uint8 = 3
 )
 
 type Message struct {
-	ObjType uint32
-	CmdType uint32
+	ObjType uint8
+	CmdType uint8
 	UID     string
 	Route   string
 
@@ -66,11 +66,11 @@ func decodeV1(data []byte) (commands.Command, error) {
 
 // Parses the header after version: obj_type, cmd_type, uid, route
 func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
-	if err := readU32(r, &msg.ObjType); err != nil {
+	if err := readU8(r, &msg.ObjType); err != nil {
 		return nil, err
 	}
 
-	if err := readU32(r, &msg.CmdType); err != nil {
+	if err := readU8(r, &msg.CmdType); err != nil {
 		return nil, err
 	}
 
