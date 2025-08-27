@@ -11,6 +11,7 @@ const (
 
 type Command interface {
 	GetID() string
+	GetCmd() uint8
 }
 
 // -----------------------------------------------------------------------------
@@ -27,6 +28,10 @@ type Delivery struct {
 
 func (cmd *Delivery) GetID() string {
 	return cmd.ID
+}
+
+func (cmd *Delivery) GetCmd() uint8 {
+	return cmd.Cmd
 }
 
 func NewDelivery(cmd uint8, id, route string, body []byte) *Delivery {
@@ -56,6 +61,10 @@ func (cmd *Subscriber) GetID() string {
 	return cmd.ID
 }
 
+func (cmd *Subscriber) GetCmd() uint8 {
+	return cmd.Cmd
+}
+
 func NewSubscriber(cmd uint8, id, route, channel, address string) *Subscriber {
 	return &Subscriber{
 		Cmd:     cmd,
@@ -80,6 +89,10 @@ type Transformer struct {
 
 func (cmd *Transformer) GetID() string {
 	return cmd.ID
+}
+
+func (cmd *Transformer) GetCmd() uint8 {
+	return cmd.Cmd
 }
 
 func NewTransformer(cmd uint8, id, route, channel, address string) *Transformer {

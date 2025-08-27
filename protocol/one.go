@@ -5,7 +5,6 @@ import (
 	"io"
 	"mycelia/commands"
 	"mycelia/global"
-	"mycelia/str"
 )
 
 // -----------------------------------------------------------------------------
@@ -83,22 +82,19 @@ func parseSubscriberMessage(r io.Reader, msg *Message) (commands.Command, error)
 	if err != nil {
 		return nil, ParseCommandErr
 	}
-	switch msg.CmdType {
-	case global.CMD_ADD:
-		cmd := commands.NewSubscriber(
-			msg.CmdType,
-			msg.UID,
-			msg.Route,
-			msg.Channel,
-			msg.Address,
-		)
-		return cmd, nil
-	case global.CMD_REMOVE:
-		str.WarningPrint("SUBSCRIBER CMD_REMOVE not yet implemented")
-		return nil, ParseCommandErr
-	default:
+	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
 		return nil, ParseCommandErr
 	}
+
+	cmd := commands.NewSubscriber(
+		msg.CmdType,
+		msg.UID,
+		msg.Route,
+		msg.Channel,
+		msg.Address,
+	)
+
+	return cmd, nil
 }
 
 func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error) {
@@ -106,22 +102,19 @@ func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error
 	if err != nil {
 		return nil, ParseCommandErr
 	}
-	switch msg.CmdType {
-	case global.CMD_ADD:
-		cmd := commands.NewTransformer(
-			msg.CmdType,
-			msg.UID,
-			msg.Route,
-			msg.Channel,
-			msg.Address,
-		)
-		return cmd, nil
-	case global.CMD_REMOVE:
-		str.WarningPrint("TRANSFORMER CMD_REMOVE not yet implemented")
-		return nil, ParseCommandErr
-	default:
+	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
 		return nil, ParseCommandErr
 	}
+
+	cmd := commands.NewTransformer(
+		msg.CmdType,
+		msg.UID,
+		msg.Route,
+		msg.Channel,
+		msg.Address,
+	)
+
+	return cmd, nil
 }
 
 func parseRoutedMessage(r io.Reader, msg *Message) (*Message, error) {

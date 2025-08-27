@@ -10,6 +10,7 @@ import (
 
 	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/global"
 	"mycelia/protocol"
 	"mycelia/str"
 )
@@ -137,12 +138,22 @@ func (b *Broker) Route(name string) *Route {
 	r, ok := b.routes[name]
 	if !ok {
 		r = &Route{
+			broker:   b,
 			name:     name,
 			channels: map[string]*Channel{},
 		}
 		b.routes[name] = r
 	}
 	return r
+}
+
+func (b *Broker) removeEmptyRoute(name string) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	_, exists := b.routes[name]
+	if exists {
+		delete(b.routes, name)
+	}
 }
 
 // Handles the raw byte form of a command, hot off a socket, converts it to a
@@ -167,23 +178,49 @@ func (b *Broker) HandleBytes(input []byte) {
 // Handles the command object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleCommand(cmd commands.Command) error {
-	// TODO: Switch on command type
 	switch t := cmd.(type) {
 	case *commands.Delivery:
-		b.Route(t.Route).ProcessDelivery(t)
-	case *commands.Subscriber:
-		subscriber := NewSubscriber(t.Address)
-		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
-		b.PrintBrokerStructure()
+		b.handleDelivery(t)
 	case *commands.Transformer:
-		transformer := NewTransformer(t.Address)
-		b.Route(t.Route).Channel(t.Channel).AddTransformer(*transformer)
-		b.PrintBrokerStructure()
+		b.handleTransformer(t)
+	case *commands.Subscriber:
+		b.handleSubscriber(t)
 	default:
 		return errors.New("Unknown command type")
 	}
 
 	return nil
+}
+
+func (b *Broker) handleDelivery(cmd *commands.Delivery) {
+	switch cmd.Cmd {
+	case global.CMD_SEND:
+		b.Route(cmd.Route).ProcessDelivery(cmd)
+	}
+}
+
+func (b *Broker) handleTransformer(cmd *commands.Transformer) {
+	switch cmd.Cmd {
+	case global.CMD_ADD:
+		transformer := NewTransformer(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).AddTransformer(*transformer)
+	case global.CMD_REMOVE:
+		transformer := NewTransformer(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).RemoveTransformer(*transformer)
+	}
+	b.PrintBrokerStructure()
+}
+
+func (b *Broker) handleSubscriber(cmd *commands.Subscriber) {
+	switch cmd.Cmd {
+	case global.CMD_ADD:
+		subscriber := NewSubscriber(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).AddSubscriber(*subscriber)
+	case global.CMD_REMOVE:
+		subscriber := NewSubscriber(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).RemoveSubscriber(*subscriber)
+	}
+	b.PrintBrokerStructure()
 }
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
@@ -231,6 +268,7 @@ func (b *Broker) PrintBrokerStructure() {
 // When a delivery is sent through a channel and possibly transformed, the newly
 // transformed delivery is sent to the next channel in the route.
 type Route struct {
+	broker   *Broker
 	mutex    sync.RWMutex
 	name     string
 	channels map[string]*Channel
@@ -244,6 +282,7 @@ func (r *Route) Channel(name string) *Channel {
 	ch, exists := r.channels[name]
 	if !exists {
 		ch = &Channel{
+			route:        r,
 			name:         name,
 			transformers: []Transformer{},
 			subscribers:  []Subscriber{},
@@ -252,6 +291,20 @@ func (r *Route) Channel(name string) *Channel {
 	}
 
 	return ch
+}
+
+func (r *Route) removeChannel(name string) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	_, exists := r.channels[name]
+	if !exists {
+		return
+	}
+	delete(r.channels, name)
+
+	if len(r.channels) == 0 {
+		r.broker.removeEmptyRoute(r.name)
+	}
 }
 
 // Sends the delivery down the route with each transformed delivery being passed
@@ -281,6 +334,7 @@ func (r *Route) ProcessDelivery(sm *commands.Delivery) {
 // transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
 // by one channel will then be sent to the next channel in a route.
 type Channel struct {
+	route        *Route
 	mutex        sync.RWMutex
 	name         string
 	transformers []Transformer
@@ -298,6 +352,21 @@ func (ch *Channel) AddTransformer(t Transformer) {
 	ch.transformers = append(ch.transformers, t)
 }
 
+func (ch *Channel) RemoveTransformer(t Transformer) {
+	ch.mutex.Lock()
+	defer ch.mutex.Unlock()
+
+	for i, transformer := range ch.transformers {
+		if t.Address == transformer.Address {
+			ch.transformers = append(
+				ch.transformers[:i], ch.transformers[i+1:]...,
+			)
+			break
+		}
+	}
+	ch.checkEmptyChannel()
+}
+
 func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
@@ -307,6 +376,25 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 		}
 	}
 	ch.subscribers = append(ch.subscribers, s)
+}
+
+func (ch *Channel) RemoveSubscriber(s Subscriber) {
+	ch.mutex.Lock()
+	defer ch.mutex.Unlock()
+
+	for i, subscriber := range ch.subscribers {
+		if s.Address == subscriber.Address {
+			ch.subscribers = append(ch.subscribers[:i], ch.subscribers[i+1:]...)
+			break
+		}
+	}
+	ch.checkEmptyChannel()
+}
+
+func (ch *Channel) checkEmptyChannel() {
+	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
+		ch.route.removeChannel(ch.name)
+	}
 }
 
 func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {

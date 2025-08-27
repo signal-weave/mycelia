@@ -157,32 +157,6 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	}
 }
 
-func TestDecodeV1_SubscriberRemove_NotImplemented(t *testing.T) {
-	uid := "u-1"
-	route := "r-1"
-	channel := "c-1"
-	address := "a-1"
-
-	var buf bytes.Buffer
-	writeU8(&buf, global.OBJ_SUBSCRIBER, t)
-	writeU8(&buf, global.CMD_REMOVE, t) // not implemented -> should error
-	writeString(&buf, uid, t)
-	writeString(&buf, route, t)
-	writeString(&buf, channel, t)
-	writeString(&buf, address, t)
-
-	cmd, err := decodeV1(buf.Bytes())
-	if err == nil {
-		t.Fatalf("expected error for SUBSCRIBER CMD_REMOVE, got nil (cmd=%T)", cmd)
-	}
-	if err != ParseCommandErr {
-		t.Fatalf("expected ParseCommandErr for SUBSCRIBER CMD_REMOVE, got %v", err)
-	}
-	if cmd != nil {
-		t.Fatalf("expected nil cmd on error, got %T", cmd)
-	}
-}
-
 func TestDecodeV1_AddTransformer_Success(t *testing.T) {
 	uid := "u-t"
 	route := "r-t"
