@@ -10,7 +10,7 @@ import (
 	"mycelia/test"
 )
 
-// TestRouting_TransformThenFanout ensures that a message sent through a route
+// TestRouting_TransformThenFanout ensures that a delivery sent through a route
 // hits all transformers in insertion order and then is delivered to all
 // subscribers with the final transformed body.
 func TestRouting_TransformThenFanout(t *testing.T) {
@@ -40,7 +40,7 @@ func TestRouting_TransformThenFanout(t *testing.T) {
 	ch.AddSubscriber(*routing.NewSubscriber(s1Addr))
 	ch.AddSubscriber(*routing.NewSubscriber(s2Addr))
 
-	// 4) Send a message through the route.
+	// 4) Send a delivery through the route.
 	msg := &commands.Delivery{
 		ID:    "test-uuid-123",
 		Route: "default",

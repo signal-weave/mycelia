@@ -10,7 +10,7 @@ import (
 
 	"mycelia/boot"
 	"mycelia/commands"
-	"mycelia/parsing"
+	"mycelia/protocol"
 	"mycelia/str"
 )
 
@@ -24,8 +24,8 @@ import (
 
 // -------Transformer-----------------------------------------------------------
 
-// Transformer intercepts messages, processes them, and returns modified
-// messages.
+// Transformer intercepts deliveries, processes them, and returns modified
+// deliveries.
 type Transformer struct {
 	Address string
 }
@@ -36,21 +36,21 @@ func NewTransformer(address string) *Transformer {
 	}
 }
 
-// TransformMessage sends the message to the transformer service and waits for
+// transformDelivery sends the delivery to the transformer service and waits for
 // response.
-func (t *Transformer) transformMessage(m *commands.Delivery) (*commands.Delivery, error) {
-	actionMsg := fmt.Sprintf("Transforming message via %s", t.Address)
+func (t *Transformer) transformDelivery(m *commands.Delivery) (*commands.Delivery, error) {
+	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
 	conn, err := net.Dial("tcp", t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
 		str.WarningPrint(wMsg)
-		return m, err // Return original message on failure
+		return m, err // Return original delivery on failure
 	}
 	defer conn.Close()
 
-	// Send the message body to transformer
+	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(m.Body))
 	if err != nil {
 		eMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
@@ -70,21 +70,21 @@ func (t *Transformer) transformMessage(m *commands.Delivery) (*commands.Delivery
 		return m, err
 	}
 
-	// Create new message with transformed body
-	transformedMessage := &commands.Delivery{
+	// Create new delivery with transformed body
+	transformedDelivery := &commands.Delivery{
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
 		Body:   buffer[:n],
 	}
 
-	return transformedMessage, nil
+	return transformedDelivery, nil
 }
 
 // -------Subscriber------------------------------------------------------------
 
 // Object representation of the client subscribed to an endpoint, ie. the
-// distributed machine that a message will be forwarded to.
+// distributed machine that a delivery will be forwarded to.
 type Subscriber struct {
 	Address string
 }
@@ -93,8 +93,8 @@ func NewSubscriber(address string) *Subscriber {
 	return &Subscriber{Address: address}
 }
 
-// Forwards the message to the client represented by the consumer object.
-func (c *Subscriber) ConsumeMessage(m *commands.Delivery) {
+// Forwards the delivery to the client represented by the consumer object.
+func (c *Subscriber) ConsumeDelivery(m *commands.Delivery) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
@@ -149,7 +149,7 @@ func (b *Broker) Route(name string) *Route {
 // command object, and forwards it to the command handler.
 func (b *Broker) HandleBytes(input []byte) {
 	// Parse byte stream -> command object.
-	cmd, err := parsing.ParseLine(input)
+	cmd, err := protocol.ParseLine(input)
 	if err != nil {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
@@ -228,8 +228,8 @@ func (b *Broker) PrintBrokerStructure() {
 // can contain transformers, routes are a way of grouping transformer
 // "categories", in the form of channels, together.
 //
-// When a message is sent through a channel and possibly transformed, the newly
-// transformed message is sent to the next channel in the route.
+// When a delivery is sent through a channel and possibly transformed, the newly
+// transformed delivery is sent to the next channel in the route.
 type Route struct {
 	mutex    sync.RWMutex
 	name     string
@@ -254,7 +254,7 @@ func (r *Route) Channel(name string) *Channel {
 	return ch
 }
 
-// Sends the message down the route with each transformed message being passed
+// Sends the delivery down the route with each transformed delivery being passed
 // on to the next channel.
 func (r *Route) ProcessDelivery(sm *commands.Delivery) {
 	r.mutex.RLock()
@@ -274,11 +274,11 @@ func (r *Route) ProcessDelivery(sm *commands.Delivery) {
 // -------Channel---------------------------------------------------------------
 
 // Channels are the subscription buckets that fill routes. A subscriber
-// specifies a route + channel to subscribe to. The channel will run a message
+// specifies a route + channel to subscribe to. The channel will run a delivery
 // through each of its transformers before forwarding it to the subscriber.
 //
 // More than one channel may exist in a route - Subscribers choose which
-// transform "checkpoint" they wish to subscribe to. i.e. a message transformed
+// transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
 // by one channel will then be sent to the next channel in a route.
 type Channel struct {
 	mutex        sync.RWMutex
@@ -316,11 +316,11 @@ func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 	transformers := slices.Clone(c.transformers)
 	c.mutex.RUnlock()
 
-	// First, run message through all transformers in order
+	// First, run delivery through all transformers in order
 	for _, transformer := range transformers {
-		transformedMsg, err := transformer.transformMessage(result)
+		transformedMsg, err := transformer.transformDelivery(result)
 		if err != nil {
-			// Log error but continue with original message
+			// Log error but continue with original delivery
 			eMsg := fmt.Sprintf(
 				"Transformer %s failed: %v", transformer.Address, err)
 			str.ErrorPrint(eMsg)
@@ -333,7 +333,7 @@ func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 	subscribers := slices.Clone(c.subscribers)
 	c.mutex.RUnlock()
 
-	// Second, run transformed message through all subscribers.
+	// Second, run transformed delivery through all subscribers.
 	// --- fan-out delivery ---
 	var wg sync.WaitGroup
 	wg.Add(len(subscribers))
@@ -344,7 +344,7 @@ func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 
 		go func() {
 			defer wg.Done()
-			s.ConsumeMessage(msg)
+			s.ConsumeDelivery(msg)
 		}()
 	}
 
