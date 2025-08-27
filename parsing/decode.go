@@ -11,6 +11,11 @@ func readU32(r io.Reader, out *uint32) error {
 	return binary.Read(r, binary.BigEndian, out)
 }
 
+func readU8(r io.Reader, out *uint8) error {
+	// endian is irrelevent for 1 byte but Read() requires it.
+	return binary.Read(r, binary.BigEndian, out)
+}
+
 func readString(r io.Reader) (string, error) {
 	n, err := readLen(r)
 	if err != nil {

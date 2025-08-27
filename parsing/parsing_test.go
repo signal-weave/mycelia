@@ -12,6 +12,13 @@ import (
 
 // -------Test helpers (writers)------------------------------------------------
 
+func wrU8(buf *bytes.Buffer, v uint8, t *testing.T) {
+	t.Helper()
+	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
+		t.Fatalf("wrU32 failed: %v", err)
+	}
+}
+
 func wrU32(buf *bytes.Buffer, v uint32, t *testing.T) {
 	t.Helper()
 	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
@@ -46,7 +53,7 @@ func wrUvarint(buf *bytes.Buffer, x uint64) {
 
 func TestParseProtoVer_OK(t *testing.T) {
 	var buf bytes.Buffer
-	wrU32(&buf, 1, t)                 // version
+	wrU8(&buf, 1, t)                    // version
 	buf.Write([]byte{0xAA, 0xBB, 0xCC}) // rest
 
 	ver, rest, err := parseProtoVer(buf.Bytes())
@@ -62,7 +69,7 @@ func TestParseProtoVer_OK(t *testing.T) {
 }
 
 func TestParseProtoVer_ShortBuffer(t *testing.T) {
-	data := []byte{0x00, 0x01, 0x02} // < 4 bytes
+	data := []byte{} // < 1 byte needed for uint8 version
 	_, _, err := parseProtoVer(data)
 	if !errors.Is(err, io.ErrUnexpectedEOF) {
 		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
@@ -79,15 +86,15 @@ func TestParseLine_V1_Success_SendMessage(t *testing.T) {
 	// Build v1 body that decodeV1 understands:
 	// [obj_type][cmd_type][uid][route][payload]
 	var body bytes.Buffer
-	wrU32(&body, OBJ_MESSAGE, t)
-	wrU32(&body, CMD_SEND, t)
+	wrU8(&body, OBJ_MESSAGE, t)
+	wrU8(&body, CMD_SEND, t)
 	wrString32(&body, uid, t)
 	wrString32(&body, route, t)
 	wrBytes32(&body, payload, t)
 
 	// Prefix with version
 	var packet bytes.Buffer
-	wrU32(&packet, 1, t)
+	wrU8(&packet, 1, t)
 	packet.Write(body.Bytes())
 
 	cmd, err := ParseLine(packet.Bytes())
@@ -98,10 +105,13 @@ func TestParseLine_V1_Success_SendMessage(t *testing.T) {
 		t.Fatalf("ParseLine returned nil command")
 	}
 
-	// We don't depend on concrete type; just ensure it's the SendMessage variant.
+	// We don't depend on concrete type;
+	// just ensure it's the SendMessage variant.
 	typeName := reflect.TypeOf(cmd).String()
 	if !strings.Contains(typeName, "SendMessage") {
-		t.Fatalf("expected command type to contain 'SendMessage', got %q", typeName)
+		t.Fatalf(
+			"expected command type to contain 'SendMessage', got %q", typeName,
+		)
 	}
 }
 

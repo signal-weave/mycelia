@@ -19,12 +19,13 @@ var ParseCommandErr = errors.New("unable to parse command")
 
 // parseProtoVer extracts only the protocol version and returns it along with
 // a slice that starts at the next byte (i.e., the remainder of the message).
-func parseProtoVer(data []byte) (uint32, []byte, error) {
-	if len(data) < 4 {
+func parseProtoVer(data []byte) (uint8, []byte, error) {
+	const u8len = 1
+	if len(data) < u8len {
 		return 0, nil, io.ErrUnexpectedEOF
 	}
-	ver := binary.BigEndian.Uint32(data[:4])
-	return ver, data[4:], nil
+	ver := data[0]
+	return ver, data[u8len:], nil
 }
 
 func ParseLine(line []byte) (commands.Command, error) {
