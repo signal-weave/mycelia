@@ -10,7 +10,8 @@ import (
 
 	"mycelia/boot"
 	"mycelia/commands"
-	"mycelia/parsing"
+	"mycelia/global"
+	"mycelia/protocol"
 	"mycelia/str"
 )
 
@@ -24,8 +25,8 @@ import (
 
 // -------Transformer-----------------------------------------------------------
 
-// Transformer intercepts messages, processes them, and returns modified
-// messages.
+// Transformer intercepts deliveries, processes them, and returns modified
+// deliveries.
 type Transformer struct {
 	Address string
 }
@@ -36,21 +37,21 @@ func NewTransformer(address string) *Transformer {
 	}
 }
 
-// TransformMessage sends the message to the transformer service and waits for
+// transformDelivery sends the delivery to the transformer service and waits for
 // response.
-func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendMessage, error) {
-	actionMsg := fmt.Sprintf("Transforming message via %s", t.Address)
+func (t *Transformer) transformDelivery(m *commands.Delivery) (*commands.Delivery, error) {
+	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
 	conn, err := net.Dial("tcp", t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
 		str.WarningPrint(wMsg)
-		return m, err // Return original message on failure
+		return m, err // Return original delivery on failure
 	}
 	defer conn.Close()
 
-	// Send the message body to transformer
+	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(m.Body))
 	if err != nil {
 		eMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
@@ -70,21 +71,21 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 		return m, err
 	}
 
-	// Create new message with transformed body
-	transformedMessage := &commands.SendMessage{
+	// Create new delivery with transformed body
+	transformedDelivery := &commands.Delivery{
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
 		Body:   buffer[:n],
 	}
 
-	return transformedMessage, nil
+	return transformedDelivery, nil
 }
 
 // -------Subscriber------------------------------------------------------------
 
 // Object representation of the client subscribed to an endpoint, ie. the
-// distributed machine that a message will be forwarded to.
+// distributed machine that a delivery will be forwarded to.
 type Subscriber struct {
 	Address string
 }
@@ -93,8 +94,8 @@ func NewSubscriber(address string) *Subscriber {
 	return &Subscriber{Address: address}
 }
 
-// Forwards the message to the client represented by the consumer object.
-func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
+// Forwards the delivery to the client represented by the consumer object.
+func (c *Subscriber) ConsumeDelivery(m *commands.Delivery) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
@@ -137,6 +138,7 @@ func (b *Broker) Route(name string) *Route {
 	r, ok := b.routes[name]
 	if !ok {
 		r = &Route{
+			broker:   b,
 			name:     name,
 			channels: map[string]*Channel{},
 		}
@@ -145,11 +147,20 @@ func (b *Broker) Route(name string) *Route {
 	return r
 }
 
+func (b *Broker) removeEmptyRoute(name string) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	_, exists := b.routes[name]
+	if exists {
+		delete(b.routes, name)
+	}
+}
+
 // Handles the raw byte form of a command, hot off a socket, converts it to a
 // command object, and forwards it to the command handler.
 func (b *Broker) HandleBytes(input []byte) {
 	// Parse byte stream -> command object.
-	cmd, err := parsing.ParseLine(input)
+	cmd, err := protocol.ParseLine(input)
 	if err != nil {
 		wMsg := "Error parsing command..."
 		str.WarningPrint(wMsg)
@@ -168,21 +179,48 @@ func (b *Broker) HandleBytes(input []byte) {
 // Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleCommand(cmd commands.Command) error {
 	switch t := cmd.(type) {
-	case *commands.SendMessage:
-		b.Route(t.Route).ProcessMessage(t)
-	case *commands.AddSubscriber:
-		subscriber := NewSubscriber(t.Address)
-		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
-		b.PrintBrokerStructure()
-	case *commands.AddTransformer:
-		transformer := NewTransformer(t.Address)
-		b.Route(t.Route).Channel(t.Channel).AddTransformer(*transformer)
-		b.PrintBrokerStructure()
+	case *commands.Delivery:
+		b.handleDelivery(t)
+	case *commands.Transformer:
+		b.handleTransformer(t)
+	case *commands.Subscriber:
+		b.handleSubscriber(t)
 	default:
 		return errors.New("Unknown command type")
 	}
 
 	return nil
+}
+
+func (b *Broker) handleDelivery(cmd *commands.Delivery) {
+	switch cmd.Cmd {
+	case global.CMD_SEND:
+		b.Route(cmd.Route).ProcessDelivery(cmd)
+	}
+}
+
+func (b *Broker) handleTransformer(cmd *commands.Transformer) {
+	switch cmd.Cmd {
+	case global.CMD_ADD:
+		transformer := NewTransformer(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).AddTransformer(*transformer)
+	case global.CMD_REMOVE:
+		transformer := NewTransformer(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).RemoveTransformer(*transformer)
+	}
+	b.PrintBrokerStructure()
+}
+
+func (b *Broker) handleSubscriber(cmd *commands.Subscriber) {
+	switch cmd.Cmd {
+	case global.CMD_ADD:
+		subscriber := NewSubscriber(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).AddSubscriber(*subscriber)
+	case global.CMD_REMOVE:
+		subscriber := NewSubscriber(cmd.Address)
+		b.Route(cmd.Route).Channel(cmd.Channel).RemoveSubscriber(*subscriber)
+	}
+	b.PrintBrokerStructure()
 }
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
@@ -227,9 +265,10 @@ func (b *Broker) PrintBrokerStructure() {
 // can contain transformers, routes are a way of grouping transformer
 // "categories", in the form of channels, together.
 //
-// When a message is sent through a channel and possibly transformed, the newly
-// transformed message is sent to the next channel in the route.
+// When a delivery is sent through a channel and possibly transformed, the newly
+// transformed delivery is sent to the next channel in the route.
 type Route struct {
+	broker   *Broker
 	mutex    sync.RWMutex
 	name     string
 	channels map[string]*Channel
@@ -243,6 +282,7 @@ func (r *Route) Channel(name string) *Channel {
 	ch, exists := r.channels[name]
 	if !exists {
 		ch = &Channel{
+			route:        r,
 			name:         name,
 			transformers: []Transformer{},
 			subscribers:  []Subscriber{},
@@ -253,9 +293,23 @@ func (r *Route) Channel(name string) *Channel {
 	return ch
 }
 
-// Sends the message down the route with each transformed message being passed
+func (r *Route) removeChannel(name string) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	_, exists := r.channels[name]
+	if !exists {
+		return
+	}
+	delete(r.channels, name)
+
+	if len(r.channels) == 0 {
+		r.broker.removeEmptyRoute(r.name)
+	}
+}
+
+// Sends the delivery down the route with each transformed delivery being passed
 // on to the next channel.
-func (r *Route) ProcessMessage(sm *commands.SendMessage) {
+func (r *Route) ProcessDelivery(sm *commands.Delivery) {
 	r.mutex.RLock()
 	// copy map for minimal mutex lock time
 	channels := make([]*Channel, 0, len(r.channels))
@@ -266,20 +320,21 @@ func (r *Route) ProcessMessage(sm *commands.SendMessage) {
 
 	cur := sm
 	for _, ch := range channels {
-		cur = ch.ProcessMessage(cur)
+		cur = ch.ProcessDelivery(cur)
 	}
 }
 
 // -------Channel---------------------------------------------------------------
 
 // Channels are the subscription buckets that fill routes. A subscriber
-// specifies a route + channel to subscribe to. The channel will run a message
+// specifies a route + channel to subscribe to. The channel will run a delivery
 // through each of its transformers before forwarding it to the subscriber.
 //
 // More than one channel may exist in a route - Subscribers choose which
-// transform "checkpoint" they wish to subscribe to. i.e. a message transformed
+// transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
 // by one channel will then be sent to the next channel in a route.
 type Channel struct {
+	route        *Route
 	mutex        sync.RWMutex
 	name         string
 	transformers []Transformer
@@ -297,6 +352,21 @@ func (ch *Channel) AddTransformer(t Transformer) {
 	ch.transformers = append(ch.transformers, t)
 }
 
+func (ch *Channel) RemoveTransformer(t Transformer) {
+	ch.mutex.Lock()
+	defer ch.mutex.Unlock()
+
+	for i, transformer := range ch.transformers {
+		if t.Address == transformer.Address {
+			ch.transformers = append(
+				ch.transformers[:i], ch.transformers[i+1:]...,
+			)
+			break
+		}
+	}
+	ch.checkEmptyChannel()
+}
+
 func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
@@ -308,18 +378,37 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.subscribers = append(ch.subscribers, s)
 }
 
-func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage {
+func (ch *Channel) RemoveSubscriber(s Subscriber) {
+	ch.mutex.Lock()
+	defer ch.mutex.Unlock()
+
+	for i, subscriber := range ch.subscribers {
+		if s.Address == subscriber.Address {
+			ch.subscribers = append(ch.subscribers[:i], ch.subscribers[i+1:]...)
+			break
+		}
+	}
+	ch.checkEmptyChannel()
+}
+
+func (ch *Channel) checkEmptyChannel() {
+	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
+		ch.route.removeChannel(ch.name)
+	}
+}
+
+func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 	result := m
 
 	c.mutex.RLock() // Copy transform slice for minimal mutex lock time
 	transformers := slices.Clone(c.transformers)
 	c.mutex.RUnlock()
 
-	// First, run message through all transformers in order
+	// First, run delivery through all transformers in order
 	for _, transformer := range transformers {
-		transformedMsg, err := transformer.transformMessage(result)
+		transformedMsg, err := transformer.transformDelivery(result)
 		if err != nil {
-			// Log error but continue with original message
+			// Log error but continue with original delivery
 			eMsg := fmt.Sprintf(
 				"Transformer %s failed: %v", transformer.Address, err)
 			str.ErrorPrint(eMsg)
@@ -332,7 +421,7 @@ func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage 
 	subscribers := slices.Clone(c.subscribers)
 	c.mutex.RUnlock()
 
-	// Second, run transformed message through all subscribers.
+	// Second, run transformed delivery through all subscribers.
 	// --- fan-out delivery ---
 	var wg sync.WaitGroup
 	wg.Add(len(subscribers))
@@ -343,7 +432,7 @@ func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage 
 
 		go func() {
 			defer wg.Done()
-			s.ConsumeMessage(msg)
+			s.ConsumeDelivery(msg)
 		}()
 	}
 

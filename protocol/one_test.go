@@ -1,4 +1,4 @@
-package parsing
+package protocol
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"mycelia/global"
 )
 
 // Helpers to build length-prefixed (uint32 big-endian) strings/bytes.
@@ -54,8 +56,8 @@ func TestDecodeV1_SendMessage_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Header: obj_type, cmd_type, uid, route
-	writeU8(&buf, OBJ_MESSAGE, t)
-	writeU8(&buf, CMD_SEND, t)
+	writeU8(&buf, global.OBJ_DELIVERY, t)
+	writeU8(&buf, global.CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	// Body: payload
@@ -71,8 +73,8 @@ func TestDecodeV1_SendMessage_Success(t *testing.T) {
 
 	tn := typeName(cmd)
 	// Be flexible in case the exact package/type name differs slightly.
-	if !strings.Contains(tn, "SendMessage") {
-		t.Fatalf("expected command type to contain 'SendMessage', got %q", tn)
+	if !strings.Contains(tn, "Delivery") {
+		t.Fatalf("expected command type to contain 'Delivery', got %q", tn)
 	}
 }
 
@@ -84,8 +86,8 @@ func TestDecodeV1_AddSubscriber_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Header: obj_type, cmd_type, uid, route
-	writeU8(&buf, OBJ_SUBSCRIBER, t)
-	writeU8(&buf, CMD_ADD, t)
+	writeU8(&buf, global.OBJ_SUBSCRIBER, t)
+	writeU8(&buf, global.CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	// Body: channel, address
@@ -101,8 +103,8 @@ func TestDecodeV1_AddSubscriber_Success(t *testing.T) {
 	}
 
 	tn := typeName(cmd)
-	if !strings.Contains(tn, "AddSubscriber") && !strings.Contains(tn, "Subscriber") {
-		t.Fatalf("expected command type to contain 'AddSubscriber' or 'Subscriber', got %q", tn)
+	if !strings.Contains(tn, "Subscriber") {
+		t.Fatalf("expected command type to contain 'Subscriber', got %q", tn)
 	}
 }
 
@@ -112,7 +114,7 @@ func TestDecodeV1_UnknownObjType_Error(t *testing.T) {
 
 	var buf bytes.Buffer
 	writeU32(&buf, 99, t) // unknown obj_type
-	writeU8(&buf, CMD_ADD, t)
+	writeU8(&buf, global.CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 
@@ -134,8 +136,8 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	payload := []byte{0x01, 0x02, 0x03}
 
 	var buf bytes.Buffer
-	writeU8(&buf, OBJ_MESSAGE, t)
-	writeU8(&buf, CMD_SEND, t)
+	writeU8(&buf, global.OBJ_DELIVERY, t)
+	writeU8(&buf, global.CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	writeBytes(&buf, payload, t)
@@ -155,32 +157,6 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	}
 }
 
-func TestDecodeV1_SubscriberRemove_NotImplemented(t *testing.T) {
-	uid := "u-1"
-	route := "r-1"
-	channel := "c-1"
-	address := "a-1"
-
-	var buf bytes.Buffer
-	writeU8(&buf, OBJ_SUBSCRIBER, t)
-	writeU8(&buf, CMD_REMOVE, t) // not implemented -> should error
-	writeString(&buf, uid, t)
-	writeString(&buf, route, t)
-	writeString(&buf, channel, t)
-	writeString(&buf, address, t)
-
-	cmd, err := decodeV1(buf.Bytes())
-	if err == nil {
-		t.Fatalf("expected error for SUBSCRIBER CMD_REMOVE, got nil (cmd=%T)", cmd)
-	}
-	if err != ParseCommandErr {
-		t.Fatalf("expected ParseCommandErr for SUBSCRIBER CMD_REMOVE, got %v", err)
-	}
-	if cmd != nil {
-		t.Fatalf("expected nil cmd on error, got %T", cmd)
-	}
-}
-
 func TestDecodeV1_AddTransformer_Success(t *testing.T) {
 	uid := "u-t"
 	route := "r-t"
@@ -188,8 +164,8 @@ func TestDecodeV1_AddTransformer_Success(t *testing.T) {
 	address := "addr-t"
 
 	var buf bytes.Buffer
-	writeU8(&buf, OBJ_TRANSFORMER, t)
-	writeU8(&buf, CMD_ADD, t)
+	writeU8(&buf, global.OBJ_TRANSFORMER, t)
+	writeU8(&buf, global.CMD_ADD, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
 	writeString(&buf, channel, t)
@@ -202,7 +178,7 @@ func TestDecodeV1_AddTransformer_Success(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("decodeV1 returned nil command")
 	}
-	if !strings.Contains(typeName(cmd), "AddTransformer") {
+	if !strings.Contains(typeName(cmd), "Transformer") {
 		t.Fatalf("expected transformer add command, got %T", cmd)
 	}
 }

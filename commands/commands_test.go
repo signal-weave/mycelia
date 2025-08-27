@@ -13,46 +13,46 @@ func TestStatusConstants(t *testing.T) {
 	if StatusCreated != 0 {
 		t.Errorf("StatusCreated expected 0, got %d", StatusCreated)
 	}
-	if StatusPending != 1 {
-		t.Errorf("StatusPending expected 1, got %d", StatusPending)
-	}
-	if StatusResolved != 2 {
+	if StatusResolved != 1 {
 		t.Errorf("StatusResolved expected 2, got %d", StatusResolved)
 	}
-	if StatusInvalid != 3 {
+	if StatusInvalid != 2 {
 		t.Errorf("StatusInvalid expected 3, got %d", StatusInvalid)
 	}
 }
 
-func TestSendMessageStruct(t *testing.T) {
-	msg := SendMessage{
+func TestDeliveryStruct(t *testing.T) {
+	msg := Delivery{
+		Cmd:    uint8(1),
 		ID:     "123",
 		Route:  "main",
 		Status: StatusCreated,
 		Body:   []byte("Hello!"),
 	}
 
-	if msg.ID != "123" || msg.Route != "main" || msg.Status != StatusCreated ||
-		!bytes.Equal(msg.Body, []byte("Hello!")) {
-		t.Errorf("SendMessage fields not assigned correctly: %+v", msg)
+	if msg.Cmd != uint8(1) || msg.ID != "123" || msg.Route != "main" ||
+		msg.Status != StatusCreated || !bytes.Equal(msg.Body, []byte("Hello!")) {
+		t.Errorf("Delivery fields not assigned correctly: %+v", msg)
 	}
 }
 
-func TestAddSubscriberStruct(t *testing.T) {
-	sub := AddSubscriber{
+func TestSubscriberStruct(t *testing.T) {
+	sub := Subscriber{
+		Cmd:     uint8(2),
 		ID:      "sub-1",
 		Route:   "main",
 		Channel: "ch-1",
 		Address: "127.0.0.1:9000",
 	}
-	if sub.ID != "sub-1" || sub.Route != "main" || sub.Channel != "ch-1" ||
-		sub.Address != "127.0.0.1:9000" {
-		t.Errorf("AddSubscriber fields not assigned correctly: %+v", sub)
+	if sub.Cmd != uint8(2) || sub.ID != "sub-1" || sub.Route != "main" ||
+		sub.Channel != "ch-1" || sub.Address != "127.0.0.1:9000" {
+		t.Errorf("Subscriber fields not assigned correctly: %+v", sub)
 	}
 }
 
-func TestSendMessageJSONTag(t *testing.T) {
-	msg := SendMessage{
+func TestMessageJSONTag(t *testing.T) {
+	msg := Delivery{
+		Cmd:    uint8(1),
 		ID:     "id1",
 		Route:  "route1",
 		Status: StatusResolved,
@@ -68,6 +68,7 @@ func TestSendMessageJSONTag(t *testing.T) {
 	encodedBody := base64.StdEncoding.EncodeToString(msg.Body)
 
 	expectedFields := []string{
+		`"cmd":1`,
 		`"id":"id1"`,
 		`"route":"route1"`,
 		fmt.Sprintf(`"status":%d`, int(StatusResolved)),
@@ -79,10 +80,4 @@ func TestSendMessageJSONTag(t *testing.T) {
 			t.Errorf("Expected JSON to contain: %s\nGot: %s", field, jsonStr)
 		}
 	}
-}
-
-// Helper
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		len(s) > 0 && (s[0:len(substr)] == substr || contains(s[1:], substr)))
 }

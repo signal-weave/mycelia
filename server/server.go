@@ -71,7 +71,8 @@ func (server *Server) handleConnection(conn net.Conn) {
 // Read the frame's byte stream until the message header's worth of bytes have
 // been consumed, then return a buffer of those bytes or error.
 func readFrame(conn net.Conn) ([]byte, error) {
-	var hdr [4]byte
+	const lenU32 = 4
+	var hdr [lenU32]byte
 	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
 		return nil, err
 	}

@@ -1,27 +1,15 @@
-package parsing
+package protocol
 
 import (
 	"bytes"
 	"io"
 	"mycelia/commands"
-	"mycelia/str"
+	"mycelia/global"
 )
 
 // -----------------------------------------------------------------------------
 // Version 1 command decoding.
 // -----------------------------------------------------------------------------
-
-const (
-	OBJ_MESSAGE     uint8 = 1
-	OBJ_TRANSFORMER uint8 = 2
-	OBJ_SUBSCRIBER  uint8 = 3
-)
-
-const (
-	CMD_SEND   uint8 = 1
-	CMD_ADD    uint8 = 2
-	CMD_REMOVE uint8 = 3
-)
 
 type Message struct {
 	ObjType uint8
@@ -46,11 +34,11 @@ func decodeV1(data []byte) (commands.Command, error) {
 	var cmd commands.Command
 
 	switch msg.ObjType {
-	case OBJ_TRANSFORMER:
+	case global.OBJ_TRANSFORMER:
 		cmd, err = parseTransformerMessage(r, msg)
-	case OBJ_SUBSCRIBER:
+	case global.OBJ_SUBSCRIBER:
 		cmd, err = parseSubscriberMessage(r, msg)
-	case OBJ_MESSAGE:
+	case global.OBJ_DELIVERY:
 		cmd, err = parseSendMessage(r, msg)
 	default:
 		cmd, err = nil, ParseCommandErr
@@ -94,21 +82,19 @@ func parseSubscriberMessage(r io.Reader, msg *Message) (commands.Command, error)
 	if err != nil {
 		return nil, ParseCommandErr
 	}
-	switch msg.CmdType {
-	case CMD_ADD:
-		cmd := commands.NewAddSubscriber(
-			msg.UID,
-			msg.Route,
-			msg.Channel,
-			msg.Address,
-		)
-		return cmd, nil
-	case CMD_REMOVE:
-		str.WarningPrint("SUBSCRIBER CMD_REMOVE not yet implemented")
-		return nil, ParseCommandErr
-	default:
+	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
 		return nil, ParseCommandErr
 	}
+
+	cmd := commands.NewSubscriber(
+		msg.CmdType,
+		msg.UID,
+		msg.Route,
+		msg.Channel,
+		msg.Address,
+	)
+
+	return cmd, nil
 }
 
 func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error) {
@@ -116,21 +102,19 @@ func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error
 	if err != nil {
 		return nil, ParseCommandErr
 	}
-	switch msg.CmdType {
-	case CMD_ADD:
-		cmd := commands.NewAddTransformer(
-			msg.UID,
-			msg.Route,
-			msg.Channel,
-			msg.Address,
-		)
-		return cmd, nil
-	case CMD_REMOVE:
-		str.WarningPrint("TRANSFORMER CMD_REMOVE not yet implemented")
-		return nil, ParseCommandErr
-	default:
+	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
 		return nil, ParseCommandErr
 	}
+
+	cmd := commands.NewTransformer(
+		msg.CmdType,
+		msg.UID,
+		msg.Route,
+		msg.Channel,
+		msg.Address,
+	)
+
+	return cmd, nil
 }
 
 func parseRoutedMessage(r io.Reader, msg *Message) (*Message, error) {
@@ -159,8 +143,12 @@ func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 	} else {
 		msg.Payload = payload
 	}
+	if msg.CmdType != uint8(1) {
+		return nil, ParseCommandErr
+	}
 
-	cmd := commands.NewSendMessage(
+	cmd := commands.NewDelivery(
+		msg.CmdType,
 		msg.UID,
 		msg.Route,
 		msg.Payload,

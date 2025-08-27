@@ -87,17 +87,17 @@ func TestParseRouteCmds_AppendsTransformerAndSubscriberCommands(t *testing.T) {
 	var nXforms, nSubs int
 	for _, cmd := range CommandList {
 		switch cmd.(type) {
-		case *commands.AddTransformer:
+		case *commands.Transformer:
 			nXforms++
-		case *commands.AddSubscriber:
+		case *commands.Subscriber:
 			nSubs++
 		}
 	}
 
 	if nXforms != 2 {
-		t.Fatalf("AddTransformer count = %d, want %d", nXforms, 2)
+		t.Fatalf("Transformer count = %d, want %d", nXforms, 2)
 	}
 	if nSubs != 2 {
-		t.Fatalf("AddSubscriber count = %d, want %d", nSubs, 2)
+		t.Fatalf("Subscriber count = %d, want %d", nSubs, 2)
 	}
 }
