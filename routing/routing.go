@@ -38,7 +38,7 @@ func NewTransformer(address string) *Transformer {
 
 // TransformMessage sends the message to the transformer service and waits for
 // response.
-func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendMessage, error) {
+func (t *Transformer) transformMessage(m *commands.Message) (*commands.Message, error) {
 	actionMsg := fmt.Sprintf("Transforming message via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
@@ -71,7 +71,7 @@ func (t *Transformer) transformMessage(m *commands.SendMessage) (*commands.SendM
 	}
 
 	// Create new message with transformed body
-	transformedMessage := &commands.SendMessage{
+	transformedMessage := &commands.Message{
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
@@ -94,7 +94,7 @@ func NewSubscriber(address string) *Subscriber {
 }
 
 // Forwards the message to the client represented by the consumer object.
-func (c *Subscriber) ConsumeMessage(m *commands.SendMessage) {
+func (c *Subscriber) ConsumeMessage(m *commands.Message) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
@@ -167,14 +167,15 @@ func (b *Broker) HandleBytes(input []byte) {
 // Handles the command object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleCommand(cmd commands.Command) error {
+	// TODO: Switch on command type
 	switch t := cmd.(type) {
-	case *commands.SendMessage:
+	case *commands.Message:
 		b.Route(t.Route).ProcessMessage(t)
-	case *commands.AddSubscriber:
+	case *commands.Subscriber:
 		subscriber := NewSubscriber(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
 		b.PrintBrokerStructure()
-	case *commands.AddTransformer:
+	case *commands.Transformer:
 		transformer := NewTransformer(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddTransformer(*transformer)
 		b.PrintBrokerStructure()
@@ -255,7 +256,7 @@ func (r *Route) Channel(name string) *Channel {
 
 // Sends the message down the route with each transformed message being passed
 // on to the next channel.
-func (r *Route) ProcessMessage(sm *commands.SendMessage) {
+func (r *Route) ProcessMessage(sm *commands.Message) {
 	r.mutex.RLock()
 	// copy map for minimal mutex lock time
 	channels := make([]*Channel, 0, len(r.channels))
@@ -308,7 +309,7 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.subscribers = append(ch.subscribers, s)
 }
 
-func (c *Channel) ProcessMessage(m *commands.SendMessage) *commands.SendMessage {
+func (c *Channel) ProcessMessage(m *commands.Message) *commands.Message {
 	result := m
 
 	c.mutex.RLock() // Copy transform slice for minimal mutex lock time

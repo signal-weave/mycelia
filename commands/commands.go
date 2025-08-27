@@ -4,14 +4,9 @@ package commands
 type Status int
 
 const (
-	// The initial status of a valid message.
-	StatusCreated = iota
-	// When a message is waiting in queue to be sent to next consumer.
-	StatusPending
-	// Message has been consumed.
-	StatusResolved
-	// A message whose source string could not be properly decoded.
-	StatusInvalid
+	StatusCreated  = iota // The initial status of a valid message.
+	StatusResolved        // Message has been consumed.
+	StatusInvalid         // A msg whose fields couldn't properly be decoded.
 )
 
 type Command interface {
@@ -22,19 +17,21 @@ type Command interface {
 
 // The Message itself with fields from the incoming tcp stream and various
 // Mycelia used fields.
-type SendMessage struct {
+type Message struct {
+	Cmd    uint8  `json:"cmd"`
 	ID     string `json:"id"` // Should be some form of UUID.
 	Route  string `json:"route"`
 	Status Status `json:"status"`
 	Body   []byte `json:"body"` // The primary payload to send to the consumer.
 }
 
-func (cmd *SendMessage) GetID() string {
+func (cmd *Message) GetID() string {
 	return cmd.ID
 }
 
-func NewSendMessage(id, route string, body []byte) *SendMessage {
-	return &SendMessage{
+func NewMessage(cmd uint8, id, route string, body []byte) *Message {
+	return &Message{
+		Cmd:    cmd,
 		ID:     id,
 		Route:  route,
 		Status: StatusCreated,
@@ -47,19 +44,21 @@ func NewSendMessage(id, route string, body []byte) *SendMessage {
 // A subscriber is a message that informs the system of a client that wishes
 // to have all messages traveling along a route forwarded to it.
 // From there a Consumer is made and registered to the end channel of a route.
-type AddSubscriber struct {
+type Subscriber struct {
+	Cmd     uint8  `json:"cmd"`     // What to do once this object hits a chnl.
 	ID      string `json:"id"`      // Should be some form of UUID.
 	Route   string `json:"route"`   // Which route to subscribe to.
 	Channel string `json:"channel"` // Which chnl on the route to subscribe to.
 	Address string `json:"address"` // Where to forward the message.
 }
 
-func (cmd *AddSubscriber) GetID() string {
+func (cmd *Subscriber) GetID() string {
 	return cmd.ID
 }
 
-func NewAddSubscriber(id, route, channel, address string) *AddSubscriber {
-	return &AddSubscriber{
+func NewSubscriber(cmd uint8, id, route, channel, address string) *Subscriber {
+	return &Subscriber{
+		Cmd:     cmd,
 		ID:      id,
 		Route:   route,
 		Channel: channel,
@@ -71,19 +70,21 @@ func NewAddSubscriber(id, route, channel, address string) *AddSubscriber {
 
 // Command to add a transformer to a channel. Transformers intercept and modify
 // messages before they reach subscribers.
-type AddTransformer struct {
+type Transformer struct {
+	Cmd     uint8  `json:"cmd"`     // What to do once this object hits a chnl.
 	ID      string `json:"id"`      // Should be some form of UUID.
 	Route   string `json:"route"`   // Which route the channel belongs to.
 	Channel string `json:"channel"` // Which channel to add transformer to.
 	Address string `json:"address"` // Where to send message for transformation.
 }
 
-func (cmd *AddTransformer) GetID() string {
+func (cmd *Transformer) GetID() string {
 	return cmd.ID
 }
 
-func NewAddTransformer(id, route, channel, address string) *AddTransformer {
-	return &AddTransformer{
+func NewTransformer(cmd uint8, id, route, channel, address string) *Transformer {
+	return &Transformer{
+		Cmd:     cmd,
 		ID:      id,
 		Route:   route,
 		Channel: channel,

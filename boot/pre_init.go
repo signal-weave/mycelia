@@ -9,6 +9,7 @@ import (
 
 	"mycelia/commands"
 	"mycelia/errgo"
+	"mycelia/global"
 	"mycelia/str"
 
 	"github.com/google/uuid"
@@ -180,8 +181,8 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := transformer["address"].(string)
-				cmd := commands.NewAddTransformer(
-					id, routeName, channelName, addr,
+				cmd := commands.NewTransformer(
+					global.CMD_ADD, id, routeName, channelName, addr,
 				)
 				CommandList = append(CommandList, cmd)
 			}
@@ -194,8 +195,8 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := subscriber["address"].(string)
-				cmd := commands.NewAddSubscriber(
-					id, routeName, channelName, addr,
+				cmd := commands.NewSubscriber(
+					global.CMD_ADD, id, routeName, channelName, addr,
 				)
 				CommandList = append(CommandList, cmd)
 			}
