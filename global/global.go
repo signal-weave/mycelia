@@ -1,9 +1,14 @@
 package global
 
+// -----------------------------------------------------------------------------
+// Shared, or "global", constants that are referenced between packages.
+// This is not meant to contain mutable values.
+// -----------------------------------------------------------------------------
+
 // -------Commands--------------------------------------------------------------
 
 const (
-	OBJ_MESSAGE     uint8 = 1
+	OBJ_DELIVERY    uint8 = 1
 	OBJ_TRANSFORMER uint8 = 2
 	OBJ_SUBSCRIBER  uint8 = 3
 )

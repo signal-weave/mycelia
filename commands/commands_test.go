@@ -21,8 +21,8 @@ func TestStatusConstants(t *testing.T) {
 	}
 }
 
-func TestMessageStruct(t *testing.T) {
-	msg := Message{
+func TestDeliveryStruct(t *testing.T) {
+	msg := Delivery{
 		Cmd:    uint8(1),
 		ID:     "123",
 		Route:  "main",
@@ -32,7 +32,7 @@ func TestMessageStruct(t *testing.T) {
 
 	if msg.Cmd != uint8(1) || msg.ID != "123" || msg.Route != "main" ||
 		msg.Status != StatusCreated || !bytes.Equal(msg.Body, []byte("Hello!")) {
-		t.Errorf("Message fields not assigned correctly: %+v", msg)
+		t.Errorf("Delivery fields not assigned correctly: %+v", msg)
 	}
 }
 
@@ -51,7 +51,7 @@ func TestSubscriberStruct(t *testing.T) {
 }
 
 func TestMessageJSONTag(t *testing.T) {
-	msg := Message{
+	msg := Delivery{
 		Cmd:    uint8(1),
 		ID:     "id1",
 		Route:  "route1",

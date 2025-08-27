@@ -88,7 +88,7 @@ func TestParseLine_V1_Success_SendMessage(t *testing.T) {
 	// Build v1 body that decodeV1 understands:
 	// [obj_type][cmd_type][uid][route][payload]
 	var body bytes.Buffer
-	wrU8(&body, global.OBJ_MESSAGE, t)
+	wrU8(&body, global.OBJ_DELIVERY, t)
 	wrU8(&body, global.CMD_SEND, t)
 	wrString32(&body, uid, t)
 	wrString32(&body, route, t)
@@ -110,9 +110,9 @@ func TestParseLine_V1_Success_SendMessage(t *testing.T) {
 	// We don't depend on concrete type;
 	// just ensure it's the SendMessage variant.
 	typeName := reflect.TypeOf(cmd).String()
-	if !strings.Contains(typeName, "Message") {
+	if !strings.Contains(typeName, "Delivery") {
 		t.Fatalf(
-			"expected command type to contain 'Message', got %q", typeName,
+			"expected command type to contain 'Delivery', got %q", typeName,
 		)
 	}
 }

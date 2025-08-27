@@ -15,9 +15,9 @@ type Command interface {
 
 // -----------------------------------------------------------------------------
 
-// The Message itself with fields from the incoming tcp stream and various
+// The Delivery itself with fields from the incoming tcp stream and various
 // Mycelia used fields.
-type Message struct {
+type Delivery struct {
 	Cmd    uint8  `json:"cmd"`
 	ID     string `json:"id"` // Should be some form of UUID.
 	Route  string `json:"route"`
@@ -25,12 +25,12 @@ type Message struct {
 	Body   []byte `json:"body"` // The primary payload to send to the consumer.
 }
 
-func (cmd *Message) GetID() string {
+func (cmd *Delivery) GetID() string {
 	return cmd.ID
 }
 
-func NewMessage(cmd uint8, id, route string, body []byte) *Message {
-	return &Message{
+func NewDelivery(cmd uint8, id, route string, body []byte) *Delivery {
+	return &Delivery{
 		Cmd:    cmd,
 		ID:     id,
 		Route:  route,

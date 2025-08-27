@@ -56,7 +56,7 @@ func TestDecodeV1_SendMessage_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Header: obj_type, cmd_type, uid, route
-	writeU8(&buf, global.OBJ_MESSAGE, t)
+	writeU8(&buf, global.OBJ_DELIVERY, t)
 	writeU8(&buf, global.CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)
@@ -73,8 +73,8 @@ func TestDecodeV1_SendMessage_Success(t *testing.T) {
 
 	tn := typeName(cmd)
 	// Be flexible in case the exact package/type name differs slightly.
-	if !strings.Contains(tn, "Message") {
-		t.Fatalf("expected command type to contain 'Message', got %q", tn)
+	if !strings.Contains(tn, "Delivery") {
+		t.Fatalf("expected command type to contain 'Delivery', got %q", tn)
 	}
 }
 
@@ -104,7 +104,7 @@ func TestDecodeV1_AddSubscriber_Success(t *testing.T) {
 
 	tn := typeName(cmd)
 	if !strings.Contains(tn, "Subscriber") {
-		t.Fatalf("expected command type to contain 'AddSubscriber' or 'Subscriber', got %q", tn)
+		t.Fatalf("expected command type to contain 'Subscriber', got %q", tn)
 	}
 }
 
@@ -136,7 +136,7 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	payload := []byte{0x01, 0x02, 0x03}
 
 	var buf bytes.Buffer
-	writeU8(&buf, global.OBJ_MESSAGE, t)
+	writeU8(&buf, global.OBJ_DELIVERY, t)
 	writeU8(&buf, global.CMD_SEND, t)
 	writeString(&buf, uid, t)
 	writeString(&buf, route, t)

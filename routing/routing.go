@@ -38,7 +38,7 @@ func NewTransformer(address string) *Transformer {
 
 // TransformMessage sends the message to the transformer service and waits for
 // response.
-func (t *Transformer) transformMessage(m *commands.Message) (*commands.Message, error) {
+func (t *Transformer) transformMessage(m *commands.Delivery) (*commands.Delivery, error) {
 	actionMsg := fmt.Sprintf("Transforming message via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
@@ -71,7 +71,7 @@ func (t *Transformer) transformMessage(m *commands.Message) (*commands.Message, 
 	}
 
 	// Create new message with transformed body
-	transformedMessage := &commands.Message{
+	transformedMessage := &commands.Delivery{
 		ID:     m.ID,
 		Route:  m.Route,
 		Status: m.Status,
@@ -94,7 +94,7 @@ func NewSubscriber(address string) *Subscriber {
 }
 
 // Forwards the message to the client represented by the consumer object.
-func (c *Subscriber) ConsumeMessage(m *commands.Message) {
+func (c *Subscriber) ConsumeMessage(m *commands.Delivery) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
@@ -169,8 +169,8 @@ func (b *Broker) HandleBytes(input []byte) {
 func (b *Broker) HandleCommand(cmd commands.Command) error {
 	// TODO: Switch on command type
 	switch t := cmd.(type) {
-	case *commands.Message:
-		b.Route(t.Route).ProcessMessage(t)
+	case *commands.Delivery:
+		b.Route(t.Route).ProcessDelivery(t)
 	case *commands.Subscriber:
 		subscriber := NewSubscriber(t.Address)
 		b.Route(t.Route).Channel(t.Channel).AddSubscriber(*subscriber)
@@ -256,7 +256,7 @@ func (r *Route) Channel(name string) *Channel {
 
 // Sends the message down the route with each transformed message being passed
 // on to the next channel.
-func (r *Route) ProcessMessage(sm *commands.Message) {
+func (r *Route) ProcessDelivery(sm *commands.Delivery) {
 	r.mutex.RLock()
 	// copy map for minimal mutex lock time
 	channels := make([]*Channel, 0, len(r.channels))
@@ -267,7 +267,7 @@ func (r *Route) ProcessMessage(sm *commands.Message) {
 
 	cur := sm
 	for _, ch := range channels {
-		cur = ch.ProcessMessage(cur)
+		cur = ch.ProcessDelivery(cur)
 	}
 }
 
@@ -309,7 +309,7 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 	ch.subscribers = append(ch.subscribers, s)
 }
 
-func (c *Channel) ProcessMessage(m *commands.Message) *commands.Message {
+func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 	result := m
 
 	c.mutex.RLock() // Copy transform slice for minimal mutex lock time

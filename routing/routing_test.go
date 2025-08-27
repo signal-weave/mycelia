@@ -41,12 +41,12 @@ func TestRouting_TransformThenFanout(t *testing.T) {
 	ch.AddSubscriber(*routing.NewSubscriber(s2Addr))
 
 	// 4) Send a message through the route.
-	msg := &commands.Message{
+	msg := &commands.Delivery{
 		ID:    "test-uuid-123",
 		Route: "default",
 		Body:  []byte("hello"),
 	}
-	r.ProcessMessage(msg)
+	r.ProcessDelivery(msg)
 
 	// 5) Expect transformed body to be "B:A:hello".
 	want := "B:A:hello"

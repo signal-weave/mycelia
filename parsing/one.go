@@ -39,7 +39,7 @@ func decodeV1(data []byte) (commands.Command, error) {
 		cmd, err = parseTransformerMessage(r, msg)
 	case global.OBJ_SUBSCRIBER:
 		cmd, err = parseSubscriberMessage(r, msg)
-	case global.OBJ_MESSAGE:
+	case global.OBJ_DELIVERY:
 		cmd, err = parseSendMessage(r, msg)
 	default:
 		cmd, err = nil, ParseCommandErr
@@ -154,7 +154,7 @@ func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 		return nil, ParseCommandErr
 	}
 
-	cmd := commands.NewMessage(
+	cmd := commands.NewDelivery(
 		msg.CmdType,
 		msg.UID,
 		msg.Route,
