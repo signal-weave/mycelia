@@ -3,25 +3,53 @@
 package errgo
 
 import (
-	"fmt"
+	"mycelia/global"
+	"mycelia/str"
 )
 
-// Panics if the error of a function that returns a tuple (val, err)
-// returned a non-nil error, otherwise will return the value.
-func ValueOrPanic[T any](value T, err error) T {
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	return value
+type MyceliaError interface {
+	Msg() string
+	Verbosity() int
 }
 
-// The error must not equal nil.
-// For use with functions that only return an error or nil.
-// Will panic if err != nil.
-func PanicIfError(err error) {
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
+type myError struct {
+	msg       string
+	verbosity int
+}
+
+func (me myError) Msg() string {
+	return me.msg
+}
+
+func (me myError) Verbosity() int {
+	return me.verbosity
+}
+
+func (e myError) Error() string {
+	return e.msg
+}
+
+func NewError(msg string, verbosity int) error {
+	e := myError{
+		verbosity: verbosity,
+		msg:       msg,
+	}
+	AnnounceError(e)
+
+	return e
+}
+
+func AnnounceError(e MyceliaError) {
+	switch e.Verbosity() {
+
+	case global.VERB_ERR:
+		str.ErrorPrint(e.Msg())
+
+	case global.VERB_WRN:
+		str.WarningPrint(e.Msg())
+
+	case global.VERB_ACT:
+		str.ActionPrint(e.Msg())
+
 	}
 }

@@ -5,14 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"mycelia/global"
 )
 
-func readU32(r io.Reader, out *uint32) error {
-	return binary.Read(r, binary.BigEndian, out)
-}
+const readLineLimit = 64 * global.BytesInMegabyte // 64MB
 
 func readU8(r io.Reader, out *uint8) error {
 	// endian is irrelevent for 1 byte but Read() requires it.
+	return binary.Read(r, binary.BigEndian, out)
+}
+
+func readU32(r io.Reader, out *uint32) error {
 	return binary.Read(r, binary.BigEndian, out)
 }
 
@@ -52,7 +56,7 @@ func readLen(r io.Reader) (uint32, error) {
 		return 0, fmt.Errorf("read length: %w", err)
 	}
 	// Sanity check - May want to store this value somewhere.
-	if n > 64*1024*1024 {
+	if n > readLineLimit {
 		return 0, errors.New("declared length exceeds 64MB safety limit")
 	}
 	return n, nil

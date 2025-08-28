@@ -61,10 +61,7 @@ func startServer() {
 	server := server.NewServer(boot.RuntimeCfg.Address, boot.RuntimeCfg.Port)
 	if len(boot.CommandList) > 0 {
 		for _, cmd := range boot.CommandList {
-			err := server.Broker.HandleCommand(cmd)
-			if err != nil {
-				str.WarningPrint(err.Error())
-			}
+			server.Broker.HandleCommand(cmd)
 		}
 	}
 
