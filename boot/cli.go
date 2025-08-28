@@ -76,6 +76,9 @@ func looksLikeIP(s string) bool {
 	if len(parts) != 4 {
 		return false
 	}
+	if strings.Contains(s, "..") {
+		return false
+	}
 	for _, p := range parts {
 		if p == "" {
 			return true

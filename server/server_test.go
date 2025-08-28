@@ -15,6 +15,7 @@ func writeUvarint(w io.Writer, n uint64) {
 	_, _ = w.Write(buf[:k])
 }
 
+// For handling the go-routines when the server handles connections.
 func runHandlerAsync(t *testing.T, srv *Server, conn net.Conn) chan struct{} {
 	t.Helper()
 	done := make(chan struct{})
@@ -35,13 +36,13 @@ func waitOrTimeout(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-// Test: empty frame (msgLen=0) should be skipped, then EOF should exit cleanly.
+// Test empty frame (msgLen=0) should be skipped, then EOF should exit cleanly.
 func TestHandleConnection_EmptyFrameThenEOF(t *testing.T) {
 	serverSide, clientSide := net.Pipe()
 	defer clientSide.Close() // serverSide closed by handler
 
 	srv := &Server{
-		Broker:  nil, // safe: we won't send a non-empty message
+		Broker:  nil, // safe; we won't send a non-empty message
 		address: "pipe",
 		port:    0,
 	}
@@ -56,7 +57,7 @@ func TestHandleConnection_EmptyFrameThenEOF(t *testing.T) {
 	waitOrTimeout(t, done)
 }
 
-// Test: corrupt length varint (overflow) should log a warning and return.
+// Test corrupt length varint (overflow) should log a warning and return.
 func TestHandleConnection_BadLengthVarint(t *testing.T) {
 	serverSide, clientSide := net.Pipe()
 	defer clientSide.Close()
@@ -81,7 +82,8 @@ func TestHandleConnection_BadLengthVarint(t *testing.T) {
 	waitOrTimeout(t, done)
 }
 
-// Test: truncated body should warn and return (length says 5, only 3 bytes arrive).
+// Test truncated body should warn and return
+// (length says 5, only 3 bytes arrive).
 func TestHandleConnection_TruncatedBody(t *testing.T) {
 	serverSide, clientSide := net.Pipe()
 	defer clientSide.Close()
@@ -102,7 +104,8 @@ func TestHandleConnection_TruncatedBody(t *testing.T) {
 	waitOrTimeout(t, done)
 }
 
-// Optional: immediate EOF (client closes without sending any bytes) should exit cleanly.
+// Test immediate EOF (client closes without sending any bytes), should exit
+// cleanly.
 func TestHandleConnection_ImmediateEOF(t *testing.T) {
 	serverSide, clientSide := net.Pipe()
 

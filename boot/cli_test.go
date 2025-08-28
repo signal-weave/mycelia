@@ -60,7 +60,8 @@ func TestParseRuntimeArgs_WithFlags(t *testing.T) {
 }
 
 func TestParseRuntimeArgs_HostnameAllowed(t *testing.T) {
-	// Hostnames are allowed; only reject strings that *look like* IPs but aren't valid IPs.
+	// Hostnames are allowed; only reject strings that *look like* IPs but
+	// aren't valid IPs.
 	args := []string{"-address", "myhost.local"}
 
 	_, err := parseRuntimeArgs(args)
@@ -138,8 +139,8 @@ func TestLooksLikeIP(t *testing.T) {
 	}{
 		{"127.0.0.1", true},
 		{"192.168.1.10", true},
-		{"...1", true},            // has 4 parts and empties -> treated as IP-like by current logic
-		{"1..2.3", true},          // empty part -> true
+		{"...1", false},            // has 4 parts and empties -> false
+		{"1..2.3", false},          // empty part -> false
 		{"abc.def.ghi.jkl", true}, // non-numeric parts but 4 segments -> true
 		{"localhost", false},      // not 4 parts
 		{"myhost.local", false},   // not 4 parts

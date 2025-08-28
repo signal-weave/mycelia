@@ -10,6 +10,11 @@ import (
 	"mycelia/global"
 )
 
+// -----------------------------------------------------------------------------
+// The primary parsing entry point.
+// The main protocol version detection and parsing version handling.
+// -----------------------------------------------------------------------------
+
 var _ = boot.RuntimeCfg // REQUIRED for global config values.
 
 // parseProtoVer extracts only the protocol version and returns it along with

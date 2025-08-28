@@ -49,7 +49,10 @@ func TestParseRuntimeConfigurable_SetsFieldsAndEnv(t *testing.T) {
 		t.Fatalf("PrintTree = %v, want %v", cfg.PrintTree, true)
 	}
 	if cfg.TransformTimeout != 45*time.Second {
-		t.Fatalf("TransformTimeout = %v, want %v", cfg.TransformTimeout, 45*time.Second)
+		t.Fatalf(
+			"TransformTimeout = %v, want %v",
+			cfg.TransformTimeout, 45*time.Second,
+		)
 	}
 	if got := os.Getenv("VERBOSITY"); got != "2" {
 		t.Fatalf("env VERBOSITY = %q, want %q", got, "2")

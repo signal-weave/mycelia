@@ -42,7 +42,7 @@ func writeBytes(buf *bytes.Buffer, b []byte, t *testing.T) {
 	}
 }
 
-func typeName(v interface{}) string {
+func typeName(v any) string {
 	if v == nil {
 		return "<nil>"
 	}
