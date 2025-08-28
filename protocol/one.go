@@ -30,7 +30,11 @@ func decodeV1(data []byte) (commands.Command, error) {
 	msg := &Message{}
 	msg, err := parseBaseHeader(r, msg)
 	if err != nil {
-		return nil, ParseCommandErr
+		return nil, err
+	}
+	msg, err = parseSubHeader(r, msg)
+	if err != nil {
+		return il, err
 	}
 
 	var cmd commands.Command
@@ -71,7 +75,9 @@ func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
 		wErr := errgo.NewError(wMsg, global.VERB_WRN)
 		return nil, wErr
 	}
+}
 
+func parseSubHeader(r io.Reader, msg *Message) (*Message, error) {
 	uid, err := readString(r)
 	if err != nil {
 		wMsg := fmt.Sprintf(
