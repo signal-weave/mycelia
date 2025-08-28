@@ -12,6 +12,47 @@ import (
 // -----------------------------------------------------------------------------
 // Version 1 command decoding.
 // -----------------------------------------------------------------------------
+//           fields
+// --------------------------
+// protocol_ver  |  u8
+// obj_type      |  u8
+// obj_cmd       |  u8
+// uid           |  u32 + len
+// route         |  u32 + len
+// --------------------------
+// channel       |  u32 + len
+// address       |  u32 + len
+// --------------------------
+// payload       |  u32 + len
+// -----------------------------------------------------------------------------
+// The version 1 protocol looks as follows:
+
+// # Fixed field sized header
+// +---------+--------+-------------+-------------+
+// | u32 len | u8 ver | u8 obj_type | u8 cmd_type |
+// +---------+--------+-------------+-------------+
+
+// which is then followed by a variable field sized sub-header
+
+// # Routing Sub-header
+// +-------------+---------------+
+// | u32 len uid | u32 len route |
+// +-------------+---------------+
+
+// which is then followed by one of the following bodies:
+
+// # Subscriber + Transformer Body
+// +--------------+--------------+
+// | u32 len chan | u32 len addr |
+// +--------------+--------------+
+
+// # Message Body
+// +-----------------+
+// | u32 len payload |
+// +-----------------+
+// With the Message Body payload being the data finally forwarded to
+// subscribers.
+// -----------------------------------------------------------------------------
 
 type Message struct {
 	ObjType uint8
