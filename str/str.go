@@ -68,18 +68,20 @@ func PrettyPrintStrKeyJson(data map[string]any) {
 	fmt.Println(string(b))
 }
 
+// Returns the current terminal width if it can be found else 80.
+func getOutputWidth() int {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		if err == nil {
+			return width
+		}
+	}
+	return global.DEFAULT_TERMINAL_W
+}
+
 // Prints "-" repeated to fill the terminal lenght if a terminal is being used
 // for Stdout, otherwise repeats 80 times.
 func PrintAsciiLine() {
-	if term.IsTerminal(int(os.Stdout.Fd())) {
-		width, _, err := term.GetSize(int(os.Stdout.Fd()))
-		if err != nil {
-			fmt.Println(strings.Repeat("-", 80))
-			return
-		} else {
-			fmt.Println(strings.Repeat("-", width))
-		}
-	} else {
-		fmt.Println(strings.Repeat("-", 80))
-	}
+	width := getOutputWidth()
+	fmt.Println(strings.Repeat("-", width))
 }

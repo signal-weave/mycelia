@@ -5,6 +5,10 @@ package global
 // This is not meant to contain mutable values.
 // -----------------------------------------------------------------------------
 
+const (
+	Developer = "SignalWeave"
+)
+
 // -------Memory Values---------------------------------------------------------
 
 const (
@@ -45,4 +49,11 @@ const (
 	CMD_SEND    uint8 = 1
 	CMD_ADD     uint8 = 2
 	CMD_REMOVE  uint8 = 3
+)
+
+// -------Terminal--------------------------------------------------------------
+
+const (
+	DEFAULT_TERMINAL_W = 80
+	DEFAULT_TERMINAL_H = 25
 )

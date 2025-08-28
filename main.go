@@ -9,42 +9,16 @@ import (
 	"mycelia/str"
 )
 
-var startupBanner string = `
-            ███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗
-            ████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗
-            ██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║
-            ██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║
-            ██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║
-            ╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝`
-
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
-var majorVersion int = 0
-var minorVersion int = 7
-var patchVersion int = 0
-var brokerVersion string = fmt.Sprintf(
-	"%d.%d.%d", majorVersion, minorVersion, patchVersion,
-)
-var verNotice string = fmt.Sprintf(
-	"Running verison: %s", brokerVersion,
-)
+var majorVersion int = 0 // Proud version
+var minorVersion int = 7 // Real version
+var patchVersion int = 1 // Sucky verison
 
 func main() {
-	displayStartupText()
+	str.PrintStartupText(majorVersion, minorVersion, patchVersion)
 	readArgs()
-
 	startServer() // Must be last, contains infinite for loop.
-}
-
-// Prints ascii banner, disclaimer text, and any misc info.
-func displayStartupText() {
-	str.PrintAsciiLine()
-	fmt.Println(startupBanner)
-	str.PrintAsciiLine()
-	fmt.Println(verNotice)
-	str.PrintAsciiLine()
-	fmt.Println(disclaimer)
-	str.PrintAsciiLine()
 }
 
 func readArgs() {
