@@ -149,9 +149,6 @@ func TestDecodeV1_TrailingBytes_Error(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error due to trailing bytes, got nil (cmd=%T)", cmd)
 	}
-	if err != ParseCommandErr {
-		t.Fatalf("expected ParseCommandErr due to trailing bytes, got %v", err)
-	}
 	if cmd != nil {
 		t.Fatalf("expected nil cmd on error, got %T", cmd)
 	}

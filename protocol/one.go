@@ -90,12 +90,14 @@ func decodeV1(data []byte) (commands.Command, error) {
 	case global.OBJ_DELIVERY:
 		cmd, err = parseSendMessage(r, msg)
 	default:
-		cmd, err = nil, ParseCommandErr
+		wMsg := fmt.Sprintf("Unknown object yet %s", string(msg.ObjType))
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		cmd, err = nil, wErr
 	}
 
 	if r.Len() != 0 {
 		cmd = nil
-		err = ParseCommandErr
+		err = errgo.NewError("Unaccounted data in reader", global.VERB_WRN)
 	}
 
 	return cmd, err

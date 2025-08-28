@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -12,8 +11,6 @@ import (
 )
 
 var _ = boot.RuntimeCfg // REQUIRED for global config values.
-
-var ParseCommandErr = errors.New("unable to parse command")
 
 // parseProtoVer extracts only the protocol version and returns it along with
 // a slice that starts at the next byte (i.e., the remainder of the message).
