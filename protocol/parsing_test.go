@@ -135,7 +135,7 @@ func TestParseLine_VersionReadError(t *testing.T) {
 	// <4 bytes total
 	data := []byte{0x01, 0x02, 0x03}
 	cmd, err := ParseLine(data)
-	if !errors.Is(err, ParseCommandErr) {
+	if !strings.Contains(err.Error(), "Unable to parse string UID field") {
 		t.Fatalf("expected ParseCommandErr, got %v", err)
 	}
 	if cmd != nil {

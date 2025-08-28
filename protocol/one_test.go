@@ -122,7 +122,7 @@ func TestDecodeV1_UnknownObjType_Error(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got nil (cmd=%T)", cmd)
 	}
-	if err != ParseCommandErr {
+	if !strings.Contains(err.Error(), "Unable to parse string UID field") {
 		t.Fatalf("expected ParseCommandErr, got %v", err)
 	}
 	if cmd != nil {

@@ -34,7 +34,7 @@ func decodeV1(data []byte) (commands.Command, error) {
 	}
 	msg, err = parseSubHeader(r, msg)
 	if err != nil {
-		return il, err
+		return nil, err
 	}
 
 	var cmd commands.Command
@@ -75,6 +75,8 @@ func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
 		wErr := errgo.NewError(wMsg, global.VERB_WRN)
 		return nil, wErr
 	}
+
+	return msg, nil
 }
 
 func parseSubHeader(r io.Reader, msg *Message) (*Message, error) {
