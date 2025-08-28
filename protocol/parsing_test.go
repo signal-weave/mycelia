@@ -123,8 +123,8 @@ func TestParseLine_UnsupportedVersion(t *testing.T) {
 	wrU32(&packet, 999, t)
 
 	cmd, err := ParseLine(packet.Bytes())
-	if !errors.Is(err, ParseCommandErr) {
-		t.Fatalf("expected ParseCommandErr, got %v", err)
+	if !strings.Contains(err.Error(), "Unable to parse command!") {
+		t.Fatalf("expected 'Unable to parse command!', got %v", err)
 	}
 	if cmd != nil {
 		t.Fatalf("expected nil cmd on error, got %T", cmd)
@@ -140,80 +140,5 @@ func TestParseLine_VersionReadError(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Fatalf("expected nil cmd, got %T", cmd)
-	}
-}
-
-// -------parseTokens-----------------------------------------------------------
-
-func TestParseTokens_Normal(t *testing.T) {
-	var buf bytes.Buffer
-	wrUvarint(&buf, 3)
-	buf.WriteString("foo")
-	wrUvarint(&buf, 3)
-	buf.WriteString("bar")
-
-	out, err := parseTokens(buf.Bytes())
-	if err != nil {
-		t.Fatalf("parseTokens error: %v", err)
-	}
-	want := []string{"foo", "bar"}
-	if !reflect.DeepEqual(out, want) {
-		t.Fatalf("expected %v, got %v", want, out)
-	}
-}
-
-func TestParseTokens_SkipZeroLength(t *testing.T) {
-	var buf bytes.Buffer
-	wrUvarint(&buf, 3)
-	buf.WriteString("foo")
-	wrUvarint(&buf, 0) // should be skipped
-	wrUvarint(&buf, 3)
-	buf.WriteString("bar")
-
-	out, err := parseTokens(buf.Bytes())
-	if err != nil {
-		t.Fatalf("parseTokens error: %v", err)
-	}
-	want := []string{"foo", "bar"}
-	if !reflect.DeepEqual(out, want) {
-		t.Fatalf("expected %v, got %v", want, out)
-	}
-}
-
-func TestParseTokens_TruncatedFieldBody(t *testing.T) {
-	var buf bytes.Buffer
-	// Declare length 5, provide only 4 bytes.
-	wrUvarint(&buf, 5)
-	buf.Write([]byte{'h', 'e', 'l', 'l'})
-
-	_, err := parseTokens(buf.Bytes())
-	if err == nil || !strings.Contains(err.Error(), "truncated field body") {
-		t.Fatalf("expected truncated body error, got %v", err)
-	}
-}
-
-func TestParseTokens_OverflowVarint(t *testing.T) {
-	var buf bytes.Buffer
-	// Craft an overflowing varint (>10 bytes with continuation bits set)
-	for i := 0; i < 11; i++ {
-		buf.WriteByte(0xFF)
-	}
-
-	_, err := parseTokens(buf.Bytes())
-	if err == nil {
-		t.Fatalf("expected overflow/varint error, got nil")
-	}
-}
-
-// -------verifyTokenLength-----------------------------------------------------
-
-func TestVerifyTokenLength(t *testing.T) {
-	ok := verifyTokenLength([]string{"a", "b"}, 2, "CMD")
-	if !ok {
-		t.Fatalf("expected true for matching length")
-	}
-	ok = verifyTokenLength([]string{"a"}, 2, "CMD")
-	if ok {
-		t.Fatalf("expected false for mismatched length")
 	}
 }

@@ -42,7 +42,7 @@ func getPreInitData(cfg *runtimeConfig) {
 
 	routesAny, ok := data["routes"].([]any)
 	if !ok {
-		str.ActionPrint("No PreInit route data found, kipping PreInit Routes.")
+		str.ActionPrint("No PreInit route data found, skipping PreInit Routes.")
 		return
 	}
 	routes := make([]map[string]any, 0, len(routesAny))

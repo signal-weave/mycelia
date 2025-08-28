@@ -2,8 +2,10 @@ package protocol
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mycelia/commands"
+	"mycelia/errgo"
 	"mycelia/global"
 )
 
@@ -55,22 +57,38 @@ func decodeV1(data []byte) (commands.Command, error) {
 // Parses the header after version: obj_type, cmd_type, uid, route
 func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
 	if err := readU8(r, &msg.ObjType); err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf(
+			"Unable to parse u8 ObjType field from %s.", msg.Address,
+		)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 
 	if err := readU8(r, &msg.CmdType); err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf(
+			"Unable to parse u8 CmdType field from %s.", msg.Address,
+		)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 
 	uid, err := readString(r)
 	if err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf(
+			"Unable to parse string UID field from %s.", msg.Address,
+		)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 	msg.UID = uid
 
 	route, err := readString(r)
 	if err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf(
+			"Unable to parse string Route field from %s.", msg.Address,
+		)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 	msg.Route = route
 
@@ -80,10 +98,11 @@ func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
 func parseSubscriberMessage(r io.Reader, msg *Message) (commands.Command, error) {
 	msg, err := parseRoutedMessage(r, msg)
 	if err != nil {
-		return nil, ParseCommandErr
+		return nil, err
 	}
-	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
-		return nil, ParseCommandErr
+	if msg.CmdType != global.CMD_ADD && msg.CmdType != global.CMD_REMOVE {
+		wErr := errgo.NewError("Invalid command code!", global.VERB_WRN)
+		return nil, wErr
 	}
 
 	cmd := commands.NewSubscriber(
@@ -100,10 +119,11 @@ func parseSubscriberMessage(r io.Reader, msg *Message) (commands.Command, error)
 func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error) {
 	msg, err := parseRoutedMessage(r, msg)
 	if err != nil {
-		return nil, ParseCommandErr
+		return nil, err
 	}
-	if msg.CmdType < global.CMD_ADD || msg.CmdType > global.CMD_REMOVE {
-		return nil, ParseCommandErr
+	if msg.CmdType != global.CMD_ADD && msg.CmdType != global.CMD_REMOVE {
+		wErr := errgo.NewError("Invalid command code!", global.VERB_WRN)
+		return nil, wErr
 	}
 
 	cmd := commands.NewTransformer(
@@ -120,13 +140,17 @@ func parseTransformerMessage(r io.Reader, msg *Message) (commands.Command, error
 func parseRoutedMessage(r io.Reader, msg *Message) (*Message, error) {
 	ch, err := readString(r)
 	if err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf("Unable to parse channel name from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 	msg.Channel = ch
 
 	addr, err := readString(r)
 	if err != nil {
-		return nil, err
+		wMsg := fmt.Sprintf("Unable to parse address from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 	msg.Address = addr
 
@@ -136,15 +160,18 @@ func parseRoutedMessage(r io.Reader, msg *Message) (*Message, error) {
 func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 	payload, err := readBytes(r)
 	if err != nil {
-		return nil, ParseCommandErr
+		wMsg := fmt.Sprintf("Unable to parse payload len for %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
 	}
 	if payload == nil {
 		msg.Payload = []byte{}
 	} else {
 		msg.Payload = payload
 	}
-	if msg.CmdType != uint8(1) {
-		return nil, ParseCommandErr
+	if msg.CmdType != global.CMD_SEND {
+		wErr := errgo.NewError("Invalid command code!", global.VERB_WRN)
+		return nil, wErr
 	}
 
 	cmd := commands.NewDelivery(

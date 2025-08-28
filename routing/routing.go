@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"slices"
@@ -10,6 +9,7 @@ import (
 
 	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/errgo"
 	"mycelia/global"
 	"mycelia/protocol"
 	"mycelia/str"
@@ -46,17 +46,17 @@ func (t *Transformer) transformDelivery(m *commands.Delivery) (*commands.Deliver
 	conn, err := net.Dial("tcp", t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
-		str.WarningPrint(wMsg)
-		return m, err // Return original delivery on failure
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return m, wErr // Return original delivery on failure
 	}
 	defer conn.Close()
 
 	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(m.Body))
 	if err != nil {
-		eMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
-		str.ErrorPrint(eMsg)
-		return m, err
+		wMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return m, wErr
 	}
 
 	// Read the transformed response with a timeout
@@ -66,9 +66,9 @@ func (t *Transformer) transformDelivery(m *commands.Delivery) (*commands.Deliver
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		eMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
-		str.ErrorPrint(eMsg)
-		return m, err
+		wMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return m, wErr
 	}
 
 	// Create new delivery with transformed body
@@ -162,17 +162,11 @@ func (b *Broker) HandleBytes(input []byte) {
 	// Parse byte stream -> command object.
 	cmd, err := protocol.ParseLine(input)
 	if err != nil {
-		wMsg := "Error parsing command..."
-		str.WarningPrint(wMsg)
 		return
 	}
 
 	// Handle command object
-	err = b.HandleCommand(cmd)
-	if err != nil {
-		msg := fmt.Sprintf("Unknown command type %v", cmd)
-		str.WarningPrint(msg)
-	}
+	b.HandleCommand(cmd)
 }
 
 // Handles the command object generated from the incoming byte stream.
@@ -186,7 +180,8 @@ func (b *Broker) HandleCommand(cmd commands.Command) error {
 	case *commands.Subscriber:
 		b.handleSubscriber(t)
 	default:
-		return errors.New("Unknown command type")
+		wErr := errgo.NewError("Unknown command type!", global.VERB_WRN)
+		return wErr
 	}
 
 	return nil
@@ -408,10 +403,6 @@ func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
 	for _, transformer := range transformers {
 		transformedMsg, err := transformer.transformDelivery(result)
 		if err != nil {
-			// Log error but continue with original delivery
-			eMsg := fmt.Sprintf(
-				"Transformer %s failed: %v", transformer.Address, err)
-			str.ErrorPrint(eMsg)
 			continue
 		}
 		result = transformedMsg
