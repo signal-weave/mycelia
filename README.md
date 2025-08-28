@@ -141,3 +141,79 @@ Example PreInit.json file:
   ]
 }
 ```
+
+## Protocol
+
+Mycelia employs a custom protocl as outlined:
+
+Version 1 command decoding.
+
+*Note that this is a messaging protocol, not a file transfer protocol
+```
+          fields
+--------------------------
+protocol_ver  |  u8
+obj_type      |  u8
+obj_cmd       |  u8
+uid           |  u32 + len
+route         |  u32 + len
+--------------------------
+channel       |  u32 + len
+address       |  u32 + len
+--------------------------
+payload       |  u32 + len
+```
+-----------------------------------------------------------------------------
+The version 1 protocol looks as follows:
+
+Fixed field sized header
+```
++---------+--------+-------------+-------------+
+| u32 len | u8 ver | u8 obj_type | u8 cmd_type |
++---------+--------+-------------+-------------+
+```
+A `uint32` length header field that dictates the number of bytes for the rest of
+the message body.
+
+A `uint8` version field, which is used for decoding the message after the base
+header. This will likely be obsolete one day but for now, in prototyping, this
+helps with managing variations of the header after we deploy it for internal
+projects.
+
+A `uint8` object type which corresponds to what concept the client is working
+with: messages, transformers, subscribers, etc.
+
+And a `uint8` command type which is the behavioral action being done to the
+object: `SEND`, `ADD`, `REMOVE`, etc.
+
+This is then followed by a variable field sized sub-header:
+
+Routing Sub-header
+```
++-------------+---------------+
+| u32 len uid | u32 len route |
++-------------+---------------+
+```
+The sub header is two variable sized fields with a `uint32` field header and a
+field body.
+
+This is then followed by one of the following bodies:
+
+Subscriber + Transformer Body
+```
++--------------+--------------+
+| u32 len chan | u32 len addr |
++--------------+--------------+
+```
+Here, again, are two variable sized fields with a `uint32` field header for the
+channel and address to route a message through.
+
+Message Body
+```
++-----------------+
+| u32 len payload |
++-----------------+
+```
+With the Message Body payload being the data finally forwarded to subscribers.
+Thes Message body payload is a single `uint32` field header and the byte array
+that is forwarded onwards.
