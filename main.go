@@ -20,7 +20,7 @@ var startupBanner string = `
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
 var majorVersion int = 0
-var minorVersion int = 6
+var minorVersion int = 7
 var patchVersion int = 0
 var brokerVersion string = fmt.Sprintf(
 	"%d.%d.%d", majorVersion, minorVersion, patchVersion,
