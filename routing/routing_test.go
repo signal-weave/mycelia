@@ -151,8 +151,6 @@ func TestSubscriberReceivesDelivery(t *testing.T) {
 		Body:  []byte(payload),
 	}
 
-	// fan-out to subscribers (waits for wg)
-	// :contentReference[oaicite:5]{index=5}
 	r.ProcessDelivery(msg)
 
 	// Verify subscriber got the original body
@@ -164,8 +162,6 @@ func TestSubscriberReceivesDelivery(t *testing.T) {
 		t.Fatalf("expected subscriber body %q, got %q", payload, got)
 	}
 
-	// Ensure ConsumeDelivery marked it resolved
-	// (subscriber writes and flips status) :contentReference[oaicite:6]{index=6}
 	if msg.Status != commands.StatusResolved {
 		t.Fatalf(
 			"expected message status to be StatusResolved, got %v", msg.Status,
@@ -189,10 +185,8 @@ func TestTransformerThenSubscriber_PathTransformsBody(t *testing.T) {
 	r := b.Route("r-tx")
 	ch := r.Channel("c-tx")
 
-	// Add transformer then subscriber
-
-	// will dial, write, read with timeout
-	// :contentReference[oaicite:7]{index=7}
+	// Add transformer then subscriber.
+	// Will dial, write, read with timeout.
 	ch.AddTransformer(Transformer{Address: txAddr})
 	ch.AddSubscriber(Subscriber{Address: subAddr})
 
@@ -204,7 +198,6 @@ func TestTransformerThenSubscriber_PathTransformsBody(t *testing.T) {
 	}
 
 	// Channel runs all transformers (in order), then fans out to subscribers
-	// (wg waits) :contentReference[oaicite:8]{index=8}
 	r.ProcessDelivery(msg)
 
 	// Expect transformed payload at subscriber
@@ -243,7 +236,6 @@ func TestTransformerFailureFallsBackToOriginalBody(t *testing.T) {
 	}
 
 	// transformer fails -> proceed with original body
-	// :contentReference[oaicite:10]{index=10}
 	r.ProcessDelivery(msg)
 
 	got, ok := recvWithTimeout(t, gotBody, 500*time.Millisecond)

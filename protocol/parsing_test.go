@@ -44,13 +44,6 @@ func wrBytes32(buf *bytes.Buffer, b []byte, t *testing.T) {
 	}
 }
 
-// write an unsigned varint (LEB128) into buf.
-func wrUvarint(buf *bytes.Buffer, x uint64) {
-	var tmp [10]byte
-	n := binary.PutUvarint(tmp[:], x)
-	buf.Write(tmp[:n])
-}
-
 // -------parseProtoVer---------------------------------------------------------
 
 func TestParseProtoVer_OK(t *testing.T) {
@@ -132,7 +125,7 @@ func TestParseLine_UnsupportedVersion(t *testing.T) {
 }
 
 func TestParseLine_VersionReadError(t *testing.T) {
-	// <4 bytes total
+	// < 4 bytes total
 	data := []byte{0x01, 0x02, 0x03}
 	cmd, err := ParseLine(data)
 	if !strings.Contains(err.Error(), "Unable to parse string UID field") {
