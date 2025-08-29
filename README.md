@@ -181,7 +181,7 @@ helps with managing variations of the header after we deploy it for internal
 projects.
 
 A `uint8` object type which corresponds to what concept the client is working
-with: messages, transformers, subscribers, etc.
+with: `messages`, `transformers`, `subscribers`, `globals`, etc.
 
 And a `uint8` command type which is the behavioral action being done to the
 object: `SEND`, `ADD`, `REMOVE`, etc.
@@ -217,3 +217,15 @@ Message Body
 With the Message Body payload being the data finally forwarded to subscribers.
 Thes Message body payload is a single `uint32` field header and the byte array
 that is forwarded onwards.
+
+Globals Body
+```
++-----------------+
+| u32 len payload |
++-----------------+
+```
+Globals takes a json string to update how the broker works at runtime.
+For example a system might change the address or port at runtime when message
+traffic increases and then change it again when traffic decreases.
+Any of the cli args can be changed by creating a globals update command through
+any of the client APIs.
