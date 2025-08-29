@@ -9,12 +9,16 @@ import (
 	"sync"
 )
 
+// This is here so the server that spawns the broker can add itself without
+// causing a circular dependency.
 type server interface {
 	Run()
 	UpdateListener()
 	GetAddress() string
 	GetPort() int
 }
+
+// -------Base Broker Details---------------------------------------------------
 
 // The primary route orchestrator.
 // Takes the incoming byte stream and runs it through the command parser where
@@ -31,6 +35,21 @@ func NewBroker() *Broker {
 		routes: map[string]*Route{},
 	}
 }
+
+// Handles the raw byte form of a command, hot off a socket, converts it to a
+// command object, and forwards it to the command handler.
+func (b *Broker) HandleBytes(input []byte) {
+	// Parse byte stream -> command object.
+	cmd, err := protocol.ParseLine(input)
+	if err != nil {
+		return
+	}
+
+	// Handle command object
+	b.HandleCommand(cmd)
+}
+
+// -------Route Management------------------------------------------------------
 
 // Route returns existing or creates if missing.
 func (b *Broker) Route(name string) *Route {
@@ -57,18 +76,7 @@ func (b *Broker) removeEmptyRoute(name string) {
 	}
 }
 
-// Handles the raw byte form of a command, hot off a socket, converts it to a
-// command object, and forwards it to the command handler.
-func (b *Broker) HandleBytes(input []byte) {
-	// Parse byte stream -> command object.
-	cmd, err := protocol.ParseLine(input)
-	if err != nil {
-		return
-	}
-
-	// Handle command object
-	b.HandleCommand(cmd)
-}
+// -------Command Handling------------------------------------------------------
 
 // Handles the command object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
@@ -132,6 +140,8 @@ func (b *Broker) handleGlobals(cmd *commands.Globals) {
 		}
 	}
 }
+
+// -------Util------------------------------------------------------------------
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
