@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"mycelia/boot"
 	"mycelia/commands"
 	"mycelia/errgo"
 	"mycelia/global"
@@ -61,7 +60,7 @@ func (t *Transformer) transformDelivery(m *commands.Delivery) (*commands.Deliver
 
 	// Read the transformed response with a timeout
 	conn.SetReadDeadline(time.Now().Add(
-		time.Duration(boot.RuntimeCfg.TransformTimeout) * time.Second))
+		time.Duration(global.TransformTimeout) * time.Second))
 
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
@@ -220,7 +219,7 @@ func (b *Broker) handleSubscriber(cmd *commands.Subscriber) {
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
-	if !boot.RuntimeCfg.PrintTree {
+	if !global.PrintTree {
 		return
 	}
 

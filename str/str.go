@@ -6,23 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"mycelia/global"
 
 	"golang.org/x/term"
 )
-
-func getVerbosity() int {
-	s := os.Getenv("VERBOSITY")
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	return i
-}
 
 func SprintfLn(formatStr string, args ...string) {
 	interfaceArgs := make([]interface{}, len(args))
@@ -34,21 +23,21 @@ func SprintfLn(formatStr string, args ...string) {
 }
 
 func ActionPrint(s string) {
-	if getVerbosity() < global.VERB_ACT {
+	if global.Verbosity < global.VERB_ACT {
 		return
 	}
 	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if getVerbosity() < global.VERB_WRN {
+	if global.Verbosity < global.VERB_WRN {
 		return
 	}
 	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if getVerbosity() < global.VERB_ERR {
+	if global.Verbosity < global.VERB_ERR {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"mycelia/commands"
+	"mycelia/global"
 )
 
 // Test that parseRuntimeConfigurable maps all supported runtime fields
@@ -15,14 +16,6 @@ func TestParseRuntimeConfigurable_SetsFieldsAndEnv(t *testing.T) {
 	// Save/restore env
 	prevVerbosity := os.Getenv("VERBOSITY")
 	t.Cleanup(func() { _ = os.Setenv("VERBOSITY", prevVerbosity) })
-
-	cfg := &runtimeConfig{
-		Address:          "",
-		Port:             0,
-		Verbosity:        0,
-		PrintTree:        false,
-		TransformTimeout: 0,
-	}
 
 	input := map[string]any{
 		"runtime": map[string]any{
@@ -34,24 +27,24 @@ func TestParseRuntimeConfigurable_SetsFieldsAndEnv(t *testing.T) {
 		},
 	}
 
-	parseRuntimeConfigurable(cfg, input)
+	parseRuntimeConfigurable(input)
 
-	if cfg.Address != "0.0.0.0" {
-		t.Fatalf("Address = %q, want %q", cfg.Address, "0.0.0.0")
+	if global.Address != "0.0.0.0" {
+		t.Fatalf("Address = %q, want %q", global.Address, "0.0.0.0")
 	}
-	if cfg.Port != 8080 {
-		t.Fatalf("Port = %d, want %d", cfg.Port, 8080)
+	if global.Port != 8080 {
+		t.Fatalf("Port = %d, want %d", global.Port, 8080)
 	}
-	if cfg.Verbosity != 2 {
-		t.Fatalf("Verbosity = %d, want %d", cfg.Verbosity, 2)
+	if global.Verbosity != 2 {
+		t.Fatalf("Verbosity = %d, want %d", global.Verbosity, 2)
 	}
-	if !cfg.PrintTree {
-		t.Fatalf("PrintTree = %v, want %v", cfg.PrintTree, true)
+	if !global.PrintTree {
+		t.Fatalf("PrintTree = %v, want %v", global.PrintTree, true)
 	}
-	if cfg.TransformTimeout != 45*time.Second {
+	if global.TransformTimeout != 45*time.Second {
 		t.Fatalf(
 			"TransformTimeout = %v, want %v",
-			cfg.TransformTimeout, 45*time.Second,
+			global.TransformTimeout, 45*time.Second,
 		)
 	}
 	if got := os.Getenv("VERBOSITY"); got != "2" {

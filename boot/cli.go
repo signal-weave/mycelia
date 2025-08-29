@@ -4,32 +4,32 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net"
+	"net/netip"
 	"os"
-	"strconv"
+	"regexp"
 	"strings"
+
+	"mycelia/global"
 )
 
 // ParseRuntimeArgs parses only runtime flags validates, and returns
 // (config, error).
 //
 // Duration examples: 500ms, 3s, 2m, 1h.
-func parseRuntimeArgs(argv []string) (runtimeConfig, error) {
-	cfg := defaultRuntimeConfig()
-
+func parseRuntimeArgs(argv []string) error {
 	fs := flag.NewFlagSet("runtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
 
-	fs.StringVar(&cfg.Address, "address", cfg.Address, "Bind address (IP or hostname)")
-	fs.IntVar(&cfg.Port, "port", cfg.Port, "Bind port (1-65535)")
-	fs.BoolVar(&cfg.PrintTree, "print-tree", cfg.PrintTree, "Print router tree at startup")
-	fs.DurationVar(&cfg.TransformTimeout, "xform-timeout", cfg.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
-	fs.IntVar(&cfg.Verbosity, "verbosity", cfg.Verbosity,
+	fs.StringVar(&global.Address, "address", global.Address, "Bind address (IP or hostname)")
+	fs.IntVar(&global.Port, "port", global.Port, "Bind port (1-65535)")
+	fs.BoolVar(&global.PrintTree, "print-tree", global.PrintTree, "Print router tree at startup")
+	fs.DurationVar(&global.TransformTimeout, "xform-timeout", global.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
+	fs.IntVar(&global.Verbosity, "verbosity", global.Verbosity,
 		`0 - None
     1 - Errors
     2 - Warnings + Errors
     3 - Errors + Warnings + Actions`)
-	os.Setenv("VERBOSITY", strconv.Itoa(cfg.Verbosity))
+	global.UpdateVerbosityEnvironVar()
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
@@ -46,45 +46,52 @@ Examples:
 	}
 
 	if err := fs.Parse(argv); err != nil {
-		return cfg, err
+		return err
 	}
 
-	if err := validateRuntimeConfig(cfg); err != nil {
-		return cfg, err
+	if err := validateRuntimeConfig(); err != nil {
+		return err
 	}
 
-	return cfg, nil
+	return nil
 }
 
-func validateRuntimeConfig(c runtimeConfig) error {
-	if c.Port < 1 || c.Port > 65535 {
-		return fmt.Errorf("invalid port %d (expected 1-65535)", c.Port)
+func validateRuntimeConfig() error {
+	if global.Port < 1 || global.Port > 65535 {
+		return fmt.Errorf("invalid port %d (expected 1-65535)", global.Port)
 	}
 	// Allow hostnames; validate if it looks like an IP.
-	if ip := net.ParseIP(c.Address); ip == nil && looksLikeIP(c.Address) {
-		return fmt.Errorf("invalid IP address %q", c.Address)
+	if !isIPLiteral(global.Address) && !isValidHostname(global.Address) {
+		return fmt.Errorf("invalid IP address %q", global.Address)
 	}
-	if c.TransformTimeout <= 0 {
+	if global.TransformTimeout <= 0 {
 		return errors.New("xform-timeout must be > 0")
 	}
 	return nil
 }
 
-func looksLikeIP(s string) bool {
-	// crude: "n.n.n.n" suggests intended IP; otherwise treat as hostname
-	parts := strings.Split(s, ".")
-	if len(parts) != 4 {
+func isIPLiteral(s string) bool {
+	_, err := netip.ParseAddr(s)
+	return err == nil
+}
+
+// isValidHostname does a syntax-only RFC-1123 style check (no DNS lookups).
+// - total length <= 253
+// - labels are 1..63 chars, [A-Za-z0-9-], no leading/trailing '-'
+var hostnameLabelRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$`)
+
+func isValidHostname(s string) bool {
+	if len(s) == 0 || len(s) > 253 {
 		return false
 	}
-	if strings.Contains(s, "..") {
-		return false
+	// Special-case: common localhost
+	if s == "localhost" {
+		return true
 	}
-	for _, p := range parts {
-		if p == "" {
-			return true
-		}
-		if _, err := strconv.Atoi(p); err != nil {
-			return true
+	labels := strings.Split(s, ".")
+	for _, lbl := range labels {
+		if !hostnameLabelRE.MatchString(lbl) {
+			return false
 		}
 	}
 	return true

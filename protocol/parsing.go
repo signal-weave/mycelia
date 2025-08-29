@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"mycelia/boot"
 	"mycelia/commands"
 	"mycelia/errgo"
 	"mycelia/global"
@@ -14,8 +13,6 @@ import (
 // The primary parsing entry point.
 // The main protocol version detection and parsing version handling.
 // -----------------------------------------------------------------------------
-
-var _ = boot.RuntimeCfg // REQUIRED for global config values.
 
 // parseProtoVer extracts only the protocol version and returns it along with
 // a slice that starts at the next byte (i.e., the remainder of the message).

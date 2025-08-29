@@ -11,18 +11,17 @@ import "os"
 // Parses and stores the runtime flags in public var.
 func ParseRuntimeArgs(argv []string) error {
 	// -------CLI values--------------------------------------------------------
-	cfg, err := parseRuntimeArgs(argv)
+	err := parseRuntimeArgs(argv)
 	if err != nil {
+		// We do not make a Mycelia Error here because main hands this in stdout
 		return err
 	}
 
 	// -------PreInit.json values-----------------------------------------------
 	_, err = os.Stat(preInitFile)
 	if err == nil {
-		getPreInitData(&cfg)
+		getPreInitData()
 	}
-
-	RuntimeCfg = cfg
 
 	return nil
 }
