@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mycelia/commands"
@@ -54,6 +55,13 @@ import (
 // +-----------------+
 // With the Message Body payload being the data finally forwarded to
 // subscribers.
+
+// # Globals Body
+// +-----------------+
+// | u32 len payload |
+// +-----------------+
+// With the Globals body payload being json syntax for updating the global
+// dynamic values.
 // -----------------------------------------------------------------------------
 
 type Message struct {
@@ -68,6 +76,19 @@ type Message struct {
 	Payload []byte // Message
 }
 
+// Does the object type use a route field in its sub-header?
+var routedTypes map[uint8]bool = map[uint8]bool{
+	global.OBJ_DELIVERY:    true,
+	global.OBJ_TRANSFORMER: true,
+	global.OBJ_SUBSCRIBER:  true,
+	global.OBJ_GLOBALS:     false,
+}
+
+// Whether the give message should have a route field in its sub-header.
+func expectsRouteField(m *Message) bool {
+	return routedTypes[m.ObjType]
+}
+
 func decodeV1(data []byte) (commands.Command, error) {
 	r := bytes.NewReader(data)
 	msg := &Message{}
@@ -75,9 +96,16 @@ func decodeV1(data []byte) (commands.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg, err = parseSubHeader(r, msg)
-	if err != nil {
-		return nil, err
+	if expectsRouteField(msg) {
+		msg, err = parseSubHeaderRouted(r, msg)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		msg, err = parseSubHeaderMeta(r, msg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var cmd commands.Command
@@ -89,6 +117,8 @@ func decodeV1(data []byte) (commands.Command, error) {
 		cmd, err = parseSubscriberMessage(r, msg)
 	case global.OBJ_DELIVERY:
 		cmd, err = parseSendMessage(r, msg)
+	case global.OBJ_GLOBALS:
+		cmd, err = parseGlobalsMessage(r, msg)
 	default:
 		wMsg := fmt.Sprintf("Unknown object yet %s", string(msg.ObjType))
 		wErr := errgo.NewError(wMsg, global.VERB_WRN)
@@ -124,7 +154,8 @@ func parseBaseHeader(r io.Reader, msg *Message) (*Message, error) {
 	return msg, nil
 }
 
-func parseSubHeader(r io.Reader, msg *Message) (*Message, error) {
+// Parse the sub-header for objects that travel down a route.
+func parseSubHeaderRouted(r io.Reader, msg *Message) (*Message, error) {
 	uid, err := readString(r)
 	if err != nil {
 		wMsg := fmt.Sprintf(
@@ -144,6 +175,21 @@ func parseSubHeader(r io.Reader, msg *Message) (*Message, error) {
 		return nil, wErr
 	}
 	msg.Route = route
+
+	return msg, nil
+}
+
+// Parse the sub-header for objects that perform an action on the broker itself.
+func parseSubHeaderMeta(r io.Reader, msg *Message) (*Message, error) {
+	uid, err := readString(r)
+	if err != nil {
+		wMsg := fmt.Sprintf(
+			"Unable to parse string UID field from %s.", msg.Address,
+		)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
+	}
+	msg.UID = uid
 
 	return msg, nil
 }
@@ -223,7 +269,8 @@ func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 		msg.Payload = payload
 	}
 	if msg.CmdType != global.CMD_SEND {
-		wErr := errgo.NewError("Invalid command code!", global.VERB_WRN)
+		wMsg := fmt.Sprintf("Invalid command code from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
 		return nil, wErr
 	}
 
@@ -234,4 +281,76 @@ func parseSendMessage(r io.Reader, msg *Message) (commands.Command, error) {
 		msg.Payload,
 	)
 	return cmd, nil
+}
+
+func parseGlobalsMessage(r io.Reader, msg *Message) (commands.Command, error) {
+	payload, err := readBytes(r)
+	if err != nil {
+		wMsg := fmt.Sprintf("Unable to parse payload len for %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
+	}
+	if payload == nil {
+		wMsg := fmt.Sprintf("Empty globals update payload from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
+	}
+	if msg.CmdType != global.CMD_UPDATE {
+		wMsg := fmt.Sprintf("Invalid command code from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
+	}
+
+	var fields map[string]any
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		wMsg := fmt.Sprintf("Unparsable globals update from %s", msg.Address)
+		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		return nil, wErr
+	}
+	fields["command_type"] = msg.CmdType
+
+	cmd := parseGlobalFields(fields)
+
+	return cmd, nil
+}
+
+// Parses the raw json fields into a commands.Globals object and returns it.
+// Unparsable values do not update dynamic globals.
+func parseGlobalFields(fields map[string]any) commands.Command {
+	var cmd *commands.Globals = &commands.Globals{}
+	cmd.Address = global.Address
+	cmd.Port = global.Port
+	cmd.Verbosity = global.Verbosity
+	cmd.PrintTree = global.PrintTree
+	cmd.TransformTimeout = global.TransformTimeout.String()
+	cmd.Cmd = fields["command_type"].(uint8)
+
+	addr, exists := fields["address"].(string)
+	if exists {
+		cmd.Address = addr
+	}
+
+	// For the love of god, why the fuck does go unmarshal int to float64
+	// by default?! It gets me every god damn time.
+	port, exists := fields["port"].(float64)
+	if exists {
+		cmd.Port = int(port)
+	}
+
+	verbosity, exists := fields["verbosity"].(float64)
+	if exists {
+		cmd.Verbosity = int(verbosity)
+	}
+
+	printTree, exists := fields["print_tree"].(bool)
+	if exists {
+		cmd.PrintTree = printTree
+	}
+
+	timeoutExpression, exists := fields["transform_timeout"].(string)
+	if exists {
+		cmd.TransformTimeout = timeoutExpression
+	}
+
+	return cmd
 }

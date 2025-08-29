@@ -2,12 +2,14 @@ package server
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
+	"sync"
 
-	"mycelia/errgo"
+	"mycelia/global"
 	"mycelia/routing"
 	"mycelia/str"
 )
@@ -15,6 +17,7 @@ import (
 func NewServer(address string, port int) *Server {
 	server := &Server{}
 	server.Broker = routing.NewBroker()
+	server.Broker.ManagingServer = server
 	server.address = address
 	server.port = port
 	return server
@@ -23,33 +26,83 @@ func NewServer(address string, port int) *Server {
 // Servers are responsible for translating raw TCP string input into routable
 // messages.
 type Server struct {
-	Broker  *routing.Broker
-	address string
-	port    int
+	Broker   *routing.Broker
+	address  string
+	port     int
+	listener net.Listener
+	mutex    sync.RWMutex
+}
+
+func (s *Server) GetAddress() string {
+	return s.address
+}
+
+func (s *Server) GetPort() int {
+	return s.port
 }
 
 // Run ...
 func (server *Server) Run() {
+	if server.listener == nil {
+		server.UpdateListener()
+	}
+
 	strPort := strconv.Itoa(server.port)
 	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
-	str.SprintfLn("TCP server on %s", fullAddress)
+	str.SprintfLn("Listening on %s", fullAddress)
 
-	listener := errgo.ValueOrPanic(net.Listen("tcp", fullAddress))
-	defer listener.Close()
-
+	// TODO: Print values for address of sender.
 	for {
-		conn, err := listener.Accept()
+		server.mutex.RLock()
+		l := server.listener
+		server.mutex.RUnlock()
+
+		conn, err := l.Accept()
 		if err != nil {
-			// TODO: Print values for address of sender.
-			str.ErrorPrint("Listener could not accept message.")
+			if errors.Is(err, net.ErrClosed) {
+				continue
+			}
+			eMsg := fmt.Sprintf("Listener accept error %v", err)
+			str.ErrorPrint(eMsg)
 			continue
 		}
-		go server.handleConnection(conn)
+		go server.HandleConnection(conn)
+	}
+}
+
+func (server *Server) UpdateListener() {
+	// open new first
+	addr := fmt.Sprintf("%s:%d", global.Address, global.Port)
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		wMsg := fmt.Sprintf(
+			"Could not open listener to %s, staying on old listener!", addr,
+		)
+		str.WarningPrint(wMsg)
+
+		// These should be in sync, not thrilled with this here though.
+		global.Address = server.address
+		global.Port = server.port
+		return
+	}
+
+	server.mutex.Lock()
+	old := server.listener
+	server.listener = l
+	server.address = global.Address
+	server.port = global.Port
+	server.mutex.Unlock()
+
+	str.SprintfLn("Now listening on %s", addr)
+
+	if old != nil {
+		str.SprintfLn("Closing listener on %s", old.Addr().String())
+		_ = old.Close() // will cause a benign net.ErrClosed in Run()
 	}
 }
 
 // Handle incoming data stream.
-func (server *Server) handleConnection(conn net.Conn) {
+func (server *Server) HandleConnection(conn net.Conn) {
 	defer conn.Close()
 	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
 	str.ActionPrint(aMsg)
