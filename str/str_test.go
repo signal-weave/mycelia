@@ -3,6 +3,7 @@ package str
 import (
 	"bytes"
 	"io"
+	"mycelia/global"
 	"os"
 	"strings"
 	"testing"
@@ -18,8 +19,7 @@ func captureOutput(t *testing.T, fn func()) string {
 	}
 	os.Stdout = w
 
-	// Run the function
-	fn()
+	fn() // Run the function
 
 	// Restore and read
 	_ = w.Close()
@@ -29,24 +29,6 @@ func captureOutput(t *testing.T, fn func()) string {
 	_, _ = io.Copy(&buf, r)
 	_ = r.Close()
 	return buf.String()
-}
-
-func TestGetVerbosity_Valid(t *testing.T) {
-	t.Setenv("VERBOSITY", "3")
-	got := getVerbosity()
-	if got != 3 {
-		t.Fatalf("getVerbosity() = %d, want 3", got)
-	}
-}
-
-func TestGetVerbosity_PanicOnInvalid(t *testing.T) {
-	t.Setenv("VERBOSITY", "abc")
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic for invalid VERBOSITY")
-		}
-	}()
-	_ = getVerbosity() // should panic
 }
 
 func TestSprintfLn(t *testing.T) {
@@ -61,27 +43,27 @@ func TestSprintfLn(t *testing.T) {
 
 func TestActionWarningErrorPrint_VerbosityThresholds(t *testing.T) {
 	type tc struct {
-		name       string
-		verbosity  string
-		call       func()
+		name        string
+		verbosity   int
+		call        func()
 		shouldPrint bool
-		prefix     string
+		prefix      string
 	}
 
 	tests := []tc{
-		{"ActionPrint_v3_prints", "3", func() { ActionPrint("go!") }, true, "[ACTION] - "},
-		{"ActionPrint_v2_suppressed", "2", func() { ActionPrint("nope") }, false, ""},
+		{"ActionPrint_v3_prints", 3, func() { ActionPrint("go!") }, true, "[ACTION] - "},
+		{"ActionPrint_v2_suppressed", 2, func() { ActionPrint("nope") }, false, ""},
 
-		{"WarningPrint_v2_prints", "2", func() { WarningPrint("heads up") }, true, "[WARNING] - "},
-		{"WarningPrint_v1_suppressed", "1", func() { WarningPrint("nope") }, false, ""},
+		{"WarningPrint_v2_prints", 2, func() { WarningPrint("heads up") }, true, "[WARNING] - "},
+		{"WarningPrint_v1_suppressed", 1, func() { WarningPrint("nope") }, false, ""},
 
-		{"ErrorPrint_v1_prints", "1", func() { ErrorPrint("uh oh") }, true, "[ERROR] - "},
-		{"ErrorPrint_v0_suppressed", "0", func() { ErrorPrint("nope") }, false, ""},
+		{"ErrorPrint_v1_prints", 1, func() { ErrorPrint("uh oh") }, true, "[ERROR] - "},
+		{"ErrorPrint_v0_suppressed", 0, func() { ErrorPrint("nope") }, false, ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("VERBOSITY", tt.verbosity)
+			global.Verbosity = tt.verbosity
 			out := captureOutput(t, tt.call)
 			if tt.shouldPrint {
 				if out == "" {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"mycelia/commands"
@@ -32,13 +31,13 @@ import (
 
 // ------Pre-Init File Handling-------------------------------------------------
 
-func getPreInitData(cfg *runtimeConfig) {
+func getPreInitData() {
 	data := importPreInitData()
 	if data == nil {
 		fmt.Println("Could not import PreInit JSON data - Skipping Pre-Init.")
 		return
 	}
-	parseRuntimeConfigurable(cfg, data)
+	parseRuntimeConfigurable(data)
 
 	routesAny, ok := data["routes"].([]any)
 	if !ok {
@@ -80,7 +79,7 @@ type runtimeData struct {
 }
 
 // Pipes the non-shape data into the RuntimeCfg
-func parseRuntimeConfigurable(cfg *runtimeConfig, data map[string]any) {
+func parseRuntimeConfigurable(data map[string]any) {
 	rawRuntimeData, exists := data["runtime"].(map[string]any)
 	if !exists {
 		return
@@ -104,21 +103,21 @@ func parseRuntimeConfigurable(cfg *runtimeConfig, data map[string]any) {
 	}
 
 	if rd.Address != nil {
-		cfg.Address = *rd.Address
+		global.Address = *rd.Address
 	}
 	if rd.Port != nil {
-		cfg.Port = *rd.Port
+		global.Port = *rd.Port
 	}
 	if rd.Verbosity != nil {
-		cfg.Verbosity = *rd.Verbosity
-		os.Setenv("VERBOSITY", strconv.Itoa(cfg.Verbosity))
+		global.Verbosity = *rd.Verbosity
+		global.UpdateVerbosityEnvironVar()
 	}
 	if rd.PrintTree != nil {
-		cfg.PrintTree = *rd.PrintTree
+		global.PrintTree = *rd.PrintTree
 	}
 	if rd.TransformTimeout != nil {
 		if d, err := time.ParseDuration(*rd.TransformTimeout); err == nil {
-			cfg.TransformTimeout = d
+			global.TransformTimeout = d
 		}
 	}
 }

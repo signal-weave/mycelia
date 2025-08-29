@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"mycelia/boot"
 	"mycelia/commands"
+	"mycelia/global"
 	"mycelia/test"
 )
 
@@ -131,7 +131,7 @@ func recvWithTimeout(
 
 func TestSubscriberReceivesDelivery(t *testing.T) {
 	// Speed up tests that hit the net
-	boot.RuntimeCfg.TransformTimeout = 1
+	global.TransformTimeout = 1
 
 	// Start a one-way mock server that captures what we send to it.
 	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
@@ -170,7 +170,7 @@ func TestSubscriberReceivesDelivery(t *testing.T) {
 }
 
 func TestTransformerThenSubscriber_PathTransformsBody(t *testing.T) {
-	boot.RuntimeCfg.TransformTimeout = 1
+	global.TransformTimeout = 1
 
 	// Transformer echoes back with prefix + body
 	const prefix = "tx:"
@@ -212,7 +212,7 @@ func TestTransformerThenSubscriber_PathTransformsBody(t *testing.T) {
 }
 
 func TestTransformerFailureFallsBackToOriginalBody(t *testing.T) {
-	boot.RuntimeCfg.TransformTimeout = 1
+	global.TransformTimeout = 1
 
 	// Use an address that won't accept connections to force a dial error
 	// When transformer fails, it returns the original delivery, and the channel
