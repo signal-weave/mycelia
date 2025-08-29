@@ -3,18 +3,18 @@ package commands
 // Status of the current message describing its life cycle or validity.
 type Status int
 
-const (
-	StatusCreated  = iota // The initial status of a valid message.
-	StatusResolved        // Message has been consumed.
-	StatusInvalid         // A msg whose fields couldn't properly be decoded.
-)
-
 type Command interface {
 	GetID() string
 	GetCmd() uint8
 }
 
 // -----------------------------------------------------------------------------
+
+const (
+	StatusCreated  = iota // The initial status of a valid message.
+	StatusResolved        // Message has been consumed.
+	StatusInvalid         // A msg whose fields couldn't properly be decoded.
+)
 
 // The Delivery itself with fields from the incoming tcp stream and various
 // Mycelia used fields.
@@ -102,5 +102,44 @@ func NewTransformer(cmd uint8, id, route, channel, address string) *Transformer 
 		Route:   route,
 		Channel: channel,
 		Address: address,
+	}
+}
+
+// -----------------------------------------------------------------------------
+
+// Command to update the dynamic globals at runtime.
+type Globals struct {
+	Cmd uint8  `json:"cmd"`
+	ID  string `json:"id"`
+
+	Address          string `json:"address"`
+	Port             int    `json:"port"`
+	Verbosity        int    `json:"verbosity"`
+	PrintTree        bool   `json:"print_tree"`
+	TransformTimeout string `json:"transform_timeout"`
+}
+
+func (cmd *Globals) GetID() string {
+	return cmd.ID
+}
+
+func (cmd *Globals) GetCmd() uint8 {
+	return cmd.Cmd
+}
+
+func NewGlobals(
+	cmd uint8,
+	id, address, timeout string,
+	port, verbosity int,
+	print bool) *Globals {
+	return &Globals{
+		Cmd: cmd,
+		ID:  id,
+
+		Address:          address,
+		Port:             port,
+		Verbosity:        verbosity,
+		PrintTree:        print,
+		TransformTimeout: timeout,
 	}
 }

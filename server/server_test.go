@@ -2,10 +2,14 @@ package server
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"testing"
 	"time"
+
+	"mycelia/global"
+	"mycelia/test"
 )
 
 // writeUvarint is a tiny helper for tests.
@@ -20,7 +24,7 @@ func runHandlerAsync(t *testing.T, srv *Server, conn net.Conn) chan struct{} {
 	t.Helper()
 	done := make(chan struct{})
 	go func() {
-		srv.handleConnection(conn)
+		srv.HandleConnection(conn)
 		close(done)
 	}()
 	return done
@@ -120,4 +124,47 @@ func TestHandleConnection_ImmediateEOF(t *testing.T) {
 	_ = clientSide.Close()
 
 	waitOrTimeout(t, done)
+}
+
+func portOf(l net.Listener) int {
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func TestUpdateListener_BindsToRequestedPort_AndClosesOld(t *testing.T) {
+	var s Server
+
+	// Start on an ephemeral port.
+	s.UpdateListener()
+	if s.listener == nil {
+		t.Fatalf("listener not created")
+	}
+	oldPort := portOf(s.listener)
+	t.Cleanup(func() { _ = s.listener.Close() })
+
+	// Choose a specific, free port (different from oldPort).
+	newPort := test.FirstFreeTCPPort(t)
+	for newPort == oldPort {
+		newPort = test.FirstFreeTCPPort(t)
+	}
+	global.Port = newPort
+
+	// Switch to the new port.
+	s.UpdateListener()
+	if s.listener == nil {
+		t.Fatalf("listener not created after update")
+	}
+	got := portOf(s.listener)
+	if got != newPort {
+		t.Fatalf("expected listener port %d, got %d", newPort, got)
+	}
+
+	// Old listener should be closed: we should be able to bind to oldPort now.
+	addr := fmt.Sprintf("127.0.0.1:%d", oldPort)
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf(
+			"old listener appears not closed; cannot re-bind %s: %v", addr, err,
+		)
+	}
+	_ = l.Close()
 }

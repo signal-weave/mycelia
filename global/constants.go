@@ -39,9 +39,11 @@ const (
 // -------Commands--------------------------------------------------------------
 
 const (
+	OBJ_UNKNOWN     uint8 = iota
 	OBJ_DELIVERY    uint8 = 1
 	OBJ_TRANSFORMER uint8 = 2
 	OBJ_SUBSCRIBER  uint8 = 3
+	OBJ_GLOBALS     uint8 = 4
 )
 
 const (
@@ -49,6 +51,7 @@ const (
 	CMD_SEND    uint8 = 1
 	CMD_ADD     uint8 = 2
 	CMD_REMOVE  uint8 = 3
+	CMD_UPDATE  uint8 = 4
 )
 
 // -------Terminal--------------------------------------------------------------

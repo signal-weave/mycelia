@@ -1,9 +1,12 @@
 package global
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
+
+	"mycelia/commands"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,4 +22,32 @@ var TransformTimeout time.Duration = time.Duration(5) * time.Second
 
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
+}
+
+func UpdateGlobalsByMessage(m *commands.Globals) {
+	Address = m.Address
+	Port = m.Port
+	Verbosity = m.Verbosity
+	UpdateVerbosityEnvironVar()
+	PrintTree = m.PrintTree
+
+	oldTimeout := TransformTimeout
+	newTimeout, err := time.ParseDuration(m.TransformTimeout)
+	if err != nil {
+		TransformTimeout = oldTimeout
+		return
+	}
+	TransformTimeout = newTimeout
+
+	PrintDynamicValues()
+}
+
+func PrintDynamicValues() {
+	fmt.Println("----------Current Dynamic Global Values----------")
+	fmt.Printf("Address: %s\n", Address)
+	fmt.Printf("Port: %v\n", Port)
+	fmt.Printf("Verbosity: %v\n", Verbosity)
+	fmt.Printf("PrintTree: %v\n", PrintTree)
+	fmt.Printf("TransformTimeout: %s\n", TransformTimeout.String())
+	fmt.Println("-------------------------------------------------")
 }
