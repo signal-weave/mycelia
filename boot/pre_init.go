@@ -71,12 +71,13 @@ func importPreInitData() map[string]any {
 // This handles type conversion - Go marshals json integers to float64 by
 // default for whatever fucking reason.
 type runtimeData struct {
-	Address          *string `json:"address"`
-	Port             *int    `json:"port"`
-	Verbosity        *int    `json:"verbosity"`
-	PrintTree        *bool   `json:"print-tree"`
-	TransformTimeout *string `json:"xform-timeout"`
-	AutoConsolidate  *bool `json:"consolidate"`
+	Address          *string   `json:"address"`
+	Port             *int      `json:"port"`
+	Verbosity        *int      `json:"verbosity"`
+	PrintTree        *bool     `json:"print-tree"`
+	TransformTimeout *string   `json:"xform-timeout"`
+	AutoConsolidate  *bool     `json:"consolidate"`
+	SecurityToken    *[]string `json:"security-tokens"`
 }
 
 // Pipes the non-shape data into the RuntimeCfg
@@ -124,6 +125,9 @@ func parseRuntimeConfigurable(data map[string]any) {
 	if rd.AutoConsolidate != nil {
 		globals.AutoConsolidate = *rd.AutoConsolidate
 	}
+	if rd.SecurityToken != nil {
+		globals.SecurityTokens = *rd.SecurityToken
+	}
 }
 
 /* -----------------------------------------------------------------------------
@@ -163,7 +167,6 @@ the "routes" field, or children of it, could not exist.
 func parseRouteCmds(routeData []map[string]any) {
 	for _, route := range routeData {
 		routeName, _ := route["name"].(string)
-		fmt.Println("route:", routeName)
 
 		rawChannels, exists := route["channels"].([]any)
 		if !exists {

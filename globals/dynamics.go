@@ -30,6 +30,10 @@ var AutoConsolidate bool = true
 // The deadline time when talking to a external machine.
 var TransformTimeout time.Duration = time.Duration(5) * time.Second
 
+// The list of accepted security tokens to update the broker at runtime.
+// Clients need any one of these to have permission.
+var SecurityTokens []string = []string{}
+
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
 }
@@ -42,5 +46,15 @@ func PrintDynamicValues() {
 	fmt.Printf("PrintTree: %v\n", PrintTree)
 	fmt.Printf("TransformTimeout: %s\n", TransformTimeout.String())
 	fmt.Printf("AutoConsolidate: %v\n", AutoConsolidate)
+
+	fmt.Println("Accepted security tokens:")
+	if len(SecurityTokens) > 0 {
+		for _, v := range SecurityTokens {
+			fmt.Printf("  %s\n", v)
+		}
+	} else {
+		fmt.Println("  No registered security tokens.")
+	}
+
 	fmt.Println("-------------------------------------------------")
 }

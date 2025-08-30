@@ -1,14 +1,13 @@
 package routing
 
 import (
-	"encoding/json"
 	"fmt"
+	"sync"
+
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
-	"sync"
-	"time"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -139,63 +138,15 @@ func (b *Broker) handleSubscriber(cmd *protocol.Command) {
 func (b *Broker) handleGlobals(cmd *protocol.Command) {
 	switch cmd.CmdType {
 	case globals.CMD_UPDATE:
-		b.updateGlobals(cmd)
+		updateGlobals(cmd)
 		if b.ManagingServer.GetAddress() != globals.Address ||
-		b.ManagingServer.GetPort() != globals.Port {
+			b.ManagingServer.GetPort() != globals.Port {
 			b.ManagingServer.UpdateListener()
 		}
 	}
 }
 
-func (b *Broker) updateGlobals(cmd *protocol.Command) {
-	values := map[string]any{}
-	err := json.Unmarshal(cmd.Payload, &values)
-	if err != nil {
-		wMsg := fmt.Sprintf(
-			"Could not parse payload for globals update from %s",
-			cmd.Sender,
-		)
-		errgo.NewError(wMsg, globals.VERB_WRN)
-		return
-	}
-
-	address, exists := values["address"].(string)
-	if exists {
-		globals.Address = address
-	}
-	port, exists := values["port"].(float64)
-	if exists {
-		globals.Port = int(port)
-	}
-	verbosity, exists := values["verbosity"].(float64)
-	if exists {
-		globals.Verbosity = int(verbosity)
-	}
-	globals.UpdateVerbosityEnvironVar()
-	printTree, exists := values["print_tree"].(bool)
-	if exists {
-		globals.PrintTree = printTree
-	}
-	timeout, exists := values["transform_timeout"].(string)
-	if exists {
-		newTimeout, err := time.ParseDuration(timeout)
-		if err != nil {
-			wMsg := fmt.Sprintf(
-				"Unable to parse transform timeout expr from %s", cmd.Sender,
-			)
-			str.WarningPrint(wMsg)
-		} else {
-			globals.TransformTimeout = newTimeout
-		}
-	}
-	consolidate, exists := values["consolidate"].(bool)
-	if exists {
-		globals.AutoConsolidate = consolidate
-	}
-	globals.PrintDynamicValues()
-}
-
-// -------Util------------------------------------------------------------------
+// -------Broker Util-----------------------------------------------------------
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
@@ -211,6 +162,7 @@ func (b *Broker) PrintBrokerStructure() {
 	transformerExpr := "              | - [transformer] %s\n"
 	subscriberExpr := "              | - [subscriber] %s\n"
 
+	str.PrintCenteredHeader("Broker Shape")
 	fmt.Println("\n[broker]")
 	for routeName, route := range b.routes {
 		fmt.Printf(routeExpr, routeName)
@@ -229,5 +181,6 @@ func (b *Broker) PrintBrokerStructure() {
 		}
 	}
 
+	str.PrintAsciiLine()
 	fmt.Println()
 }

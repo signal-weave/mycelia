@@ -13,12 +13,13 @@ import (
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
 var majorVersion int = 0 // Proud version
-var minorVersion int = 7 // Real version
-var patchVersion int = 1 // Sucky verison
+var minorVersion int = 8 // Real version
+var patchVersion int = 0 // Sucky verison
 
 func main() {
 	str.PrintStartupText(majorVersion, minorVersion, patchVersion)
 	readArgs()
+	globals.PrintDynamicValues()
 	startServer() // Must be last, contains infinite for loop.
 }
 
