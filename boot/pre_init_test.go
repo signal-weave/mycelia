@@ -28,13 +28,13 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 
 	data := map[string]any{
 		"runtime": map[string]any{
-			"address":       "127.0.0.1",
-			"port":          6001,
-			"verbosity":     3,
-			"print-tree":    true,
-			"xform-timeout": "150ms",
-			"consolidate": false,
-			"security-tokens": []string{ "token1" },
+			"address":         "127.0.0.1",
+			"port":            6001,
+			"verbosity":       3,
+			"print-tree":      true,
+			"xform-timeout":   "150ms",
+			"consolidate":     false,
+			"security-tokens": []string{"token1"},
 		},
 	}
 
@@ -58,7 +58,7 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	if globals.AutoConsolidate != false {
 		t.Fatalf("AutoConsolidation not updated: %v", globals.AutoConsolidate)
 	}
-	if slices.Equal(globals.SecurityTokens, []string{ "token1" }) {
+	if !slices.Equal(globals.SecurityTokens, []string{"token1"}) {
 		t.Fatalf("SecurityTokens not updated: %v", globals.SecurityTokens)
 	}
 }
