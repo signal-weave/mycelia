@@ -2,9 +2,10 @@ package routing
 
 import (
 	"fmt"
+	"sync"
+
 	"mycelia/protocol"
 	"mycelia/str"
-	"sync"
 )
 
 // The primary grouping for message traversal. A route can contain multiple

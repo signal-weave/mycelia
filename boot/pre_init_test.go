@@ -1,6 +1,7 @@
 package boot
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 			"print-tree":    true,
 			"xform-timeout": "150ms",
 			"consolidate": false,
+			"security-tokens": []string{ "token1" },
 		},
 	}
 
@@ -54,9 +56,11 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 		t.Fatalf("TransformTimeout not updated: %v", globals.TransformTimeout)
 	}
 	if globals.AutoConsolidate != false {
-		t.Fatalf("AutoConsolidation no updated: %v", globals.AutoConsolidate)
+		t.Fatalf("AutoConsolidation not updated: %v", globals.AutoConsolidate)
 	}
-
+	if slices.Equal(globals.SecurityTokens, []string{ "token1" }) {
+		t.Fatalf("SecurityTokens not updated: %v", globals.SecurityTokens)
+	}
 }
 
 func TestParseRouteCmds_GeneratesCommands(t *testing.T) {

@@ -22,10 +22,8 @@ type Command struct {
 	Sender string
 	UID    string
 
-	Arg1 string
-	Arg2 string
-	Arg3 string
-	Arg4 string
+	Arg1, Arg2 string
+	Arg3, Arg4 string
 
 	Payload []byte
 }

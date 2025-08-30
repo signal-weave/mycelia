@@ -3,10 +3,11 @@ package str
 import (
 	"bytes"
 	"io"
-	"mycelia/globals"
 	"os"
 	"strings"
 	"testing"
+
+	"mycelia/globals"
 )
 
 func captureOutput(t *testing.T, fn func()) string {
