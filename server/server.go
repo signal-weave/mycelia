@@ -70,6 +70,7 @@ func (server *Server) Run() {
 	}
 }
 
+// Updates the socket the server is listening to at runtime.
 func (server *Server) UpdateListener() {
 	// open new first
 	addr := fmt.Sprintf("%s:%d", globals.Address, globals.Port)
