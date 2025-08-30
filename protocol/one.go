@@ -23,17 +23,10 @@ import (
 // which is then followed by a variable field sized sub-header that contains a
 // UID and the sender's address for tracking purposes.
 
-<<<<<<< HEAD
 // # Tracking Sub-header
 // +-------------+----------------+
 // | u8 len uid  | u16 len sender |
 // +-------------+----------------+
-=======
-// # UID Sub-header
-// +-------------+
-// | u8 len uid  |
-// +-------------+
->>>>>>> 6f1d5bb3458c1ab2efaf5e8f61f87bc569a68fdb
 
 // which is then followed by 4 uint8 sized byte fields that act as arguments for
 // the command type in the fixed header.
