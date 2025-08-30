@@ -65,6 +65,9 @@ func (b *Broker) Route(name string) *Route {
 			channels: map[string]*Channel{},
 		}
 		b.routes[name] = r
+		str.ActionPrint(
+			fmt.Sprintf("Created route: %s", name),
+		)
 	}
 	return r
 }
@@ -184,6 +187,10 @@ func (b *Broker) updateGlobals(cmd *protocol.Command) {
 		} else {
 			globals.TransformTimeout = newTimeout
 		}
+	}
+	consolidate, exists := values["consolidate"].(bool)
+	if exists {
+		globals.AutoConsolidate = consolidate
 	}
 	globals.PrintDynamicValues()
 }

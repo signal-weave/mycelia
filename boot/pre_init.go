@@ -76,6 +76,7 @@ type runtimeData struct {
 	Verbosity        *int    `json:"verbosity"`
 	PrintTree        *bool   `json:"print-tree"`
 	TransformTimeout *string `json:"xform-timeout"`
+	AutoConsolidate  *bool `json:"consolidate"`
 }
 
 // Pipes the non-shape data into the RuntimeCfg
@@ -120,6 +121,9 @@ func parseRuntimeConfigurable(data map[string]any) {
 			globals.TransformTimeout = d
 		}
 	}
+	if rd.AutoConsolidate != nil {
+		globals.AutoConsolidate = *rd.AutoConsolidate
+	}
 }
 
 /* -----------------------------------------------------------------------------
@@ -132,7 +136,8 @@ the "routes" field, or children of it, could not exist.
     "port": 8080,
     "verbosity": 2,
     "print-tree": true,
-    "xform-timeout": "45s"
+    "xform-timeout": "45s",
+	"consolidate": true
   },
   "routes": [
     {

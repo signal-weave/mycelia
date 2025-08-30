@@ -17,6 +17,7 @@ type snapshot struct {
 	PrintTree        bool
 	Verbosity        int
 	TransformTimeout time.Duration
+	AutoConsolidate  bool
 }
 
 func takeSnapshot() snapshot {
@@ -26,6 +27,7 @@ func takeSnapshot() snapshot {
 		PrintTree:        globals.PrintTree,
 		Verbosity:        globals.Verbosity,
 		TransformTimeout: globals.TransformTimeout,
+		AutoConsolidate:  globals.AutoConsolidate,
 	}
 }
 
@@ -35,6 +37,7 @@ func restoreSnapshot(s snapshot) {
 	globals.PrintTree = s.PrintTree
 	globals.Verbosity = s.Verbosity
 	globals.TransformTimeout = s.TransformTimeout
+	globals.AutoConsolidate = s.AutoConsolidate
 }
 
 func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
@@ -45,6 +48,7 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 	globals.PrintTree = false
 	globals.Verbosity = 0
 	globals.TransformTimeout = 5 * time.Second
+	globals.AutoConsolidate = false
 
 	args := []string{
 		"-address", "0.0.0.0",
@@ -52,6 +56,7 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 		"-verbosity", "3",
 		"-print-tree",
 		"-xform-timeout", "45s",
+		"-consolidate",
 	}
 	if err := parseRuntimeArgs(args); err != nil {
 		t.Fatalf("parseRuntimeArgs returned error: %v", err)
@@ -75,6 +80,10 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 			globals.TransformTimeout, 45*time.Second,
 		)
 	}
+	if !globals.AutoConsolidate {
+		t.Errorf("AutoConsolidate = %v, want %v", globals.AutoConsolidate, true)
+	}
+
 }
 
 func TestParseRuntimeArgs_AllowsHostname(t *testing.T) {

@@ -1,10 +1,13 @@
 package routing
 
 import (
+	"fmt"
 	"slices"
 	"sync"
 
+	"mycelia/globals"
 	"mycelia/protocol"
+	"mycelia/str"
 )
 
 // Channels are the subscription buckets that fill routes. A subscriber
@@ -31,6 +34,9 @@ func (ch *Channel) AddTransformer(t Transformer) {
 		}
 	}
 	ch.transformers = append(ch.transformers, t)
+	str.ActionPrint(
+		fmt.Sprintf("Added transformer at address: %s", t.Address),
+	)
 }
 
 func (ch *Channel) RemoveTransformer(t Transformer) {
@@ -45,6 +51,9 @@ func (ch *Channel) RemoveTransformer(t Transformer) {
 			break
 		}
 	}
+	str.ActionPrint(
+		fmt.Sprintf("Removed transformer for address: %s", t.Address),
+	)
 	ch.checkEmptyChannel()
 }
 
@@ -57,6 +66,9 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 		}
 	}
 	ch.subscribers = append(ch.subscribers, s)
+	str.ActionPrint(
+		fmt.Sprintf("Added subscriber at address: %s", s.Address),
+	)
 }
 
 func (ch *Channel) RemoveSubscriber(s Subscriber) {
@@ -69,10 +81,16 @@ func (ch *Channel) RemoveSubscriber(s Subscriber) {
 			break
 		}
 	}
+	str.ActionPrint(
+		fmt.Sprintf("Removed subscriber for address: %s", s.Address),
+	)
 	ch.checkEmptyChannel()
 }
 
 func (ch *Channel) checkEmptyChannel() {
+	if !globals.AutoConsolidate{
+		return
+	}
 	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
 		ch.route.removeChannel(ch.name)
 	}

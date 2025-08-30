@@ -1,7 +1,9 @@
 package routing
 
 import (
+	"fmt"
 	"mycelia/protocol"
+	"mycelia/str"
 	"sync"
 )
 
@@ -33,6 +35,9 @@ func (r *Route) Channel(name string) *Channel {
 			subscribers:  []Subscriber{},
 		}
 		r.channels[name] = ch
+		str.ActionPrint(
+			fmt.Sprintf("Created channel %s.%s", r.name, name),
+		)
 	}
 
 	return ch

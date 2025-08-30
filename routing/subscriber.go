@@ -35,4 +35,7 @@ func (c *Subscriber) ConsumeDelivery(m *protocol.Command) {
 		str.ErrorPrint(eMsg)
 		return
 	}
+	str.ActionPrint(
+		fmt.Sprintf("Wrote delivery to: %s", c.Address),
+	)
 }
