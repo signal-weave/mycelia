@@ -119,7 +119,11 @@ Example PreInit.json file:
     "port": 8080,
     "verbosity": 2,
     "print-tree": true,
-    "xform-timeout": "45s"
+    "xform-timeout": "45s",
+    "security-tokens": [
+      "lockheed",
+      "martin"
+    ]
   },
   "routes": [
     {
