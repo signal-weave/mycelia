@@ -22,6 +22,7 @@ func main() {
 	startServer() // Must be last, contains infinite for loop.
 }
 
+// Parses CLI args and PreInit.json file.
 func readArgs() {
 	err := boot.ParseRuntimeArgs(os.Args[1:])
 	if err != nil {
@@ -30,7 +31,7 @@ func readArgs() {
 	}
 }
 
-// Starts the server - checks for pre-loaded commands in the PreInit.json file
+// Starts the server - checks for pre-loaded commands from the PreInit.json file
 // and loads them into the server's broker, then runs the server.
 func startServer() {
 	server := server.NewServer(globals.Address, globals.Port)
