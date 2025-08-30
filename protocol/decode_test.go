@@ -3,167 +3,262 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"io"
+	"math"
+	"strings"
 	"testing"
+
+	"mycelia/globals"
 )
 
-// --- helpers --------------------------------------------------------------
+// -------small helpers---------------------------------------------------------
 
-func beU32(n uint32) []byte {
-	var buf bytes.Buffer
-	_ = binary.Write(&buf, binary.BigEndian, n)
-	return buf.Bytes()
+func be16(n uint16) []byte {
+	var b [2]byte
+	binary.BigEndian.PutUint16(b[:], n)
+	return b[:]
 }
 
-func prependLenBE(body []byte) []byte {
-	var buf bytes.Buffer
-	_ = binary.Write(&buf, binary.BigEndian, uint32(len(body)))
-	buf.Write(body)
-	return buf.Bytes()
+func be32(n uint32) []byte {
+	var b [4]byte
+	binary.BigEndian.PutUint32(b[:], n)
+	return b[:]
 }
 
-// --- readU32 --------------------------------------------------------------
+// -------readU8 / readU32 -----------------------------------------------------
 
-func TestReadU32_OK(t *testing.T) {
-	r := bytes.NewReader(beU32(42))
-	var out uint32
-	if err := readU32(r, &out); err != nil {
-		t.Fatalf("readU32 error: %v", err)
-	}
-	if out != 42 {
-		t.Fatalf("expected 42, got %d", out)
-	}
-}
-
-func TestReadU32_ShortBuffer(t *testing.T) {
-	r := bytes.NewReader([]byte{0x00, 0x00}) // < 4 bytes
-	var out uint32
-	err := readU32(r, &out)
-	if err == nil {
-		t.Fatalf("expected error for short buffer, got nil")
-	}
-}
-
-// --- readLen --------------------------------------------------------------
-
-func TestReadLen_OK(t *testing.T) {
-	r := bytes.NewReader(beU32(5))
-	n, err := readLen(r)
+func TestReadU8_Success(t *testing.T) {
+	var out uint8
+	err := readU8(bytes.NewReader([]byte{0xAB}), &out)
 	if err != nil {
-		t.Fatalf("readLen error: %v", err)
+		t.Fatalf("readU8 error: %v", err)
 	}
-	if n != 5 {
-		t.Fatalf("expected 5, got %d", n)
+	if out != 0xAB {
+		t.Fatalf("want 0xAB, got 0x%02X", out)
 	}
 }
 
-func TestReadLen_ShortBuffer(t *testing.T) {
-	r := bytes.NewReader([]byte{0x00, 0x00, 0x00}) // < 4 bytes
-	_, err := readLen(r)
+func TestReadU8_EOF(t *testing.T) {
+	var out uint8
+	err := readU8(bytes.NewReader(nil), &out)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	// error is wrapped with "read length: %w"
-	if !errors.Is(err, io.ErrUnexpectedEOF) {
-		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
+	if !strings.Contains(err.Error(), "EOF") {
+		t.Fatalf("expected EOF in error, got: %v", err)
 	}
 }
 
-func TestReadLen_TooLarge(t *testing.T) {
-	const tooBig = 64*1024*1024 + 1 // 64MB + 1
-	r := bytes.NewReader(beU32(tooBig))
-	_, err := readLen(r)
-	if err == nil {
-		t.Fatalf("expected error for too-large length, got nil")
-	}
-	if got := err.Error(); got != "declared length exceeds 64MB safety limit" {
-		t.Fatalf("unexpected error: %q", got)
-	}
-}
-
-// --- readString -----------------------------------------------------------
-
-func TestReadString_Empty(t *testing.T) {
-	// length=0
-	r := bytes.NewReader(beU32(0))
-	s, err := readString(r)
+func TestReadU32_Success(t *testing.T) {
+	var out uint32
+	data := be32(0x01020304)
+	err := readU32(bytes.NewReader(data), &out)
 	if err != nil {
-		t.Fatalf("readString error: %v", err)
+		t.Fatalf("readU32 error: %v", err)
+	}
+	if out != 0x01020304 {
+		t.Fatalf("want 0x01020304, got 0x%08X", out)
+	}
+}
+
+// -------readStringU8 / U16 / U32 ---------------------------------------------
+
+func TestReadStringU8_ZeroLength(t *testing.T) {
+	// length=0 → returns empty string, nil error
+	data := []byte{0x00}
+	s, err := readStringU8(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("readStringU8 error: %v", err)
 	}
 	if s != "" {
-		t.Fatalf("expected empty string, got %q", s)
+		t.Fatalf("want empty string, got %q", s)
 	}
 }
 
-func TestReadString_OK(t *testing.T) {
-	body := []byte("test")
-	r := bytes.NewReader(prependLenBE(body))
-	s, err := readString(r)
+func TestReadStringU8_Success(t *testing.T) {
+	payload := []byte("hello")
+	data := append([]byte{uint8(len(payload))}, payload...)
+	s, err := readStringU8(bytes.NewReader(data))
 	if err != nil {
-		t.Fatalf("readString error: %v", err)
+		t.Fatalf("readStringU8 error: %v", err)
 	}
-	if s != "test" {
-		t.Fatalf("expected %q, got %q", "test", s)
+	if s != "hello" {
+		t.Fatalf("want %q, got %q", "hello", s)
 	}
 }
 
-func TestReadString_Truncated(t *testing.T) {
-	// declare len=4, provide only 3 bytes
-	var buf bytes.Buffer
-	_ = binary.Write(&buf, binary.BigEndian, uint32(4))
-	buf.Write([]byte("tes"))
-	r := bytes.NewReader(buf.Bytes())
-
-	_, err := readString(r)
+func TestReadStringU8_Truncated(t *testing.T) {
+	// declare 5, give only 3
+	data := append([]byte{5}, []byte("hey")...)
+	_, err := readStringU8(bytes.NewReader(data))
 	if err == nil {
-		t.Fatalf("expected error for truncated string, got nil")
+		t.Fatalf("expected error, got nil")
 	}
-	// wrapped with "read string bytes: %w"
-	if !errors.Is(err, io.ErrUnexpectedEOF) {
-		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
+	if !strings.Contains(err.Error(), "read string bytes") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-// --- readBytes ------------------------------------------------------------
-
-func TestReadBytes_Empty(t *testing.T) {
-	// length=0
-	r := bytes.NewReader(beU32(0))
-	b, err := readBytes(r)
+func TestReadStringU16_ZeroLength(t *testing.T) {
+	data := be16(0)
+	s, err := readStringU16(bytes.NewReader(data))
 	if err != nil {
-		t.Fatalf("readBytes error: %v", err)
+		t.Fatalf("readStringU16 error: %v", err)
 	}
-	if b != nil {
-		t.Fatalf("expected nil slice for zero length, got %#v", b)
-	}
-}
-
-func TestReadBytes_OK(t *testing.T) {
-	body := []byte{0x01, 0x02, 0x03}
-	r := bytes.NewReader(prependLenBE(body))
-	b, err := readBytes(r)
-	if err != nil {
-		t.Fatalf("readBytes error: %v", err)
-	}
-	if !bytes.Equal(b, body) {
-		t.Fatalf("expected %v, got %v", body, b)
+	if s != "" {
+		t.Fatalf("want empty string, got %q", s)
 	}
 }
 
-func TestReadBytes_Truncated(t *testing.T) {
-	// declare len=3, provide only 2 bytes
-	var buf bytes.Buffer
-	_ = binary.Write(&buf, binary.BigEndian, uint32(3))
-	buf.Write([]byte{0xAA, 0xBB})
-	r := bytes.NewReader(buf.Bytes())
-
-	_, err := readBytes(r)
+func TestReadStringU16_TooLarge_IfRepresentable(t *testing.T) {
+	// Limit from implementation: 64*globals.BytesInKilobyte - 1
+	u16Limit := uint16(64*globals.BytesInKilobyte - 1)
+	if u16Limit == math.MaxUint16 {
+		// Can't represent a value > limit in uint16; skip this edge-case.
+		t.Skip("u16 safety limit equals MaxUint16; cannot construct representable overflow")
+	}
+	decl := be16(u16Limit + 1)
+	_, err := readStringU16(bytes.NewReader(decl))
 	if err == nil {
-		t.Fatalf("expected error for truncated bytes, got nil")
+		t.Fatalf("expected limit error, got nil")
 	}
-	// wrapped with "read payload bytes: %w"
-	if !errors.Is(err, io.ErrUnexpectedEOF) {
-		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
+	if !strings.Contains(err.Error(), "declared length exceeds 64KB safety limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadStringU32_TooLarge(t *testing.T) {
+	// Limit from implementation: 64 * globals.BytesInMegabyte
+	readLimit := uint32(64 * globals.BytesInMegabyte)
+	decl := be32(readLimit + 1)
+	_, err := readStringU32(bytes.NewReader(decl))
+	if err == nil {
+		t.Fatalf("expected limit error, got nil")
+	}
+	if !strings.Contains(err.Error(), "declared length exceeds 64MB safety limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadStringU32_Truncated(t *testing.T) {
+	// declare 4, provide only 2
+	data := append(be32(4), []byte("hi")...)
+	_, err := readStringU32(bytes.NewReader(data))
+	if err == nil {
+		t.Fatalf("expected truncation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "read string bytes") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// -------readBytesU16 / U32----------------------------------------------------
+
+func TestReadBytesU16_Success(t *testing.T) {
+	body := []byte{0xAA, 0xBB, 0xCC}
+	data := append(be16(uint16(len(body))), body...)
+	got, err := readBytesU16(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("readBytesU16 error: %v", err)
+	}
+	if !bytes.Equal(got, body) {
+		t.Fatalf("payload mismatch: got %v want %v", got, body)
+	}
+}
+
+func TestReadBytesU16_Truncated(t *testing.T) {
+	body := []byte{0xAA}
+	decl := be16(3) // declare 3, give 1
+	data := append(decl, body...)
+	_, err := readBytesU16(bytes.NewReader(data))
+	if err == nil {
+		t.Fatalf("expected truncation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "read payload bytes") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadBytesU32_Success(t *testing.T) {
+	body := []byte{1, 2, 3, 4, 5}
+	data := append(be32(uint32(len(body))), body...)
+	got, err := readBytesU32(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("readBytesU32 error: %v", err)
+	}
+	if !bytes.Equal(got, body) {
+		t.Fatalf("payload mismatch: got %v want %v", got, body)
+	}
+}
+
+func TestReadBytesU32_TooLarge(t *testing.T) {
+	readLimit := uint32(64 * globals.BytesInMegabyte)
+	decl := be32(readLimit + 1)
+	_, err := readBytesU32(bytes.NewReader(decl))
+	if err == nil {
+		t.Fatalf("expected limit error, got nil")
+	}
+	if !strings.Contains(err.Error(), "declared length exceeds 64MB safety limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// -------readU8Len / U16Len / U32Len-------------------------------------------
+
+func TestReadU8Len_Success(t *testing.T) {
+	data := []byte{200}
+	n, err := readU8Len(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("readU8Len error: %v", err)
+	}
+	if n != 200 {
+		t.Fatalf("want 200, got %d", n)
+	}
+}
+
+func TestReadU8Len_EOF(t *testing.T) {
+	_, err := readU8Len(bytes.NewReader(nil))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "read length") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadU16Len_TooLarge_IfRepresentable(t *testing.T) {
+	u16Limit := uint16(64*globals.BytesInKilobyte - 1)
+	if u16Limit == math.MaxUint16 {
+		t.Skip("u16 safety limit equals MaxUint16; cannot construct representable overflow")
+	}
+	decl := be16(u16Limit + 1)
+	_, err := readU16Len(bytes.NewReader(decl))
+	if err == nil {
+		t.Fatalf("expected limit error, got nil")
+	}
+	if !strings.Contains(err.Error(), "declared length exceeds 64KB safety limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadU32Len_TooLarge(t *testing.T) {
+	readLimit := uint32(64 * globals.BytesInMegabyte)
+	decl := be32(readLimit + 1)
+	_, err := readU32Len(bytes.NewReader(decl))
+	if err == nil {
+		t.Fatalf("expected limit error, got nil")
+	}
+	if !strings.Contains(err.Error(), "declared length exceeds 64MB safety limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadU32Len_Success(t *testing.T) {
+	decl := be32(123456)
+	n, err := readU32Len(bytes.NewReader(decl))
+	if err != nil {
+		t.Fatalf("readU32Len error: %v", err)
+	}
+	if n != 123456 {
+		t.Fatalf("want 123456, got %d", n)
 	}
 }

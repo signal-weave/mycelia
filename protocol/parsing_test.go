@@ -2,136 +2,116 @@ package protocol
 
 import (
 	"bytes"
-	"encoding/binary"
-	"errors"
-	"io"
-	"reflect"
 	"strings"
 	"testing"
-
-	"mycelia/global"
 )
 
-// -------Test helpers (writers)------------------------------------------------
+// -------helpers to build a V1 frame (after version byte)----------------------
 
-func wrU8(buf *bytes.Buffer, v uint8, t *testing.T) {
-	t.Helper()
-	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
-		t.Fatalf("wrU32 failed: %v", err)
-	}
-}
-
-func wrU32(buf *bytes.Buffer, v uint32, t *testing.T) {
-	t.Helper()
-	if err := binary.Write(buf, binary.BigEndian, v); err != nil {
-		t.Fatalf("wrU32 failed: %v", err)
-	}
-}
-
-func wrString32(buf *bytes.Buffer, s string, t *testing.T) {
-	t.Helper()
-	wrU32(buf, uint32(len(s)), t)
-	if _, err := buf.Write([]byte(s)); err != nil {
-		t.Fatalf("wrString32 failed: %v", err)
-	}
-}
-
-func wrBytes32(buf *bytes.Buffer, b []byte, t *testing.T) {
-	t.Helper()
-	wrU32(buf, uint32(len(b)), t)
-	if _, err := buf.Write(b); err != nil {
-		t.Fatalf("wrBytes32 failed: %v", err)
-	}
+func buildV1AfterVersion(
+	obj, cmd uint8,
+	uid, sender, a1, a2, a3, a4, payload string) []byte {
+	var data []byte
+	data = append(data, obj)                   // ObjType
+	data = append(data, cmd)                   // CmdType
+	data = append(data, encStrU8(uid)...)      // UID (u8-len)
+	data = append(data, encStrU16(sender)...)  // Sender (u16-len)
+	data = append(data, encStrU8(a1)...)       // Arg1 (u8-len)
+	data = append(data, encStrU8(a2)...)       // Arg2
+	data = append(data, encStrU8(a3)...)       // Arg3
+	data = append(data, encStrU8(a4)...)       // Arg4
+	data = append(data, encStrU16(payload)...) // Payload (u16-len)
+	return data
 }
 
 // -------parseProtoVer---------------------------------------------------------
 
-func TestParseProtoVer_OK(t *testing.T) {
-	var buf bytes.Buffer
-	wrU8(&buf, 1, t)                    // version
-	buf.Write([]byte{0xAA, 0xBB, 0xCC}) // rest
-
-	ver, rest, err := parseProtoVer(buf.Bytes())
+func TestParseProtoVer_Valid(t *testing.T) {
+	line := []byte{1, 0xAA, 0xBB, 0xCC}
+	ver, rest, err := parseProtoVer(line)
 	if err != nil {
 		t.Fatalf("parseProtoVer error: %v", err)
 	}
 	if ver != 1 {
-		t.Fatalf("expected ver=1, got %d", ver)
+		t.Fatalf("want version 1, got %d", ver)
 	}
 	if !bytes.Equal(rest, []byte{0xAA, 0xBB, 0xCC}) {
-		t.Fatalf("unexpected rest: %v", rest)
+		t.Fatalf("rest mismatch: %v", rest)
 	}
 }
 
-func TestParseProtoVer_ShortBuffer(t *testing.T) {
-	data := []byte{} // < 1 byte needed for uint8 version
-	_, _, err := parseProtoVer(data)
-	if !errors.Is(err, io.ErrUnexpectedEOF) {
-		t.Fatalf("expected io.ErrUnexpectedEOF, got %v", err)
+func TestParseProtoVer_Short(t *testing.T) {
+	_, _, err := parseProtoVer(nil)
+	if err == nil {
+		t.Fatalf("expected error on empty input, got nil")
 	}
 }
 
-// -------ParseLine (dispatch to v1)--------------------------------------------
+// -------ParseLine-------------------------------------------------------------
 
-func TestParseLine_V1_Success_SendMessage(t *testing.T) {
-	const uid = "uid-123"
-	const route = "topic.route"
-	payload := []byte{0xDE, 0xAD, 0xBE, 0xEF}
+func TestParseLine_V1_Success(t *testing.T) {
+	// Build full line: [version=1][v1 payload...]
+	body := buildV1AfterVersion(
+		5, 9,
+		"uid-123",
+		"127.0.0.1:5500",
+		"a1", "a2", "a3", "a4",
+		"hello",
+	)
+	line := append([]byte{1}, body...)
 
-	// Build v1 body that decodeV1 understands:
-	// [obj_type][cmd_type][uid][route][payload]
-	var body bytes.Buffer
-	wrU8(&body, global.OBJ_DELIVERY, t)
-	wrU8(&body, global.CMD_SEND, t)
-	wrString32(&body, uid, t)
-	wrString32(&body, route, t)
-	wrBytes32(&body, payload, t)
-
-	// Prefix with version
-	var packet bytes.Buffer
-	wrU8(&packet, 1, t)
-	packet.Write(body.Bytes())
-
-	cmd, err := ParseLine(packet.Bytes())
+	cmd, err := ParseLine(line)
 	if err != nil {
-		t.Fatalf("ParseLine error: %v", err)
+		t.Fatalf("ParseLine returned error: %v", err)
 	}
 	if cmd == nil {
-		t.Fatalf("ParseLine returned nil command")
+		t.Fatalf("ParseLine returned nil *Command")
 	}
 
-	// We don't depend on concrete type;
-	// just ensure it's the SendMessage variant.
-	typeName := reflect.TypeOf(cmd).String()
-	if !strings.Contains(typeName, "Delivery") {
+	if cmd.ObjType != 5 || cmd.CmdType != 9 {
+		t.Fatalf("header mismatch: obj=%d cmd=%d", cmd.ObjType, cmd.CmdType)
+	}
+	if cmd.UID != "uid-123" {
+		t.Fatalf("UID mismatch: %q", cmd.UID)
+	}
+	if cmd.Sender != "127.0.0.1:5500" {
+		t.Fatalf("Sender mismatch: %q", cmd.Sender)
+	}
+	if cmd.Arg1 != "a1" || cmd.Arg2 != "a2" || cmd.Arg3 != "a3" ||
+		cmd.Arg4 != "a4" {
 		t.Fatalf(
-			"expected command type to contain 'Delivery', got %q", typeName,
+			"args mismatch: %q %q %q %q", cmd.Arg1, cmd.Arg2,
+			cmd.Arg3, cmd.Arg4,
 		)
 	}
+	if string(cmd.Payload) != "hello" {
+		t.Fatalf("payload mismatch: %q", cmd.Payload)
+	}
 }
 
-func TestParseLine_UnsupportedVersion(t *testing.T) {
-	// version 999, empty body
-	var packet bytes.Buffer
-	wrU32(&packet, 999, t)
-
-	cmd, err := ParseLine(packet.Bytes())
+func TestParseLine_UnknownVersion(t *testing.T) {
+	// Version 2 is not supported; any trailing bytes are irrelevant.
+	line := []byte{2, 0xDE, 0xAD, 0xBE, 0xEF}
+	cmd, err := ParseLine(line)
+	if err == nil {
+		t.Fatalf("expected error for unknown version, got nil")
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil *Command on error, got %#v", cmd)
+	}
 	if !strings.Contains(err.Error(), "Unable to parse command!") {
-		t.Fatalf("expected 'Unable to parse command!', got %v", err)
-	}
-	if cmd != nil {
-		t.Fatalf("expected nil cmd on error, got %T", cmd)
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestParseLine_VersionReadError(t *testing.T) {
-	// < 4 bytes total
-	data := []byte{0x01, 0x02, 0x03}
-	cmd, err := ParseLine(data)
-	if !strings.Contains(err.Error(), "Unable to parse string UID field") {
-		t.Fatalf("expected ParseCommandErr, got %v", err)
+func TestParseLine_VersionReadErrorWrapped(t *testing.T) {
+	// Empty input → parseProtoVer returns io.ErrUnexpectedEOF;
+	// ParseLine wraps it.
+	_, err := ParseLine(nil)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
 	}
-	if cmd != nil {
-		t.Fatalf("expected nil cmd, got %T", cmd)
+	if !strings.Contains(err.Error(), "Read protocol version") {
+		t.Fatalf("expected wrapper message, got: %v", err)
 	}
 }

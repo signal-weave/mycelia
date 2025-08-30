@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	"mycelia/global"
+	"mycelia/globals"
 	"mycelia/routing"
 	"mycelia/str"
 )
@@ -72,7 +72,7 @@ func (server *Server) Run() {
 
 func (server *Server) UpdateListener() {
 	// open new first
-	addr := fmt.Sprintf("%s:%d", global.Address, global.Port)
+	addr := fmt.Sprintf("%s:%d", globals.Address, globals.Port)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		wMsg := fmt.Sprintf(
@@ -81,16 +81,16 @@ func (server *Server) UpdateListener() {
 		str.WarningPrint(wMsg)
 
 		// These should be in sync, not thrilled with this here though.
-		global.Address = server.address
-		global.Port = server.port
+		globals.Address = server.address
+		globals.Port = server.port
 		return
 	}
 
 	server.mutex.Lock()
 	old := server.listener
 	server.listener = l
-	server.address = global.Address
-	server.port = global.Port
+	server.address = globals.Address
+	server.port = globals.Port
 	server.mutex.Unlock()
 
 	str.SprintfLn("Now listening on %s", addr)

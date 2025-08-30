@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"mycelia/global"
+	"mycelia/globals"
 
 	"golang.org/x/term"
 )
@@ -23,21 +23,21 @@ func SprintfLn(formatStr string, args ...string) {
 }
 
 func ActionPrint(s string) {
-	if global.Verbosity < global.VERB_ACT {
+	if globals.Verbosity < globals.VERB_ACT {
 		return
 	}
 	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if global.Verbosity < global.VERB_WRN {
+	if globals.Verbosity < globals.VERB_WRN {
 		return
 	}
 	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if global.Verbosity < global.VERB_ERR {
+	if globals.Verbosity < globals.VERB_ERR {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)
@@ -65,7 +65,7 @@ func getOutputWidth() int {
 			return width
 		}
 	}
-	return global.DEFAULT_TERMINAL_W
+	return globals.DEFAULT_TERMINAL_W
 }
 
 // Prints "-" repeated to fill the terminal lenght if a terminal is being used

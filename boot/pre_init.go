@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"mycelia/commands"
 	"mycelia/errgo"
-	"mycelia/global"
+	"mycelia/globals"
+	"mycelia/protocol"
 	"mycelia/str"
 
 	"github.com/google/uuid"
@@ -103,21 +103,21 @@ func parseRuntimeConfigurable(data map[string]any) {
 	}
 
 	if rd.Address != nil {
-		global.Address = *rd.Address
+		globals.Address = *rd.Address
 	}
 	if rd.Port != nil {
-		global.Port = *rd.Port
+		globals.Port = *rd.Port
 	}
 	if rd.Verbosity != nil {
-		global.Verbosity = *rd.Verbosity
-		global.UpdateVerbosityEnvironVar()
+		globals.Verbosity = *rd.Verbosity
+		globals.UpdateVerbosityEnvironVar()
 	}
 	if rd.PrintTree != nil {
-		global.PrintTree = *rd.PrintTree
+		globals.PrintTree = *rd.PrintTree
 	}
 	if rd.TransformTimeout != nil {
 		if d, err := time.ParseDuration(*rd.TransformTimeout); err == nil {
-			global.TransformTimeout = d
+			globals.TransformTimeout = d
 		}
 	}
 }
@@ -180,8 +180,16 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := transformer["address"].(string)
-				cmd := commands.NewTransformer(
-					global.CMD_ADD, id, routeName, channelName, addr,
+				cmd := protocol.NewCommand(
+					globals.OBJ_TRANSFORMER,
+					globals.CMD_ADD,
+					addr,
+					id,
+					routeName,
+					channelName,
+					addr,
+					"",
+					[]byte{},
 				)
 				CommandList = append(CommandList, cmd)
 			}
@@ -194,8 +202,16 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := subscriber["address"].(string)
-				cmd := commands.NewSubscriber(
-					global.CMD_ADD, id, routeName, channelName, addr,
+				cmd := protocol.NewCommand(
+					globals.OBJ_SUBSCRIBER,
+					globals.CMD_ADD,
+					addr,
+					id,
+					routeName,
+					channelName,
+					addr,
+					"",
+					[]byte{},
 				)
 				CommandList = append(CommandList, cmd)
 			}

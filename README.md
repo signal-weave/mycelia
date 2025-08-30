@@ -5,7 +5,7 @@
             ██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║
             ╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝
 --------------------------------------------------------------------------------
-## Mycelia is a work-in-progress concurrent message broker.
+# Mycelia is a work-in-progress concurrent message broker.
 
 A lightweight, extensible message broker leveraging Go's concurrency model for
 speedy message delivery.
@@ -13,7 +13,7 @@ speedy message delivery.
 You can find the currently supported APIs for your client services to interact
 with the broker [here](https://github.com/orgs/SignalWeave/repositories).
 
-## Concepts
+# Concepts
 
 Mycelia orchestrates message routing through 4 primary concepts: routes,
 channels, transformers, and subscribers.
@@ -29,7 +29,7 @@ channels, transformers, and subscribers.
               | - [subscriber] 16.70.18.1:9999
 ```
 
-### Routes
+## Routes
 
 Routes are like topics in other messaging services. A route can contain multiple
 channels for messages to travel through. Data is passed through each channel
@@ -37,13 +37,13 @@ sequentially in their creation order.
 
 By default, a route named `"main"` will always be created on broker startup.
 
-### Channels
+## Channels
 
 A channel is like a sub-route which contains transformers and subscribers. Data
 is passed through each transformer in creation order before being forwarded to
 each subscriber.
 
-### Transformers
+## Transformers
 
 If a transformer is added to a channel, it will intercept data going over that
 channel before it hits the subscriber. Channels will forward the payload of a
@@ -72,12 +72,12 @@ client -> broker ->       -> service A -> broker -> client
                   service B
 ```
 
-### Subscribers
+## Subscribers
 
 Subscribers are the address end point for services that subscribe to data passed
 over a route + channel.
 
-## CLI
+# CLI
 
 Mycelia supports serveral CLI args:
 
@@ -102,7 +102,7 @@ with verbosity values relating to
 3 - Errors + Warnings + Actions
 ```
 
-## Pre Init
+# Pre Init
 
 Additionally, Mycelia will check the exe's directory for a `PreInit.json` file.
 This file can specify any of the CLI args in the `"runtime"` field - these will
@@ -142,90 +142,55 @@ Example PreInit.json file:
 }
 ```
 
-## Protocol
+# Protocol
 
 Mycelia employs a custom protocl as outlined:
 
-Version 1 command decoding.
+# Version 1 command decoding.
 
-*Note that this is a messaging protocol, not a file transfer protocol
-```
-          fields
---------------------------
-protocol_ver  |  u8
-obj_type      |  u8
-obj_cmd       |  u8
-uid           |  u32 + len
-route         |  u32 + len
---------------------------
-channel       |  u32 + len
-address       |  u32 + len
---------------------------
-payload       |  u32 + len
-```
+* Note that this is a messaging protocol, not a file transfer protocol
 -----------------------------------------------------------------------------
-The version 1 protocol looks as follows:
 
-Fixed field sized header
+## Fixed field sized header
 ```
 +---------+--------+-------------+-------------+
 | u32 len | u8 ver | u8 obj_type | u8 cmd_type |
 +---------+--------+-------------+-------------+
 ```
-A `uint32` length header field that dictates the number of bytes for the rest of
-the message body.
+The fixed header contains 4 fields: a message length prefix, a protocol version
+and object type, and a command type field.
+The object type field is for what part of the system a command is being issued
+to, and the command type field is what functionality is being invoked in that
+systme.
 
-A `uint8` version field, which is used for decoding the message after the base
-header. This will likely be obsolete one day but for now, in prototyping, this
-helps with managing variations of the header after we deploy it for internal
-projects.
-
-A `uint8` object type which corresponds to what concept the client is working
-with: `messages`, `transformers`, `subscribers`, `globals`, etc.
-
-And a `uint8` command type which is the behavioral action being done to the
-object: `SEND`, `ADD`, `REMOVE`, etc.
-
-This is then followed by a variable field sized sub-header:
-
-Routing Sub-header
+## Tracking Sub-header
 ```
-+-------------+---------------+
-| u32 len uid | u32 len route |
-+-------------+---------------+
++-------------+----------------+
+| u8 len uid  | u16 len sender |
++-------------+----------------+
 ```
-The sub header is two variable sized fields with a `uint32` field header and a
-field body.
+This is a sub-header for tracking purposes. The field sizes are variable but
+consist of two fields: a uid and the sender's address.
 
-This is then followed by one of the following bodies:
-
-Subscriber + Transformer Body
+## Argument Sub-Header
 ```
-+--------------+--------------+
-| u32 len chan | u32 len addr |
-+--------------+--------------+
++---------------+---------------+---------------+---------------+
+|  u8 len arg1  |  u8 len arg2  |  u8 len arg3  |  u8 len arg4  |
++---------------+---------------+---------------+---------------+
 ```
-Here, again, are two variable sized fields with a `uint32` field header for the
-channel and address to route a message through.
+which is then followed by 4 uint8 sized byte fields that act as arguments for
+the command type in the fixed header.
+Because these are byte streams, all arguments are considered string types
+unless the executor casts them to another type.
+These are passed to the command invoked by the command type field in the fixed
+header.
 
-Message Body
+## Globals Body
 ```
 +-----------------+
-| u32 len payload |
+| u16 len payload |
 +-----------------+
 ```
-With the Message Body payload being the data finally forwarded to subscribers.
-Thes Message body payload is a single `uint32` field header and the byte array
-that is forwarded onwards.
-
-Globals Body
-```
-+-----------------+
-| u32 len payload |
-+-----------------+
-```
-Globals takes a json string to update how the broker works at runtime.
-For example a system might change the address or port at runtime when message
-traffic increases and then change it again when traffic decreases.
-Any of the cli args can be changed by creating a globals update command through
-any of the client APIs.
+And finally the message payload that would be delivered to external sources.
+If this is unused because the message is changing the internals of the broker
+at runtime, then the field defaults to a vlaue of 0x00.

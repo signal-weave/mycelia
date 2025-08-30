@@ -4,7 +4,7 @@ import (
 	"slices"
 	"sync"
 
-	"mycelia/commands"
+	"mycelia/protocol"
 )
 
 // Channels are the subscription buckets that fill routes. A subscriber
@@ -78,7 +78,7 @@ func (ch *Channel) checkEmptyChannel() {
 	}
 }
 
-func (c *Channel) ProcessDelivery(m *commands.Delivery) *commands.Delivery {
+func (c *Channel) ProcessDelivery(m *protocol.Command) *protocol.Command {
 	result := m
 
 	c.mutex.RLock() // Copy transform slice for minimal mutex lock time

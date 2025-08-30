@@ -1,12 +1,10 @@
-package global
+package globals
 
 import (
 	"fmt"
 	"os"
 	"strconv"
 	"time"
-
-	"mycelia/commands"
 )
 
 // -----------------------------------------------------------------------------
@@ -22,24 +20,6 @@ var TransformTimeout time.Duration = time.Duration(5) * time.Second
 
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
-}
-
-func UpdateGlobalsByMessage(m *commands.Globals) {
-	Address = m.Address
-	Port = m.Port
-	Verbosity = m.Verbosity
-	UpdateVerbosityEnvironVar()
-	PrintTree = m.PrintTree
-
-	oldTimeout := TransformTimeout
-	newTimeout, err := time.ParseDuration(m.TransformTimeout)
-	if err != nil {
-		TransformTimeout = oldTimeout
-		return
-	}
-	TransformTimeout = newTimeout
-
-	PrintDynamicValues()
 }
 
 func PrintDynamicValues() {

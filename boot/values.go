@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"mycelia/commands"
+	"mycelia/protocol"
 	"mycelia/errgo"
 )
 
@@ -26,4 +26,4 @@ var exeDir = getExecDirectory()
 var preInitFile = fmt.Sprintf("%s/PreInit.json", exeDir)
 
 // Parse command type funcs append their command to this list.
-var CommandList = []commands.Command{}
+var CommandList = []*protocol.Command{}

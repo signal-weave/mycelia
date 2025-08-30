@@ -1,7 +1,7 @@
 package routing
 
 import (
-	"mycelia/commands"
+	"mycelia/protocol"
 	"sync"
 )
 
@@ -54,7 +54,7 @@ func (r *Route) removeChannel(name string) {
 
 // Sends the delivery down the route with each transformed delivery being passed
 // on to the next channel.
-func (r *Route) ProcessDelivery(sm *commands.Delivery) {
+func (r *Route) ProcessDelivery(sm *protocol.Command) {
 	r.mutex.RLock()
 	// copy map for minimal mutex lock time
 	channels := make([]*Channel, 0, len(r.channels))

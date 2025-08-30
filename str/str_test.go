@@ -3,7 +3,7 @@ package str
 import (
 	"bytes"
 	"io"
-	"mycelia/global"
+	"mycelia/globals"
 	"os"
 	"strings"
 	"testing"
@@ -63,7 +63,7 @@ func TestActionWarningErrorPrint_VerbosityThresholds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			global.Verbosity = tt.verbosity
+			globals.Verbosity = tt.verbosity
 			out := captureOutput(t, tt.call)
 			if tt.shouldPrint {
 				if out == "" {

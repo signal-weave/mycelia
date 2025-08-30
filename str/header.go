@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"mycelia/global"
+	"mycelia/globals"
 )
 
 var line1 string = "███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗"
@@ -17,7 +17,7 @@ var line6 string = "╚═╝     ╚═╝   ╚═╝    ╚═════╝
 
 var lines []string = []string{line1, line2, line3, line4, line5, line6}
 
-var producedBy string = fmt.Sprintf("A %s product.", global.Developer)
+var producedBy string = fmt.Sprintf("A %s product.", globals.Developer)
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
 func printHeader() {
