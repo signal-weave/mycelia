@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"mycelia/global"
+	"mycelia/globals"
 )
 
 // ParseRuntimeArgs parses only runtime flags validates, and returns
@@ -20,16 +20,16 @@ func parseRuntimeArgs(argv []string) error {
 	fs := flag.NewFlagSet("runtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
 
-	fs.StringVar(&global.Address, "address", global.Address, "Bind address (IP or hostname)")
-	fs.IntVar(&global.Port, "port", global.Port, "Bind port (1-65535)")
-	fs.BoolVar(&global.PrintTree, "print-tree", global.PrintTree, "Print router tree at startup")
-	fs.DurationVar(&global.TransformTimeout, "xform-timeout", global.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
-	fs.IntVar(&global.Verbosity, "verbosity", global.Verbosity,
+	fs.StringVar(&globals.Address, "address", globals.Address, "Bind address (IP or hostname)")
+	fs.IntVar(&globals.Port, "port", globals.Port, "Bind port (1-65535)")
+	fs.BoolVar(&globals.PrintTree, "print-tree", globals.PrintTree, "Print router tree at startup")
+	fs.DurationVar(&globals.TransformTimeout, "xform-timeout", globals.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
+	fs.IntVar(&globals.Verbosity, "verbosity", globals.Verbosity,
 		`0 - None
     1 - Errors
     2 - Warnings + Errors
     3 - Errors + Warnings + Actions`)
-	global.UpdateVerbosityEnvironVar()
+	globals.UpdateVerbosityEnvironVar()
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
@@ -57,14 +57,14 @@ Examples:
 }
 
 func validateRuntimeConfig() error {
-	if global.Port < 1 || global.Port > 65535 {
-		return fmt.Errorf("invalid port %d (expected 1-65535)", global.Port)
+	if globals.Port < 1 || globals.Port > 65535 {
+		return fmt.Errorf("invalid port %d (expected 1-65535)", globals.Port)
 	}
 	// Allow hostnames; validate if it looks like an IP.
-	if !isIPLiteral(global.Address) && !isValidHostname(global.Address) {
-		return fmt.Errorf("invalid IP address %q", global.Address)
+	if !isIPLiteral(globals.Address) && !isValidHostname(globals.Address) {
+		return fmt.Errorf("invalid IP address %q", globals.Address)
 	}
-	if global.TransformTimeout <= 0 {
+	if globals.TransformTimeout <= 0 {
 		return errors.New("xform-timeout must be > 0")
 	}
 	return nil

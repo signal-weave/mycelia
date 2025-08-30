@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"mycelia/boot"
-	"mycelia/global"
+	"mycelia/globals"
 	"mycelia/server"
 	"mycelia/str"
 )
@@ -33,7 +33,7 @@ func readArgs() {
 // Starts the server - checks for pre-loaded commands in the PreInit.json file
 // and loads them into the server's broker, then runs the server.
 func startServer() {
-	server := server.NewServer(global.Address, global.Port)
+	server := server.NewServer(globals.Address, globals.Port)
 	if len(boot.CommandList) > 0 {
 		for _, cmd := range boot.CommandList {
 			server.Broker.HandleCommand(cmd)

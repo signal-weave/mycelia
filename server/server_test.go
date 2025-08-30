@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"mycelia/global"
+	"mycelia/globals"
 	"mycelia/test"
 )
 
@@ -146,7 +146,7 @@ func TestUpdateListener_BindsToRequestedPort_AndClosesOld(t *testing.T) {
 	for newPort == oldPort {
 		newPort = test.FirstFreeTCPPort(t)
 	}
-	global.Port = newPort
+	globals.Port = newPort
 
 	// Switch to the new port.
 	s.UpdateListener()

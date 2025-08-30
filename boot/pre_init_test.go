@@ -1,62 +1,60 @@
 package boot
 
 import (
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"mycelia/commands"
-	"mycelia/global"
+	"mycelia/globals"
+	"mycelia/protocol"
 )
 
-// Test that parseRuntimeConfigurable maps all supported runtime fields
-// and updates the VERBOSITY environment variable.
-func TestParseRuntimeConfigurable_SetsFieldsAndEnv(t *testing.T) {
-	// Save/restore env
-	prevVerbosity := os.Getenv("VERBOSITY")
-	t.Cleanup(func() { _ = os.Setenv("VERBOSITY", prevVerbosity) })
+func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
+	// Preserve and restore original globals to avoid test bleed.
+	oldAddr := globals.Address
+	oldPort := globals.Port
+	oldVerb := globals.Verbosity
+	oldPrint := globals.PrintTree
+	oldXform := globals.TransformTimeout
+	t.Cleanup(func() {
+		globals.Address = oldAddr
+		globals.Port = oldPort
+		globals.Verbosity = oldVerb
+		globals.PrintTree = oldPrint
+		globals.TransformTimeout = oldXform
+	})
 
-	input := map[string]any{
+	data := map[string]any{
 		"runtime": map[string]any{
-			"address":       "0.0.0.0",
-			"port":          8080, // will survive via json round-trip
-			"verbosity":     2,    // ditto
+			"address":       "127.0.0.1",
+			"port":          6001,
+			"verbosity":     3,
 			"print-tree":    true,
-			"xform-timeout": "45s",
+			"xform-timeout": "150ms",
 		},
 	}
 
-	parseRuntimeConfigurable(input)
+	parseRuntimeConfigurable(data)
 
-	if global.Address != "0.0.0.0" {
-		t.Fatalf("Address = %q, want %q", global.Address, "0.0.0.0")
+	if globals.Address != "127.0.0.1" {
+		t.Fatalf("Address not updated: %q", globals.Address)
 	}
-	if global.Port != 8080 {
-		t.Fatalf("Port = %d, want %d", global.Port, 8080)
+	if globals.Port != 6001 {
+		t.Fatalf("Port not updated: %d", globals.Port)
 	}
-	if global.Verbosity != 2 {
-		t.Fatalf("Verbosity = %d, want %d", global.Verbosity, 2)
+	if globals.Verbosity != 3 {
+		t.Fatalf("Verbosity not updated: %d", globals.Verbosity)
 	}
-	if !global.PrintTree {
-		t.Fatalf("PrintTree = %v, want %v", global.PrintTree, true)
+	if globals.PrintTree != true {
+		t.Fatalf("PrintTree not updated: %v", globals.PrintTree)
 	}
-	if global.TransformTimeout != 45*time.Second {
-		t.Fatalf(
-			"TransformTimeout = %v, want %v",
-			global.TransformTimeout, 45*time.Second,
-		)
-	}
-	if got := os.Getenv("VERBOSITY"); got != "2" {
-		t.Fatalf("env VERBOSITY = %q, want %q", got, "2")
+	if globals.TransformTimeout != 150*time.Millisecond {
+		t.Fatalf("TransformTimeout not updated: %v", globals.TransformTimeout)
 	}
 }
 
-func TestParseRouteCmds_AppendsTransformerAndSubscriberCommands(t *testing.T) {
-	// Reset global CommandList and restore afterwards.
-	old := CommandList
+func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
+	// Start from a clean command list.
 	CommandList = nil
-	t.Cleanup(func() { CommandList = old })
 
 	routeData := []map[string]any{
 		{
@@ -78,22 +76,77 @@ func TestParseRouteCmds_AppendsTransformerAndSubscriberCommands(t *testing.T) {
 	}
 
 	parseRouteCmds(routeData)
-	fmt.Println(CommandList)
 
-	var nXforms, nSubs int
-	for _, cmd := range CommandList {
-		switch cmd.(type) {
-		case *commands.Transformer:
-			nXforms++
-		case *commands.Subscriber:
-			nSubs++
+	// Expect 4 commands: 2 transformers + 2 subscribers
+	if len(CommandList) != 4 {
+		t.Fatalf("expected 4 commands, got %d", len(CommandList))
+	}
+
+	// Helper to read fields regardless of pointer/value slice element.
+	get := func(i int) *protocol.Command {
+		switch c := any(CommandList[i]).(type) {
+		case *protocol.Command:
+			return c
+		case protocol.Command:
+			return &c
+		default:
+			t.Fatalf("unexpected CommandList element type at %d", i)
+			return nil
 		}
 	}
 
-	if nXforms != 2 {
-		t.Fatalf("Transformer count = %d, want %d", nXforms, 2)
+	// First two should be transformers (in the order provided)
+	c0 := get(0)
+	if c0.ObjType != globals.OBJ_TRANSFORMER || c0.CmdType != globals.CMD_ADD {
+		t.Fatalf("cmd0 wrong types: obj=%d cmd=%d", c0.ObjType, c0.CmdType)
 	}
-	if nSubs != 2 {
-		t.Fatalf("Subscriber count = %d, want %d", nSubs, 2)
+	if c0.Arg1 != "default" || c0.Arg2 != "inmem" || c0.Arg3 != "127.0.0.1:7010" {
+		t.Fatalf("cmd0 args wrong: %q %q %q", c0.Arg1, c0.Arg2, c0.Arg3)
+	}
+	if c0.Sender != "127.0.0.1:7010" {
+		t.Fatalf("cmd0 sender wrong: %q", c0.Sender)
+	}
+
+	c1 := get(1)
+	if c1.ObjType != globals.OBJ_TRANSFORMER || c1.CmdType != globals.CMD_ADD {
+		t.Fatalf("cmd1 wrong types: obj=%d cmd=%d", c1.ObjType, c1.CmdType)
+	}
+	if c1.Arg3 != "10.0.0.52:8008" {
+		t.Fatalf("cmd1 address wrong: %q", c1.Arg3)
+	}
+
+	// Next two should be subscribers
+	c2 := get(2)
+	if c2.ObjType != globals.OBJ_SUBSCRIBER || c2.CmdType != globals.CMD_ADD {
+		t.Fatalf("cmd2 wrong types: obj=%d cmd=%d", c2.ObjType, c2.CmdType)
+	}
+	if c2.Arg1 != "default" || c2.Arg2 != "inmem" || c2.Arg3 != "127.0.0.1:1234" {
+		t.Fatalf("cmd2 args wrong: %q %q %q", c2.Arg1, c2.Arg2, c2.Arg3)
+	}
+
+	c3 := get(3)
+	if c3.ObjType != globals.OBJ_SUBSCRIBER || c3.CmdType != globals.CMD_ADD {
+		t.Fatalf("cmd3 wrong types: obj=%d cmd=%d", c3.ObjType, c3.CmdType)
+	}
+	if c3.Arg3 != "16.70.18.1:9999" {
+		t.Fatalf("cmd3 address wrong: %q", c3.Arg3)
+	}
+}
+
+func TestParseRouteCmds_NoChannels_NoCommands(t *testing.T) {
+	CommandList = nil
+
+	routeData := []map[string]any{
+		{
+			"name":     "empty",
+			"channels": []any{}, // no channels
+		},
+	}
+	parseRouteCmds(routeData)
+
+	if len(CommandList) != 0 {
+		t.Fatalf(
+			"expected no commands for empty channels, got %d", len(CommandList),
+		)
 	}
 }

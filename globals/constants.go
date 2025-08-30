@@ -1,4 +1,4 @@
-package global
+package globals
 
 // -----------------------------------------------------------------------------
 // Shared, or "global", constants that are referenced between packages.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"mycelia/global"
+	"mycelia/globals"
 )
 
 // snapshot captures the mutable global config so we can restore it after
@@ -21,30 +21,30 @@ type snapshot struct {
 
 func takeSnapshot() snapshot {
 	return snapshot{
-		Address:          global.Address,
-		Port:             global.Port,
-		PrintTree:        global.PrintTree,
-		Verbosity:        global.Verbosity,
-		TransformTimeout: global.TransformTimeout,
+		Address:          globals.Address,
+		Port:             globals.Port,
+		PrintTree:        globals.PrintTree,
+		Verbosity:        globals.Verbosity,
+		TransformTimeout: globals.TransformTimeout,
 	}
 }
 
 func restoreSnapshot(s snapshot) {
-	global.Address = s.Address
-	global.Port = s.Port
-	global.PrintTree = s.PrintTree
-	global.Verbosity = s.Verbosity
-	global.TransformTimeout = s.TransformTimeout
+	globals.Address = s.Address
+	globals.Port = s.Port
+	globals.PrintTree = s.PrintTree
+	globals.Verbosity = s.Verbosity
+	globals.TransformTimeout = s.TransformTimeout
 }
 
 func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 	t.Cleanup(func() { restoreSnapshot(takeSnapshot()) })
 	// Set known baselines first.
-	global.Address = "127.0.0.1"
-	global.Port = 5000
-	global.PrintTree = false
-	global.Verbosity = 0
-	global.TransformTimeout = 5 * time.Second
+	globals.Address = "127.0.0.1"
+	globals.Port = 5000
+	globals.PrintTree = false
+	globals.Verbosity = 0
+	globals.TransformTimeout = 5 * time.Second
 
 	args := []string{
 		"-address", "0.0.0.0",
@@ -57,44 +57,44 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 		t.Fatalf("parseRuntimeArgs returned error: %v", err)
 	}
 
-	if global.Address != "0.0.0.0" {
-		t.Errorf("Address = %q, want %q", global.Address, "0.0.0.0")
+	if globals.Address != "0.0.0.0" {
+		t.Errorf("Address = %q, want %q", globals.Address, "0.0.0.0")
 	}
-	if global.Port != 8088 {
-		t.Errorf("Port = %d, want %d", global.Port, 8088)
+	if globals.Port != 8088 {
+		t.Errorf("Port = %d, want %d", globals.Port, 8088)
 	}
-	if !global.PrintTree {
-		t.Errorf("PrintTree = %v, want %v", global.PrintTree, true)
+	if !globals.PrintTree {
+		t.Errorf("PrintTree = %v, want %v", globals.PrintTree, true)
 	}
-	if global.Verbosity != 3 {
-		t.Errorf("Verbosity = %d, want %d", global.Verbosity, 3)
+	if globals.Verbosity != 3 {
+		t.Errorf("Verbosity = %d, want %d", globals.Verbosity, 3)
 	}
-	if global.TransformTimeout != 45*time.Second {
+	if globals.TransformTimeout != 45*time.Second {
 		t.Errorf(
 			"TransformTimeout = %v, want %v",
-			global.TransformTimeout, 45*time.Second,
+			globals.TransformTimeout, 45*time.Second,
 		)
 	}
 }
 
 func TestParseRuntimeArgs_AllowsHostname(t *testing.T) {
 	t.Cleanup(func() { restoreSnapshot(takeSnapshot()) })
-	global.Address = "localhost" // start with something valid
-	global.Port = 5000
-	global.TransformTimeout = 5 * time.Second
+	globals.Address = "localhost" // start with something valid
+	globals.Port = 5000
+	globals.TransformTimeout = 5 * time.Second
 
 	err := parseRuntimeArgs([]string{"-address", "example.internal"})
 	if err != nil {
 		t.Fatalf("unexpected error for hostname: %v", err)
 	}
-	if global.Address != "example.internal" {
-		t.Errorf("Address = %q, want %q", global.Address, "example.internal")
+	if globals.Address != "example.internal" {
+		t.Errorf("Address = %q, want %q", globals.Address, "example.internal")
 	}
 }
 
 func TestParseRuntimeArgs_InvalidPort(t *testing.T) {
 	t.Cleanup(func() { restoreSnapshot(takeSnapshot()) })
-	global.TransformTimeout = 5 * time.Second // valid timeout
+	globals.TransformTimeout = 5 * time.Second // valid timeout
 
 	err := parseRuntimeArgs([]string{"-port", "0"})
 	if err == nil {
@@ -104,7 +104,7 @@ func TestParseRuntimeArgs_InvalidPort(t *testing.T) {
 
 func TestParseRuntimeArgs_InvalidIP(t *testing.T) {
 	t.Cleanup(func() { restoreSnapshot(takeSnapshot()) })
-	global.TransformTimeout = 5 * time.Second // valid timeout
+	globals.TransformTimeout = 5 * time.Second // valid timeout
 
 	err := parseRuntimeArgs([]string{"-address", "256.0.0.1"})
 	if err == nil {

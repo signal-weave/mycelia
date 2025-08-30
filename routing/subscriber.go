@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"mycelia/commands"
+	"mycelia/protocol"
 	"mycelia/str"
 )
 
@@ -19,7 +19,7 @@ func NewSubscriber(address string) *Subscriber {
 }
 
 // Forwards the delivery to the client represented by the consumer object.
-func (c *Subscriber) ConsumeDelivery(m *commands.Delivery) {
+func (c *Subscriber) ConsumeDelivery(m *protocol.Command) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
@@ -29,11 +29,10 @@ func (c *Subscriber) ConsumeDelivery(m *commands.Delivery) {
 	}
 	defer conn.Close()
 
-	_, err = conn.Write(m.Body)
+	_, err = conn.Write(m.Payload)
 	if err != nil {
 		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
 		str.ErrorPrint(eMsg)
 		return
 	}
-	m.Status = commands.StatusResolved
 }
