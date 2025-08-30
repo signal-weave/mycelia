@@ -3,7 +3,7 @@
 package errgo
 
 import (
-	"mycelia/global"
+	"mycelia/globals"
 	"mycelia/str"
 )
 
@@ -42,13 +42,13 @@ func NewError(msg string, verbosity int) error {
 func AnnounceError(e MyceliaError) {
 	switch e.Verbosity() {
 
-	case global.VERB_ERR:
+	case globals.VERB_ERR:
 		str.ErrorPrint(e.Msg())
 
-	case global.VERB_WRN:
+	case globals.VERB_WRN:
 		str.WarningPrint(e.Msg())
 
-	case global.VERB_ACT:
+	case globals.VERB_ACT:
 		str.ActionPrint(e.Msg())
 
 	}

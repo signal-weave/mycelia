@@ -1,12 +1,14 @@
 package routing
 
 import (
+	"encoding/json"
 	"fmt"
-	"mycelia/commands"
 	"mycelia/errgo"
-	"mycelia/global"
+	"mycelia/globals"
 	"mycelia/protocol"
+	"mycelia/str"
 	"sync"
+	"time"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -80,72 +82,117 @@ func (b *Broker) removeEmptyRoute(name string) {
 
 // Handles the command object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
-func (b *Broker) HandleCommand(cmd commands.Command) error {
-	switch t := cmd.(type) {
-	case *commands.Delivery:
-		b.handleDelivery(t)
-	case *commands.Transformer:
-		b.handleTransformer(t)
-	case *commands.Subscriber:
-		b.handleSubscriber(t)
-	case *commands.Globals:
-		b.handleGlobals(t)
+func (b *Broker) HandleCommand(cmd *protocol.Command) error {
+	switch cmd.ObjType {
+	case globals.OBJ_DELIVERY:
+		b.handleDelivery(cmd)
+	case globals.OBJ_TRANSFORMER:
+		b.handleTransformer(cmd)
+	case globals.OBJ_SUBSCRIBER:
+		b.handleSubscriber(cmd)
+	case globals.OBJ_GLOBALS:
+		b.handleGlobals(cmd)
 	default:
-		wErr := errgo.NewError("Unknown command type!", global.VERB_WRN)
+		wErr := errgo.NewError("Unknown command type!", globals.VERB_WRN)
 		return wErr
 	}
 
 	return nil
 }
 
-func (b *Broker) handleDelivery(cmd *commands.Delivery) {
-	switch cmd.Cmd {
-	case global.CMD_SEND:
-		b.Route(cmd.Route).ProcessDelivery(cmd)
+func (b *Broker) handleDelivery(cmd *protocol.Command) {
+	switch cmd.CmdType {
+	case globals.CMD_SEND:
+		b.Route(cmd.Arg1).ProcessDelivery(cmd)
 	}
 }
 
-func (b *Broker) handleTransformer(cmd *commands.Transformer) {
-	switch cmd.Cmd {
-	case global.CMD_ADD:
-		transformer := NewTransformer(cmd.Address)
-		b.Route(cmd.Route).Channel(cmd.Channel).AddTransformer(*transformer)
-	case global.CMD_REMOVE:
-		transformer := NewTransformer(cmd.Address)
-		b.Route(cmd.Route).Channel(cmd.Channel).RemoveTransformer(*transformer)
-	}
-	b.PrintBrokerStructure()
-}
-
-func (b *Broker) handleSubscriber(cmd *commands.Subscriber) {
-	switch cmd.Cmd {
-	case global.CMD_ADD:
-		subscriber := NewSubscriber(cmd.Address)
-		b.Route(cmd.Route).Channel(cmd.Channel).AddSubscriber(*subscriber)
-	case global.CMD_REMOVE:
-		subscriber := NewSubscriber(cmd.Address)
-		b.Route(cmd.Route).Channel(cmd.Channel).RemoveSubscriber(*subscriber)
+func (b *Broker) handleTransformer(cmd *protocol.Command) {
+	switch cmd.CmdType {
+	case globals.CMD_ADD:
+		transformer := NewTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(*transformer)
+	case globals.CMD_REMOVE:
+		transformer := NewTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(*transformer)
 	}
 	b.PrintBrokerStructure()
 }
 
-func (b *Broker) handleGlobals(cmd *commands.Globals) {
-	global.UpdateGlobalsByMessage(cmd)
+func (b *Broker) handleSubscriber(cmd *protocol.Command) {
+	switch cmd.CmdType {
+	case globals.CMD_ADD:
+		// Args: route, channel, address, nil
+		subscriber := NewSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(*subscriber)
+	case globals.CMD_REMOVE:
+		// Args: route, channel, address, nil
+		subscriber := NewSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(*subscriber)
+	}
+	b.PrintBrokerStructure()
+}
 
-	switch cmd.Cmd {
-	case global.CMD_UPDATE:
-		if b.ManagingServer.GetAddress() != global.Address ||
-			b.ManagingServer.GetPort() != global.Port {
+func (b *Broker) handleGlobals(cmd *protocol.Command) {
+	switch cmd.CmdType {
+	case globals.CMD_UPDATE:
+		b.updateGlobals(cmd)
+		if b.ManagingServer.GetAddress() != globals.Address ||
+		b.ManagingServer.GetPort() != globals.Port {
 			b.ManagingServer.UpdateListener()
 		}
 	}
+}
+
+func (b *Broker) updateGlobals(cmd *protocol.Command) {
+	values := map[string]any{}
+	err := json.Unmarshal(cmd.Payload, &values)
+	if err != nil {
+		wMsg := fmt.Sprintf(
+			"Could not parse payload for globals update from %s",
+			cmd.Sender,
+		)
+		errgo.NewError(wMsg, globals.VERB_WRN)
+		return
+	}
+
+	address, exists := values["address"].(string)
+	if exists {
+		globals.Address = address
+	}
+	port, exists := values["port"].(float64)
+	if exists {
+		globals.Port = int(port)
+	}
+	verbosity, exists := values["verbosity"].(float64)
+	if exists {
+		globals.Verbosity = int(verbosity)
+	}
+	globals.UpdateVerbosityEnvironVar()
+	printTree, exists := values["print_tree"].(bool)
+	if exists {
+		globals.PrintTree = printTree
+	}
+	timeout, exists := values["transform_timeout"].(string)
+	if exists {
+		newTimeout, err := time.ParseDuration(timeout)
+		if err != nil {
+			wMsg := fmt.Sprintf(
+				"Unable to parse transform timeout expr from %s", cmd.Sender,
+			)
+			str.WarningPrint(wMsg)
+		} else {
+			globals.TransformTimeout = newTimeout
+		}
+	}
+	globals.PrintDynamicValues()
 }
 
 // -------Util------------------------------------------------------------------
 
 // PrintBrokerStructure prints the broker, routes, channels, and subscribers.
 func (b *Broker) PrintBrokerStructure() {
-	if !global.PrintTree {
+	if !globals.PrintTree {
 		return
 	}
 

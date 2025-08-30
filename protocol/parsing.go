@@ -4,15 +4,48 @@ import (
 	"fmt"
 	"io"
 
-	"mycelia/commands"
 	"mycelia/errgo"
-	"mycelia/global"
+	"mycelia/globals"
 )
 
 // -----------------------------------------------------------------------------
 // The primary parsing entry point.
 // The main protocol version detection and parsing version handling.
 // -----------------------------------------------------------------------------
+
+// A command is an object that is decoded from the incoming byte stream and ran
+// through the system.
+type Command struct {
+	ObjType uint8
+	CmdType uint8
+
+	Sender string
+	UID    string
+
+	Arg1 string
+	Arg2 string
+	Arg3 string
+	Arg4 string
+
+	Payload []byte
+}
+
+func NewCommand(
+	objType, cmdType uint8,
+	sender, uid, arg1, arg2, arg3, arg4 string,
+	payload []byte) *Command {
+	return &Command{
+		ObjType: objType,
+		CmdType: cmdType,
+		Sender:  sender,
+		UID:     uid,
+		Arg1:    arg1,
+		Arg2:    arg2,
+		Arg3:    arg3,
+		Arg4:    arg4,
+		Payload: payload,
+	}
+}
 
 // parseProtoVer extracts only the protocol version and returns it along with
 // a slice that starts at the next byte (i.e., the remainder of the message).
@@ -21,15 +54,15 @@ func parseProtoVer(data []byte) (uint8, []byte, error) {
 	if len(data) < u8len {
 		return 0, nil, io.ErrUnexpectedEOF
 	}
-	ver := data[0]
+	ver := uint8(data[0])
 	return ver, data[u8len:], nil
 }
 
-func ParseLine(line []byte) (commands.Command, error) {
+func ParseLine(line []byte) (*Command, error) {
 	version, rest, err := parseProtoVer(line)
 	if err != nil {
 		wMsg := fmt.Sprintf("Read protocol version: %v", err)
-		wErr := errgo.NewError(wMsg, global.VERB_WRN)
+		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
 	}
 
@@ -50,7 +83,7 @@ func ParseLine(line []byte) (commands.Command, error) {
 	case 1:
 		return decodeV1(rest)
 	default:
-		wErr := errgo.NewError("Unable to parse command!", global.VERB_WRN)
+		wErr := errgo.NewError("Unable to parse command!", globals.VERB_WRN)
 		return nil, wErr
 	}
 }
