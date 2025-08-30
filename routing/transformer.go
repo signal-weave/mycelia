@@ -57,19 +57,23 @@ func (t *Transformer) transformDelivery(m *protocol.Command) (*protocol.Command,
 	}
 
 	// Create new delivery with transformed body
-	transformedDelivery := &protocol.Command{
-		ObjType: m.ObjType,
-		CmdType: m.CmdType,
+	transformedDelivery := protocol.NewCommand(
+		m.ObjType,
+		m.CmdType,
 
-		UID:    m.UID,
-		Sender: m.Sender,
+		m.Sender,
+		m.UID,
 
-		Arg1: m.Arg1,
-		Arg2: m.Arg2,
-		Arg3: m.Arg3,
-		Arg4: m.Arg4,
-		Payload:   buffer[:n],
-	}
+		m.Arg1,
+		m.Arg2,
+		m.Arg3,
+		m.Arg4,
+		buffer[:n],
+	)
+
+	str.ActionPrint(
+		fmt.Sprintf("Transformed delivery at: %s", t.Address),
+	)
 
 	return transformedDelivery, nil
 }

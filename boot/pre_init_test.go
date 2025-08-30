@@ -15,12 +15,14 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	oldVerb := globals.Verbosity
 	oldPrint := globals.PrintTree
 	oldXform := globals.TransformTimeout
+	oldAutoCon := globals.AutoConsolidate
 	t.Cleanup(func() {
 		globals.Address = oldAddr
 		globals.Port = oldPort
 		globals.Verbosity = oldVerb
 		globals.PrintTree = oldPrint
 		globals.TransformTimeout = oldXform
+		globals.AutoConsolidate = oldAutoCon
 	})
 
 	data := map[string]any{
@@ -30,6 +32,7 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 			"verbosity":     3,
 			"print-tree":    true,
 			"xform-timeout": "150ms",
+			"consolidate": false,
 		},
 	}
 
@@ -50,6 +53,10 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	if globals.TransformTimeout != 150*time.Millisecond {
 		t.Fatalf("TransformTimeout not updated: %v", globals.TransformTimeout)
 	}
+	if globals.AutoConsolidate != false {
+		t.Fatalf("AutoConsolidation no updated: %v", globals.AutoConsolidate)
+	}
+
 }
 
 func TestParseRouteCmds_GeneratesCommands(t *testing.T) {

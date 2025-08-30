@@ -12,27 +12,41 @@ import (
 	"mycelia/globals"
 )
 
-// ParseRuntimeArgs parses only runtime flags validates, and returns
-// (config, error).
+// ParseRuntimeArgs parses only runtime flags validates, and returns error.
 //
 // Duration examples: 500ms, 3s, 2m, 1h.
 func parseRuntimeArgs(argv []string) error {
 	fs := flag.NewFlagSet("runtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
 
-	fs.StringVar(&globals.Address, "address", globals.Address, "Bind address (IP or hostname)")
+	addrHelp := "Bind address (IP or hostname)"
+	fs.StringVar(&globals.Address, "address", globals.Address, addrHelp)
+	
 	fs.IntVar(&globals.Port, "port", globals.Port, "Bind port (1-65535)")
-	fs.BoolVar(&globals.PrintTree, "print-tree", globals.PrintTree, "Print router tree at startup")
-	fs.DurationVar(&globals.TransformTimeout, "xform-timeout", globals.TransformTimeout, "Transformer timeout (e.g. 30s, 2m)")
-	fs.IntVar(&globals.Verbosity, "verbosity", globals.Verbosity,
-		`0 - None
+
+	printHelp := "Print router tree at startup"
+	fs.BoolVar(&globals.PrintTree, "print-tree", globals.PrintTree, printHelp)
+
+	xformTimeoutHelp := "Transformer timeout (e.g. 30s, 2m)"
+	fs.DurationVar(
+		&globals.TransformTimeout, "xform-timeout", globals.TransformTimeout,
+		xformTimeoutHelp,
+	)
+
+	cleanHelp := "Whether to auto-consolidate router shape on component removal"
+	fs.BoolVar(
+		&globals.AutoConsolidate, "consolidate", globals.AutoConsolidate,
+		cleanHelp,
+	)
+
+	verbosityHelp := `0 - None
     1 - Errors
     2 - Warnings + Errors
-    3 - Errors + Warnings + Actions`)
+    3 - Errors + Warnings + Actions`
+	fs.IntVar(&globals.Verbosity, "verbosity", globals.Verbosity, verbosityHelp)
 	globals.UpdateVerbosityEnvironVar()
 
-	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), `Mycelia runtime options:
+	usageString := `Mycelia runtime options:
 
   -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
@@ -42,7 +56,9 @@ func parseRuntimeArgs(argv []string) error {
 
 Examples:
   mycelia -addr 0.0.0.0 -port 8080 -verbosity 2 -print-tree -xform-timeout 45s
-`)
+`
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), usageString)
 	}
 
 	if err := fs.Parse(argv); err != nil {
