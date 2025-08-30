@@ -141,7 +141,11 @@ the "routes" field, or children of it, could not exist.
     "verbosity": 2,
     "print-tree": true,
     "xform-timeout": "45s",
-	"consolidate": true
+	"consolidate": true,
+    "security-tokens": [
+      "lockheed",
+      "martin"
+    ]
   },
   "routes": [
     {
