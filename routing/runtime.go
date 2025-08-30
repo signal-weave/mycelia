@@ -30,13 +30,14 @@ type runtimeUpdater struct {
 	AutoConsolidate  *bool   `json:"consolidate"`
 }
 
+// Verify that the values and sender are valid and then update the globals.
 func updateGlobals(cmd *protocol.Command) {
 	var rv runtimeUpdater
 	err := json.Unmarshal(cmd.Payload, &rv)
 	if err != nil {
 		wMsg := fmt.Sprintf(
 			"Could not parse payload for globals update from %s",
-			cmd.Sender,
+			cmd.ReturnAdress,
 		)
 		errgo.NewError(wMsg, globals.VERB_WRN)
 		return
@@ -45,40 +46,41 @@ func updateGlobals(cmd *protocol.Command) {
 	// Is user authorized
 	if rv.SecurityToken == nil {
 		str.ErrorPrint(
-			fmt.Sprintf("Message lacks security token from %s", cmd.Sender),
+			fmt.Sprintf("Message lacks security token from %s", cmd.ReturnAdress),
 		)
 	} else {
 		if !slices.Contains(globals.SecurityTokens, *rv.SecurityToken) {
 			str.ErrorPrint(
 				fmt.Sprintf(
 					"Unauthorized user attempting globals update from %s",
-					cmd.Sender,
+					cmd.ReturnAdress,
 				),
 			)
 			return
 		}
 	}
 
-	unPackGlobals(rv, cmd.Sender)
+	unPackGlobals(rv, cmd.ReturnAdress)
 	globals.PrintDynamicValues()
 }
 
-func unPackGlobals(rv runtimeUpdater, sender string) {
-	if rv.Address != nil {
-		globals.Address = *rv.Address
+// Unpack the unrtimeUpdater values into the globals.
+func unPackGlobals(ru runtimeUpdater, sender string) {
+	if ru.Address != nil {
+		globals.Address = *ru.Address
 	}
-	if rv.Port != nil {
-		globals.Port = *rv.Port
+	if ru.Port != nil {
+		globals.Port = *ru.Port
 	}
-	if rv.Verbosity != nil {
-		globals.Verbosity = *rv.Verbosity
+	if ru.Verbosity != nil {
+		globals.Verbosity = *ru.Verbosity
 		globals.UpdateVerbosityEnvironVar()
 	}
-	if rv.PrintTree != nil {
-		globals.PrintTree = *rv.PrintTree
+	if ru.PrintTree != nil {
+		globals.PrintTree = *ru.PrintTree
 	}
-	if rv.TransformTimeout != nil {
-		newTimeout, err := time.ParseDuration(*rv.TransformTimeout)
+	if ru.TransformTimeout != nil {
+		newTimeout, err := time.ParseDuration(*ru.TransformTimeout)
 		if err != nil {
 			wMsg := fmt.Sprintf(
 				"Unable to parse transform timeout expr from %s", sender,
@@ -88,7 +90,7 @@ func unPackGlobals(rv runtimeUpdater, sender string) {
 			globals.TransformTimeout = newTimeout
 		}
 	}
-	if rv.AutoConsolidate != nil {
-		globals.AutoConsolidate = *rv.AutoConsolidate
+	if ru.AutoConsolidate != nil {
+		globals.AutoConsolidate = *ru.AutoConsolidate
 	}
 }

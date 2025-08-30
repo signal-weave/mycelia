@@ -24,9 +24,9 @@ import (
 // UID and the sender's address for tracking purposes.
 
 // # Tracking Sub-header
-// +-------------+----------------+
-// | u8 len uid  | u16 len sender |
-// +-------------+----------------+
+// +-------------+---------------------+
+// | u8 len uid  | u16 len return addr |
+// +-------------+---------------------+
 
 // which is then followed by 4 uint8 sized byte fields that act as arguments for
 // the command type in the fixed header.
@@ -71,7 +71,7 @@ func decodeV1(data []byte) (*Command, error) {
 	payload, err := readBytesU16(r)
 	if err != nil {
 		wMsg := fmt.Sprintf(
-			"Unable to parse payload from %s: %s", cmd.Sender, err,
+			"Unable to parse payload from %s: %s", cmd.ReturnAdress, err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -128,7 +128,7 @@ func parseTrackingHeader(r io.Reader, cmd *Command) (*Command, error) {
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
 	}
-	cmd.Sender = senderAddr
+	cmd.ReturnAdress = senderAddr
 
 	return cmd, nil
 }
@@ -138,7 +138,7 @@ func parseArgumentFields(r io.Reader, cmd *Command) (*Command, error) {
 	arg1, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",
-			1, cmd.Sender, err,
+			1, cmd.ReturnAdress, err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -148,7 +148,7 @@ func parseArgumentFields(r io.Reader, cmd *Command) (*Command, error) {
 	arg2, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s, %s",
-			2, cmd.Sender, err,
+			2, cmd.ReturnAdress, err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -158,7 +158,7 @@ func parseArgumentFields(r io.Reader, cmd *Command) (*Command, error) {
 	arg3, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",
-			3, cmd.Sender, err,
+			3, cmd.ReturnAdress, err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -168,7 +168,7 @@ func parseArgumentFields(r io.Reader, cmd *Command) (*Command, error) {
 	arg4, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",
-			4, cmd.Sender, err,
+			4, cmd.ReturnAdress, err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr

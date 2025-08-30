@@ -61,7 +61,7 @@ func (t *Transformer) transformDelivery(m *protocol.Command) (*protocol.Command,
 		m.ObjType,
 		m.CmdType,
 
-		m.Sender,
+		m.ReturnAdress,
 		m.UID,
 
 		m.Arg1,

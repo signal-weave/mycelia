@@ -114,8 +114,8 @@ func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
 	if c0.Arg1 != "default" || c0.Arg2 != "inmem" || c0.Arg3 != "127.0.0.1:7010" {
 		t.Fatalf("cmd0 args wrong: %q %q %q", c0.Arg1, c0.Arg2, c0.Arg3)
 	}
-	if c0.Sender != "127.0.0.1:7010" {
-		t.Fatalf("cmd0 sender wrong: %q", c0.Sender)
+	if c0.ReturnAdress != "127.0.0.1:7010" {
+		t.Fatalf("cmd0 sender wrong: %q", c0.ReturnAdress)
 	}
 
 	c1 := get(1)

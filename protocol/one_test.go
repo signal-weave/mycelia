@@ -43,8 +43,8 @@ func TestDecodeV1_Success(t *testing.T) {
 	if cmd.UID != "uid-123" {
 		t.Fatalf("UID mismatch: got %q", cmd.UID)
 	}
-	if cmd.Sender != "127.0.0.1:5500" {
-		t.Fatalf("Sender mismatch: got %q", cmd.Sender)
+	if cmd.ReturnAdress != "127.0.0.1:5500" {
+		t.Fatalf("Sender mismatch: got %q", cmd.ReturnAdress)
 	}
 	if cmd.Arg1 != "a1" || cmd.Arg2 != "a2" || cmd.Arg3 != "a3" || cmd.Arg4 != "a4" {
 		t.Fatalf("Args mismatch: %q %q %q %q", cmd.Arg1, cmd.Arg2, cmd.Arg3, cmd.Arg4)

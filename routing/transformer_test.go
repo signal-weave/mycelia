@@ -12,15 +12,15 @@ import (
 
 func newMsg(body string) *protocol.Command {
 	return &protocol.Command{
-		ObjType: 1,
-		CmdType: 2,
-		UID:     "uid-123",
-		Sender:  "127.0.0.1:9999",
-		Arg1:    "routeA",
-		Arg2:    "chanA",
-		Arg3:    "",
-		Arg4:    "",
-		Payload: []byte(body),
+		ObjType:      1,
+		CmdType:      2,
+		UID:          "uid-123",
+		ReturnAdress: "127.0.0.1:9999",
+		Arg1:         "routeA",
+		Arg2:         "chanA",
+		Arg3:         "",
+		Arg4:         "",
+		Payload:      []byte(body),
 	}
 }
 
@@ -47,7 +47,7 @@ func TestTransformer_transformDelivery_Success(t *testing.T) {
 
 	// Headers/fields should be preserved
 	if out.ObjType != in.ObjType || out.CmdType != in.CmdType ||
-		out.UID != in.UID || out.Sender != in.Sender ||
+		out.UID != in.UID || out.ReturnAdress != in.ReturnAdress ||
 		out.Arg1 != in.Arg1 || out.Arg2 != in.Arg2 ||
 		out.Arg3 != in.Arg3 || out.Arg4 != in.Arg4 {
 		t.Fatalf("fields not preserved across transform")

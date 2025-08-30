@@ -19,8 +19,8 @@ type Command struct {
 	ObjType uint8
 	CmdType uint8
 
-	Sender string
-	UID    string
+	ReturnAdress string
+	UID          string
 
 	Arg1, Arg2 string
 	Arg3, Arg4 string
@@ -30,18 +30,18 @@ type Command struct {
 
 func NewCommand(
 	objType, cmdType uint8,
-	sender, uid, arg1, arg2, arg3, arg4 string,
+	returnAdress, uid, arg1, arg2, arg3, arg4 string,
 	payload []byte) *Command {
 	return &Command{
-		ObjType: objType,
-		CmdType: cmdType,
-		Sender:  sender,
-		UID:     uid,
-		Arg1:    arg1,
-		Arg2:    arg2,
-		Arg3:    arg3,
-		Arg4:    arg4,
-		Payload: payload,
+		ObjType:      objType,
+		CmdType:      cmdType,
+		ReturnAdress: returnAdress,
+		UID:          uid,
+		Arg1:         arg1,
+		Arg2:         arg2,
+		Arg3:         arg3,
+		Arg4:         arg4,
+		Payload:      payload,
 	}
 }
 

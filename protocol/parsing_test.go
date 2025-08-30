@@ -74,8 +74,8 @@ func TestParseLine_V1_Success(t *testing.T) {
 	if cmd.UID != "uid-123" {
 		t.Fatalf("UID mismatch: %q", cmd.UID)
 	}
-	if cmd.Sender != "127.0.0.1:5500" {
-		t.Fatalf("Sender mismatch: %q", cmd.Sender)
+	if cmd.ReturnAdress != "127.0.0.1:5500" {
+		t.Fatalf("Sender mismatch: %q", cmd.ReturnAdress)
 	}
 	if cmd.Arg1 != "a1" || cmd.Arg2 != "a2" || cmd.Arg3 != "a3" ||
 		cmd.Arg4 != "a4" {
