@@ -15,10 +15,10 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Mycelia will check for a PreInit.json file in the same directory as the .exe
+// Mycelia will check for a Mycelia_Config.json file in the same directory as the .exe
 // file.
 
-// The PreInit.json file acts as an alternative or addition to providing values
+// The Mycelia_Config.json file acts as an alternative or addition to providing values
 // on startup.
 
 // It will overwrite any CLI values that were placed in it if they were also
@@ -32,7 +32,7 @@ import (
 func getPreInitData() {
 	_, err := os.Stat(system.PreInitFile)
 	if err != nil {
-		str.ActionPrint("No PreInit.json found, skipping pre-init process.")
+		str.ActionPrint("No Mycelia_Config.json found, skipping pre-init process.")
 	}
 	data, err := os.ReadFile(system.PreInitFile)
 	if err != nil {
@@ -84,7 +84,7 @@ func parseRuntimeConfigurable(pd system.ParamData) {
 }
 
 /* -----------------------------------------------------------------------------
-Expected PreInit.json.
+Expected Mycelia_Config.json.
 the "routes" field, or children of it, could not exist.
 --------------------------------------------------------------------------------
 {

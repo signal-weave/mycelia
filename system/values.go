@@ -30,7 +30,7 @@ var ShutdownReportFile = fmt.Sprintf("%s/Mycelia_ShutdownReport.json", exeDir)
 
 // Whether to read the shutdown report and perform a recovery if a crash status
 // or unexpected shutdown was logged.
-// Can only be set by CLI, will not get read from PreInit.json file.
+// Can only be set by CLI, will not get read from Mycelia_Config.json file.
 var DoRecovery = true
 
 // Parse command type funcs append their command to this list.
@@ -38,7 +38,8 @@ var CommandList = []*protocol.Command{}
 
 // -------System Runtime Data Structures----------------------------------------
 
-// Proxy struct for unmarshalling the PreInit.json runtime data into cleanly.
+// Proxy struct for unmarshalling the Mycelia_Config.json runtime data into
+// cleanly.
 // This handles type conversion - Go marshals json integers to float64 by
 // default for whatever fucking reason.
 type ParamData struct {

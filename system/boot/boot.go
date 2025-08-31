@@ -40,7 +40,7 @@ func parseCli(argv []string) {
 	}
 }
 
-// Check for a PreInit.json file in the .exe directory.
+// Check for a Mycelia_Config.json file in the .exe directory.
 // If found -> load values.
 func parsePreInitFile() {
 	_, err := os.Stat(system.PreInitFile)
