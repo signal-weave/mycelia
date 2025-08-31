@@ -8,6 +8,7 @@ import (
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
+	"mycelia/system/cache"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -16,6 +17,7 @@ type server interface {
 	UpdateListener()
 	GetAddress() string
 	GetPort() int
+	Shutdown()
 }
 
 // -------Base Broker Details---------------------------------------------------
@@ -30,9 +32,10 @@ type Broker struct {
 	routes         map[string]*Route
 }
 
-func NewBroker() *Broker {
+func NewBroker(s server) *Broker {
 	return &Broker{
-		routes: map[string]*Route{},
+		ManagingServer: s,
+		routes:         map[string]*Route{},
 	}
 }
 
@@ -93,8 +96,10 @@ func (b *Broker) HandleCommand(cmd *protocol.Command) error {
 		b.handleSubscriber(cmd)
 	case globals.OBJ_GLOBALS:
 		b.handleGlobals(cmd)
+	case globals.OBJ_Action:
+		b.handleActions(cmd)
 	default:
-		wErr := errgo.NewError("Unknown command type!", globals.VERB_WRN)
+		wErr := errgo.NewError("Unknown object type!", globals.VERB_WRN)
 		return wErr
 	}
 
@@ -105,43 +110,103 @@ func (b *Broker) handleDelivery(cmd *protocol.Command) {
 	switch cmd.CmdType {
 	case globals.CMD_SEND:
 		b.Route(cmd.Arg1).ProcessDelivery(cmd)
+	default:
+		str.WarningPrint(
+			fmt.Sprintf("Unknown command type for delivery from %s",
+				cmd.ReturnAdress,
+			),
+		)
+		return
 	}
 }
 
 func (b *Broker) handleTransformer(cmd *protocol.Command) {
 	switch cmd.CmdType {
+
 	case globals.CMD_ADD:
-		transformer := NewTransformer(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(*transformer)
+		t := NewTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(*t)
+		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(t.Address)
+
 	case globals.CMD_REMOVE:
-		transformer := NewTransformer(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(*transformer)
+		t := NewTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(*t)
+		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(t.Address)
+
+	default:
+		str.WarningPrint(
+			fmt.Sprintf("Unknown command type for transformer from %s",
+				cmd.ReturnAdress,
+			),
+		)
+		return
 	}
+
+	cache.WriteSnapshot()
 	b.PrintBrokerStructure()
 }
 
 func (b *Broker) handleSubscriber(cmd *protocol.Command) {
 	switch cmd.CmdType {
+
 	case globals.CMD_ADD:
 		// Args: route, channel, address, nil
-		subscriber := NewSubscriber(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(*subscriber)
+		s := NewSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(*s)
+		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(s.Address)
+
 	case globals.CMD_REMOVE:
 		// Args: route, channel, address, nil
-		subscriber := NewSubscriber(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(*subscriber)
+		s := NewSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(*s)
+		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(s.Address)
+
+	default:
+		str.WarningPrint(
+			fmt.Sprintf("Unknown command type for subscriber from %s",
+				cmd.ReturnAdress,
+			),
+		)
+		return
 	}
+
+	cache.WriteSnapshot()
 	b.PrintBrokerStructure()
 }
 
 func (b *Broker) handleGlobals(cmd *protocol.Command) {
 	switch cmd.CmdType {
 	case globals.CMD_UPDATE:
-		updateGlobals(cmd)
+		hasPermission := updateGlobals(cmd)
+		if !hasPermission {
+			return
+		}
 		if b.ManagingServer.GetAddress() != globals.Address ||
 			b.ManagingServer.GetPort() != globals.Port {
 			b.ManagingServer.UpdateListener()
 		}
+		cache.WriteSnapshot()
+	default:
+		str.WarningPrint(
+			fmt.Sprintf("Unknown command type for globals from %s",
+				cmd.ReturnAdress,
+			),
+		)
+		return
+	}
+}
+
+func (b *Broker) handleActions(cmd *protocol.Command) {
+	switch cmd.CmdType {
+	case globals.CMD_SIGTERM:
+		b.ManagingServer.Shutdown()
+	default:
+		str.WarningPrint(
+			fmt.Sprintf("Unknown command type for action from %s",
+				cmd.ReturnAdress,
+			),
+		)
+		return
 	}
 }
 

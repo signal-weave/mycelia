@@ -41,7 +41,9 @@ func parseRuntimeArgs(argv []string) error {
 	)
 
 	recoveryHelp := "Whether to recover using the shutdown report file"
-	fs.BoolVar(&system.DoRecovery, "do-recovery", system.DoRecovery, recoveryHelp)
+	fs.BoolVar(
+		&system.DoRecovery, "do-recovery", system.DoRecovery, recoveryHelp,
+	)
 
 	verbosityHelp := `0 - None
     1 - Errors

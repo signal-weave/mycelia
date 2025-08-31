@@ -30,6 +30,7 @@ var ShutdownReportFile = fmt.Sprintf("%s/ShutdownReport.json", exeDir)
 
 // Whether to read the shutdown report and perform a recovery if a crash status
 // or unexpected shutdown was logged.
+// Can only be set by CLI, will not get read from PreInit.json file.
 var DoRecovery = true
 
 // Parse command type funcs append their command to this list.
@@ -48,7 +49,6 @@ type ParamData struct {
 	TransformTimeout *string   `json:"xform-timeout"`
 	AutoConsolidate  *bool     `json:"consolidate"`
 	SecurityToken    *[]string `json:"security-tokens"`
-	DoRecovery       *bool     `json:"do-recovery"`
 }
 
 func NewParamData() *ParamData {
@@ -62,7 +62,6 @@ func NewParamData() *ParamData {
 		TransformTimeout: &timeoutStr,
 		AutoConsolidate:  &globals.AutoConsolidate,
 		SecurityToken:    &globals.SecurityTokens,
-		DoRecovery:       &DoRecovery,
 	}
 }
 
@@ -76,4 +75,17 @@ type SystemData struct {
 	ShutdownReport *ShutdownReport   `json:"shutdown-report"`
 	Parameters     *ParamData        `json:"parameters"`
 	Routes         *[]map[string]any `json:"routes"`
+}
+
+func NewSystemData() *SystemData {
+	shutdownStatus := false
+	report := &ShutdownReport{GracefulShutdown: &shutdownStatus}
+
+	routes := []map[string]any{}
+
+	return &SystemData{
+		ShutdownReport: report,
+		Parameters:     NewParamData(),
+		Routes:         &routes,
+	}
 }

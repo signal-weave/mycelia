@@ -16,8 +16,7 @@ import (
 
 func NewServer(address string, port int) *Server {
 	server := &Server{}
-	server.Broker = routing.NewBroker()
-	server.Broker.ManagingServer = server
+	server.Broker = routing.NewBroker(server)
 	server.address = address
 	server.port = port
 	return server
@@ -51,8 +50,7 @@ func (server *Server) Run() {
 	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
 	str.SprintfLn("Listening on %s", fullAddress)
 
-	// TODO: Print values for address of sender.
-	for {
+	for !globals.PerformShutdown.Load() {
 		server.mutex.RLock()
 		l := server.listener
 		server.mutex.RUnlock()
@@ -67,6 +65,19 @@ func (server *Server) Run() {
 			continue
 		}
 		go server.HandleConnection(conn)
+	}
+}
+
+func (server *Server) Shutdown() {
+	globals.PerformShutdown.Store(true)
+
+	server.mutex.Lock()
+	l := server.listener
+	server.listener = nil
+	server.mutex.Unlock()
+
+	if l != nil {
+		_ = l.Close()
 	}
 }
 
@@ -108,6 +119,7 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
 	str.ActionPrint(aMsg)
 
+	// TODO: Print values for address of sender.
 	for {
 		frame, err := readFrame(conn)
 		if err != nil {

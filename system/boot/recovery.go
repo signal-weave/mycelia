@@ -17,6 +17,7 @@ func recover() {
 	if err != nil {
 		str.ErrorPrint("Could not import ShutdownReport JSON data")
 		str.ErrorPrint("Skipping shutdown check.")
+		system.DoRecovery = false
 		return
 	}
 
@@ -28,6 +29,7 @@ func recover() {
 			"Shutdown report is missing shutdown status, skipping check",
 		)
 		system.DoRecovery = false
+		return
 	}
 
 	// Broker shut down in expected manner, do not recover.

@@ -36,7 +36,6 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	tranTimeout := "150ms"
 	consolidate := false
 	securityTokens := []string{"token1"}
-	recovery := false
 
 	data := system.SystemData{
 		Parameters: &system.ParamData{
@@ -47,7 +46,6 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 			TransformTimeout: &tranTimeout,
 			AutoConsolidate:  &consolidate,
 			SecurityToken:    &securityTokens,
-			DoRecovery:       &recovery,
 		},
 	}
 
@@ -73,9 +71,6 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	}
 	if !slices.Equal(globals.SecurityTokens, []string{"token1"}) {
 		t.Fatalf("SecurityTokens not updated: %v", globals.SecurityTokens)
-	}
-	if system.DoRecovery != false {
-		t.Fatalf("DoRecovery nto updated: %v", system.DoRecovery)
 	}
 }
 

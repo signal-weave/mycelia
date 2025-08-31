@@ -81,9 +81,6 @@ func parseRuntimeConfigurable(pd system.ParamData) {
 	if pd.SecurityToken != nil {
 		globals.SecurityTokens = *pd.SecurityToken
 	}
-	if pd.DoRecovery != nil {
-		system.DoRecovery = *pd.DoRecovery
-	}
 }
 
 /* -----------------------------------------------------------------------------

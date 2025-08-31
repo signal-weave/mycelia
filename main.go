@@ -8,6 +8,7 @@ import (
 	"mycelia/str"
 	"mycelia/system"
 	"mycelia/system/boot"
+	"mycelia/system/shutdown"
 )
 
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
@@ -23,7 +24,9 @@ func main() {
 
 	globals.PrintDynamicValues()
 
-	startServer() // Must be last, contains infinite for loop.
+	startServer()
+
+	shutdown.PerformShutdown()
 }
 
 // Starts the server - checks for pre-loaded commands from the PreInit.json file

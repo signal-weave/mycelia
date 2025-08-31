@@ -30,8 +30,10 @@ type runtimeUpdater struct {
 	AutoConsolidate  *bool   `json:"consolidate"`
 }
 
-// Verify that the values and sender are valid and then update the globals.
-func updateGlobals(cmd *protocol.Command) {
+// Verify that the values and sender are valid and then update the globals, if
+// they are.
+// Returns if the user was verified or not.
+func updateGlobals(cmd *protocol.Command) bool {
 	var rv runtimeUpdater
 	err := json.Unmarshal(cmd.Payload, &rv)
 	if err != nil {
@@ -40,13 +42,14 @@ func updateGlobals(cmd *protocol.Command) {
 			cmd.ReturnAdress,
 		)
 		errgo.NewError(wMsg, globals.VERB_WRN)
-		return
+		return false
 	}
 
 	// Is user authorized
 	if rv.SecurityToken == nil {
 		str.ErrorPrint(
-			fmt.Sprintf("Message lacks security token from %s", cmd.ReturnAdress),
+			fmt.Sprintf("Message lacks security token from %s",
+				cmd.ReturnAdress),
 		)
 	} else {
 		if !slices.Contains(globals.SecurityTokens, *rv.SecurityToken) {
@@ -56,16 +59,17 @@ func updateGlobals(cmd *protocol.Command) {
 					cmd.ReturnAdress,
 				),
 			)
-			return
+			return false
 		}
 	}
 
-	unPackGlobals(rv, cmd.ReturnAdress)
+	unpackGlobals(rv, cmd.ReturnAdress)
 	globals.PrintDynamicValues()
+	return true
 }
 
 // Unpack the unrtimeUpdater values into the globals.
-func unPackGlobals(ru runtimeUpdater, sender string) {
+func unpackGlobals(ru runtimeUpdater, sender string) {
 	if ru.Address != nil {
 		globals.Address = *ru.Address
 	}
