@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -11,6 +12,9 @@ import (
 // Shared, or "global", dynamic values that are referenced between packages.
 // This is not meant to contain constant values.
 // -----------------------------------------------------------------------------
+
+// If the server should begin the shutdown process.
+var PerformShutdown atomic.Bool
 
 // The address the server will use to listen for message.
 var Address string = "127.0.0.1"

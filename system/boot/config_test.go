@@ -7,6 +7,7 @@ import (
 
 	"mycelia/globals"
 	"mycelia/protocol"
+	"mycelia/system"
 )
 
 func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
@@ -17,6 +18,7 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	oldPrint := globals.PrintTree
 	oldXform := globals.TransformTimeout
 	oldAutoCon := globals.AutoConsolidate
+	oldDoRecovery := system.DoRecovery
 	t.Cleanup(func() {
 		globals.Address = oldAddr
 		globals.Port = oldPort
@@ -24,21 +26,30 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 		globals.PrintTree = oldPrint
 		globals.TransformTimeout = oldXform
 		globals.AutoConsolidate = oldAutoCon
+		system.DoRecovery = oldDoRecovery
 	})
 
-	data := map[string]any{
-		"runtime": map[string]any{
-			"address":         "127.0.0.1",
-			"port":            6001,
-			"verbosity":       3,
-			"print-tree":      true,
-			"xform-timeout":   "150ms",
-			"consolidate":     false,
-			"security-tokens": []string{"token1"},
+	addr := "127.0.0.1"
+	port := 6001
+	verbosity := 3
+	printTree := true
+	tranTimeout := "150ms"
+	consolidate := false
+	securityTokens := []string{"token1"}
+
+	data := system.SystemData{
+		Parameters: &system.ParamData{
+			Address:          &addr,
+			Port:             &port,
+			Verbosity:        &verbosity,
+			PrintTree:        &printTree,
+			TransformTimeout: &tranTimeout,
+			AutoConsolidate:  &consolidate,
+			SecurityToken:    &securityTokens,
 		},
 	}
 
-	parseRuntimeConfigurable(data)
+	parseRuntimeConfigurable(*data.Parameters)
 
 	if globals.Address != "127.0.0.1" {
 		t.Fatalf("Address not updated: %q", globals.Address)
@@ -65,7 +76,7 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 
 func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
 	// Start from a clean command list.
-	CommandList = nil
+	system.CommandList = nil
 
 	routeData := []map[string]any{
 		{
@@ -89,13 +100,13 @@ func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
 	parseRouteCmds(routeData)
 
 	// Expect 4 commands: 2 transformers + 2 subscribers
-	if len(CommandList) != 4 {
-		t.Fatalf("expected 4 commands, got %d", len(CommandList))
+	if len(system.CommandList) != 4 {
+		t.Fatalf("expected 4 commands, got %d", len(system.CommandList))
 	}
 
 	// Helper to read fields regardless of pointer/value slice element.
 	get := func(i int) *protocol.Command {
-		switch c := any(CommandList[i]).(type) {
+		switch c := any(system.CommandList[i]).(type) {
 		case *protocol.Command:
 			return c
 		case protocol.Command:
@@ -145,7 +156,7 @@ func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
 }
 
 func TestParseRouteCmds_NoChannels_NoCommands(t *testing.T) {
-	CommandList = nil
+	system.CommandList = nil
 
 	routeData := []map[string]any{
 		{
@@ -155,9 +166,10 @@ func TestParseRouteCmds_NoChannels_NoCommands(t *testing.T) {
 	}
 	parseRouteCmds(routeData)
 
-	if len(CommandList) != 0 {
+	if len(system.CommandList) != 0 {
 		t.Fatalf(
-			"expected no commands for empty channels, got %d", len(CommandList),
+			"expected no commands for empty channels, got %d",
+			len(system.CommandList),
 		)
 	}
 }

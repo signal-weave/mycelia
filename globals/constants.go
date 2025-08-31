@@ -6,7 +6,7 @@ package globals
 // -----------------------------------------------------------------------------
 
 const (
-	Developer = "SignalWeave"
+	Developer = "Signa lWeave"
 )
 
 // -------Memory Values---------------------------------------------------------
@@ -39,19 +39,27 @@ const (
 // -------Commands--------------------------------------------------------------
 
 const (
-	OBJ_UNKNOWN     uint8 = iota
+	OBJ_UNKNOWN uint8 = 0
+
 	OBJ_DELIVERY    uint8 = 1
 	OBJ_TRANSFORMER uint8 = 2
 	OBJ_SUBSCRIBER  uint8 = 3
-	OBJ_GLOBALS     uint8 = 4
+
+	OBJ_GLOBALS uint8 = 20
+
+	OBJ_Action uint8 = 50
 )
 
 const (
-	CMD_UNKNOWN uint8 = iota
-	CMD_SEND    uint8 = 1
-	CMD_ADD     uint8 = 2
-	CMD_REMOVE  uint8 = 3
-	CMD_UPDATE  uint8 = 4
+	CMD_UNKNOWN uint8 = 0
+
+	CMD_SEND   uint8 = 1
+	CMD_ADD    uint8 = 2
+	CMD_REMOVE uint8 = 3
+
+	CMD_UPDATE uint8 = 20
+
+	CMD_SIGTERM uint8 = 50
 )
 
 // -------Terminal--------------------------------------------------------------

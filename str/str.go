@@ -15,12 +15,23 @@ import (
 )
 
 func SprintfLn(formatStr string, args ...string) {
-	interfaceArgs := make([]interface{}, len(args))
+	interfaceArgs := make([]any, len(args))
 	for i, v := range args {
 		interfaceArgs[i] = v
 	}
 	msg := fmt.Sprintf(formatStr, interfaceArgs...)
 	fmt.Println(msg)
+}
+
+// Converts []*string to []string
+func ConvertPtrTokens(ptrs []*string) []string {
+	out := make([]string, 0, len(ptrs))
+	for _, p := range ptrs {
+		if p != nil {
+			out = append(out, *p)
+		}
+	}
+	return out
 }
 
 func ActionPrint(s string) {

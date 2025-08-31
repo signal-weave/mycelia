@@ -10,11 +10,24 @@ import (
 	"mycelia/test"
 )
 
+type fakeServer struct {
+	addr    string
+	port    int
+	updated bool
+}
+
+func (f *fakeServer) Run()               {}
+func (f *fakeServer) UpdateListener()    { f.updated = true }
+func (f *fakeServer) GetAddress() string { return f.addr }
+func (f *fakeServer) GetPort() int       { return f.port }
+func (f *fakeServer) Shutdown() {}
+
 func TestBroker_AddSubscriber_ThenSend_ForwardsToSubscriber(t *testing.T) {
 	subAddr, gotBody, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
-	b := NewBroker()
+	fs := &fakeServer{addr: "0.0.0.0", port: 1}
+	b := NewBroker(fs)
 
 	// Add subscriber: route "r1", channel "c1" -> subAddr
 	addSub := protocol.NewCommand(
@@ -52,7 +65,8 @@ func TestBroker_AddTransformer_ThenSend_PayloadTransformedAndDelivered(t *testin
 	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
 	t.Cleanup(stopSub)
 
-	b := NewBroker()
+	fs := &fakeServer{addr: "0.0.0.0", port: 1}
+	b := NewBroker(fs)
 	globals.TransformTimeout = 2 * time.Second
 
 	// Add transformer on r2.c1
@@ -96,7 +110,8 @@ func TestBroker_RemoveSubscriber_NoFurtherDeliveries(t *testing.T) {
 	subAddr, gotBody, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
-	b := NewBroker()
+	fs := &fakeServer{addr: "0.0.0.0", port: 1}
+	b := NewBroker(fs)
 
 	addSub := protocol.NewCommand(
 		globals.OBJ_SUBSCRIBER, globals.CMD_ADD,
@@ -127,20 +142,9 @@ func TestBroker_RemoveSubscriber_NoFurtherDeliveries(t *testing.T) {
 	}
 }
 
-type fakeServer struct {
-	addr    string
-	port    int
-	updated bool
-}
-
-func (f *fakeServer) Run()               {}
-func (f *fakeServer) UpdateListener()    { f.updated = true }
-func (f *fakeServer) GetAddress() string { return f.addr }
-func (f *fakeServer) GetPort() int       { return f.port }
-
 func TestBroker_UpdateGlobals_InvokesUpdateListener(t *testing.T) {
-	b := NewBroker()
 	fs := &fakeServer{addr: "0.0.0.0", port: 1}
+	b := NewBroker(fs)
 	b.ManagingServer = fs
 
 	payload := map[string]any{

@@ -27,5 +27,6 @@ go.work.sum
 # shortuct
 *.lnk
 
-# PreInit json
-PreInit.json
+# json files
+Mycelia_Config.json
+Mycelia_ShutdownReport.json
