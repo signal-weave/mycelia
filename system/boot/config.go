@@ -30,11 +30,11 @@ import (
 // -----------------------------------------------------------------------------
 
 func getPreInitData() {
-	_, err := os.Stat(system.PreInitFile)
+	_, err := os.Stat(system.ConfigFile)
 	if err != nil {
 		str.ActionPrint("No Mycelia_Config.json found, skipping pre-init process.")
 	}
-	data, err := os.ReadFile(system.PreInitFile)
+	data, err := os.ReadFile(system.ConfigFile)
 	if err != nil {
 		str.ErrorPrint("Could not import PreInit JSON data - Skipping Pre-Init.")
 		return

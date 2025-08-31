@@ -16,7 +16,6 @@ import (
 // Startup the program...
 func Boot(argv []string) {
 	parseCli(argv)
-	fmt.Println("Recovery value:", system.DoRecovery)
 
 	// If parseShutdownReport detected a crash or suspicious shutodwn, the we
 	// want to use the recovery data instead of the PreInit data.
@@ -43,7 +42,7 @@ func parseCli(argv []string) {
 // Check for a Mycelia_Config.json file in the .exe directory.
 // If found -> load values.
 func parsePreInitFile() {
-	_, err := os.Stat(system.PreInitFile)
+	_, err := os.Stat(system.ConfigFile)
 	if err == nil {
 		getPreInitData()
 	}
