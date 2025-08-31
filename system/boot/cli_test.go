@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"mycelia/globals"
+	"mycelia/system"
 )
 
 // snapshot captures the mutable global config so we can restore it after
@@ -18,6 +19,7 @@ type snapshot struct {
 	Verbosity        int
 	TransformTimeout time.Duration
 	AutoConsolidate  bool
+	DoRecovery       bool
 }
 
 func takeSnapshot() snapshot {
@@ -28,6 +30,7 @@ func takeSnapshot() snapshot {
 		Verbosity:        globals.Verbosity,
 		TransformTimeout: globals.TransformTimeout,
 		AutoConsolidate:  globals.AutoConsolidate,
+		DoRecovery:       system.DoRecovery,
 	}
 }
 
@@ -49,6 +52,7 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 	globals.Verbosity = 0
 	globals.TransformTimeout = 5 * time.Second
 	globals.AutoConsolidate = false
+	system.DoRecovery = false
 
 	args := []string{
 		"-address", "0.0.0.0",
@@ -57,6 +61,7 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 		"-print-tree",
 		"-xform-timeout", "45s",
 		"-consolidate",
+		"-do-recovery",
 	}
 	if err := parseRuntimeArgs(args); err != nil {
 		t.Fatalf("parseRuntimeArgs returned error: %v", err)
@@ -83,7 +88,9 @@ func TestParseRuntimeArgs_ValidFlags(t *testing.T) {
 	if !globals.AutoConsolidate {
 		t.Errorf("AutoConsolidate = %v, want %v", globals.AutoConsolidate, true)
 	}
-
+	if !system.DoRecovery {
+		t.Errorf("DoRecovery = %v, want %v", system.DoRecovery, true)
+	}
 }
 
 func TestParseRuntimeArgs_AllowsHostname(t *testing.T) {

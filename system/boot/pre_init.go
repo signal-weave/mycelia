@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
+	"mycelia/system"
 
 	"github.com/google/uuid"
 )
@@ -24,109 +24,65 @@ import (
 // It will overwrite any CLI values that were placed in it if they were also
 // provided by CLI.
 
-// Any CLI value can be placed under the "runtime" field in the json as well as
-// any pre-defined routes/channels/transformers/subscribers (provided they
+// Any CLI value can be placed under the "parameters" field in the json as well
+// as any pre-defined routes/channels/transformers/subscribers (provided they
 // specify their parent object) that the router should start up with.
 // -----------------------------------------------------------------------------
 
-// ------Pre-Init File Handling-------------------------------------------------
-
 func getPreInitData() {
-	data := importPreInitData()
-	if data == nil {
-		fmt.Println("Could not import PreInit JSON data - Skipping Pre-Init.")
-		return
+	_, err := os.Stat(system.PreInitFile)
+	if err != nil {
+		str.ActionPrint("No PreInit.json found, skipping pre-init process.")
 	}
-	parseRuntimeConfigurable(data)
-
-	routesAny, ok := data["routes"].([]any)
-	if !ok {
-		str.ActionPrint("No PreInit route data found, skipping PreInit Routes.")
-		return
-	}
-	routes := make([]map[string]any, 0, len(routesAny))
-	for _, r := range routesAny {
-		if m, ok := r.(map[string]any); ok {
-			routes = append(routes, m)
-		}
-	}
-	parseRouteCmds(routes)
-}
-
-func importPreInitData() map[string]any {
-	data := errgo.ValueOrPanic(
-		os.ReadFile(preInitFile),
-	)
-
-	var obj map[string]any
-
-	errgo.PanicIfError(
-		json.Unmarshal(data, &obj),
-	)
-
-	return obj
-}
-
-// Proxy struct for unmarshalling the PreInit.json runtime data into cleanly.
-// This handles type conversion - Go marshals json integers to float64 by
-// default for whatever fucking reason.
-type runtimeData struct {
-	Address          *string   `json:"address"`
-	Port             *int      `json:"port"`
-	Verbosity        *int      `json:"verbosity"`
-	PrintTree        *bool     `json:"print-tree"`
-	TransformTimeout *string   `json:"xform-timeout"`
-	AutoConsolidate  *bool     `json:"consolidate"`
-	SecurityToken    *[]string `json:"security-tokens"`
-}
-
-// Pipes the non-shape data into the RuntimeCfg
-func parseRuntimeConfigurable(data map[string]any) {
-	rawRuntimeData, exists := data["runtime"].(map[string]any)
-	if !exists {
+	data, err := os.ReadFile(system.PreInitFile)
+	if err != nil {
+		str.ErrorPrint("Could not import PreInit JSON data - Skipping Pre-Init.")
 		return
 	}
 
+	var bd system.SystemData
+	err = json.Unmarshal(data, &bd)
+
+	if bd.Parameters != nil {
+		parseRuntimeConfigurable(*bd.Parameters)
+	}
+	if bd.Routes != nil {
+		parseRouteCmds(*bd.Routes)
+	}
+}
+
+// Update globals from non-routing data.
+func parseRuntimeConfigurable(pd system.ParamData) {
 	fmt.Println(
 		"PreInit runtime values found - these will overwrite any CLI values...",
 	)
 
-	b, err := json.Marshal(rawRuntimeData)
-	if err != nil {
-		fmt.Println("Error marshaling runtime data in PreInit.json")
-		return
+	if pd.Address != nil {
+		globals.Address = *pd.Address
 	}
-
-	var rd runtimeData
-	err = json.Unmarshal(b, &rd)
-	if err != nil {
-		fmt.Println("Error unmarshaling runtime data in PreInit.json")
-		return
+	if pd.Port != nil {
+		globals.Port = *pd.Port
 	}
-
-	if rd.Address != nil {
-		globals.Address = *rd.Address
-	}
-	if rd.Port != nil {
-		globals.Port = *rd.Port
-	}
-	if rd.Verbosity != nil {
-		globals.Verbosity = *rd.Verbosity
+	if pd.Verbosity != nil {
+		globals.Verbosity = *pd.Verbosity
 		globals.UpdateVerbosityEnvironVar()
 	}
-	if rd.PrintTree != nil {
-		globals.PrintTree = *rd.PrintTree
+	if pd.PrintTree != nil {
+		globals.PrintTree = *pd.PrintTree
 	}
-	if rd.TransformTimeout != nil {
-		if d, err := time.ParseDuration(*rd.TransformTimeout); err == nil {
+	if pd.TransformTimeout != nil {
+		if d, err := time.ParseDuration(*pd.TransformTimeout); err == nil {
 			globals.TransformTimeout = d
 		}
 	}
-	if rd.AutoConsolidate != nil {
-		globals.AutoConsolidate = *rd.AutoConsolidate
+	if pd.AutoConsolidate != nil {
+		globals.AutoConsolidate = *pd.AutoConsolidate
 	}
-	if rd.SecurityToken != nil {
-		globals.SecurityTokens = *rd.SecurityToken
+	if pd.SecurityToken != nil {
+		globals.SecurityTokens = *pd.SecurityToken
+	}
+	if pd.DoRecovery != nil {
+		system.DoRecovery = *pd.DoRecovery
 	}
 }
 
@@ -135,7 +91,7 @@ Expected PreInit.json.
 the "routes" field, or children of it, could not exist.
 --------------------------------------------------------------------------------
 {
-  "runtime": {
+  "parameters": {
     "address": "0.0.0.0",
     "port": 8080,
     "verbosity": 2,
@@ -203,7 +159,7 @@ func parseRouteCmds(routeData []map[string]any) {
 					"",
 					[]byte{},
 				)
-				CommandList = append(CommandList, cmd)
+				system.CommandList = append(system.CommandList, cmd)
 			}
 
 			rawSubscribers, _ := channel["subscribers"].([]any)
@@ -225,7 +181,7 @@ func parseRouteCmds(routeData []map[string]any) {
 					"",
 					[]byte{},
 				)
-				CommandList = append(CommandList, cmd)
+				system.CommandList = append(system.CommandList, cmd)
 			}
 		}
 	}
