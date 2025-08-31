@@ -27,5 +27,6 @@ go.work.sum
 # shortuct
 *.lnk
 
-# PreInit json
+# json files
 PreInit.json
+ShutdownReport.json
