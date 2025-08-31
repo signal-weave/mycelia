@@ -25,8 +25,8 @@ func GetExecDirectory() string {
 
 var exeDir = GetExecDirectory()
 
-var PreInitFile = fmt.Sprintf("%s/PreInit.json", exeDir)
-var ShutdownReportFile = fmt.Sprintf("%s/ShutdownReport.json", exeDir)
+var PreInitFile = fmt.Sprintf("%s/Mycelia_Conifg.json", exeDir)
+var ShutdownReportFile = fmt.Sprintf("%s/Mycelia_ShutdownReport.json", exeDir)
 
 // Whether to read the shutdown report and perform a recovery if a crash status
 // or unexpected shutdown was logged.
