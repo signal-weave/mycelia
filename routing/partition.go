@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+// A worker that manages the communication between transformers and subscribers
+// on a channel. These offload the communication so the channel can keep
+// funneling messages to its partition workers.
 type partition struct {
 	route   *route
 	channel *channel
@@ -22,6 +25,9 @@ func newPartition(r *route, c *channel) *partition {
 func (p *partition) start() { p.wg.Add(1); go p.loop() }
 func (p *partition) stop()  { close(p.in); p.wg.Wait() }
 
+// Should be called as a go routine so the partition worker is always working.
+// It can be fed messages through partition.in which will get processed in the
+// loop. Remember to call partition.stop() to close loop + channel and shutdown.
 func (p *partition) loop() {
 	defer p.wg.Done()
 	for m := range p.in {
