@@ -17,8 +17,9 @@ const (
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
-// The size of the channel partition in size.
-const PartitionChanSize = 1024
+// The number of protocol.Commands that a mycelia channel partition can hold at
+// any maximum.
+const PartitionChanSize = 128
 
 // -------Verbosity-------------------------------------------------------------
 
