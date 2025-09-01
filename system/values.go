@@ -26,12 +26,6 @@ func GetExecDirectory() string {
 var exeDir = GetExecDirectory()
 
 var ConfigFile = fmt.Sprintf("%s/Mycelia_Config.json", exeDir)
-var ShutdownReportFile = fmt.Sprintf("%s/Mycelia_ShutdownReport.json", exeDir)
-
-// Whether to read the shutdown report and perform a recovery if a crash status
-// or unexpected shutdown was logged.
-// Can only be set by CLI, will not get read from Mycelia_Config.json file.
-var DoRecovery = true
 
 // Parse command type funcs append their command to this list.
 var CommandList = []*protocol.Command{}

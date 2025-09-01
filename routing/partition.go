@@ -3,14 +3,20 @@ package routing
 import (
 	"mycelia/protocol"
 	"sync"
-	"sync/atomic"
 )
 
 type partition struct {
-	in           chan *protocol.Command
-	transformers *atomic.Pointer[[]transformer]
-	subscribers  *atomic.Pointer[[]subscriber]
-	wg           sync.WaitGroup
+	route   *route
+	channel *channel
+	in      chan *protocol.Command
+	wg      sync.WaitGroup
+}
+
+func newPartition(r *route, c *channel) *partition {
+	return &partition{
+		route:   r,
+		channel: c,
+	}
 }
 
 func (p *partition) start() { p.wg.Add(1); go p.loop() }
@@ -23,10 +29,9 @@ func (p *partition) loop() {
 			continue
 		}
 
-		ts := *p.transformers.Load()
-		ss := *p.subscribers.Load()
 		var err error
 
+		ts := p.channel.tSnap.Load().([]transformer)
 		result := m
 		for _, t := range ts {
 			result, err = t.apply(result)
@@ -38,6 +43,7 @@ func (p *partition) loop() {
 			continue
 		}
 
+		ss := p.channel.sSnap.Load().([]subscriber)
 		var wg sync.WaitGroup
 		wg.Add(len(ss))
 
@@ -52,5 +58,10 @@ func (p *partition) loop() {
 		}
 
 		wg.Wait()
+
+		// pass to next channel
+		if next := p.route.getNextChannel(p.channel); next != nil {
+			next.enqueue(result)
+		}
 	}
 }

@@ -17,6 +17,9 @@ const (
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
+// The size of the channel partition in size.
+const PartitionChanSize = 1024
+
 // -------Verbosity-------------------------------------------------------------
 
 const (

@@ -16,17 +16,7 @@ import (
 // Startup the program...
 func Boot(argv []string) {
 	parseCli(argv)
-
-	// If parseShutdownReport detected a crash or suspicious shutodwn, the we
-	// want to use the recovery data instead of the PreInit data.
-	if system.DoRecovery {
-		parseShutdownReport()
-	}
-	// Second DoRecovery check because if the recovery process encounters and
-	// error, stopping the recovery from happening, then it may switch off.
-	if !system.DoRecovery {
-		parsePreInitFile()
-	}
+	parsePreInitFile()
 }
 
 // Parses and stores the runtime flags in public vars.
@@ -48,13 +38,3 @@ func parsePreInitFile() {
 	}
 }
 
-// Check for a shutdown report.
-// If found -> load values.
-func parseShutdownReport() {
-	_, err := os.Stat(system.ShutdownReportFile)
-	if err != nil {
-		makeInitialShutdownFile()
-		return
-	}
-	recover()
-}
