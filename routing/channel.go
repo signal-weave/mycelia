@@ -2,6 +2,7 @@ package routing
 
 import (
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"sync"
 
@@ -17,15 +18,40 @@ import (
 // More than one channel may exist in a route - Subscribers choose which
 // transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
 // by one channel will then be sent to the next channel in a route.
-type Channel struct {
-	route        *Route
-	mutex        sync.RWMutex
-	name         string
-	transformers []Transformer
-	subscribers  []Subscriber
+type channel struct {
+	mutex sync.RWMutex
+	route *route
+	name  string
+
+	hash func([]byte) uint32
+
+	transformers []transformer
+	subscribers  []subscriber
+	partitions   []*partition
 }
 
-func (ch *Channel) AddTransformer(t Transformer) {
+func newChannel(r *route, name string, numPartitions int) *channel {
+	partitions := make([]*partition, numPartitions)
+
+	hash := func(b []byte) uint32 {
+		h := fnv.New32a()
+		_, _ = h.Write(b)
+		return h.Sum32()
+	}
+
+	return &channel{
+		route: r,
+		name:  name,
+
+		hash: hash,
+
+		transformers: []transformer{},
+		subscribers:  []subscriber{},
+		partitions:   partitions,
+	}
+}
+
+func (ch *channel) addTransformer(t transformer) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 	for _, existing := range ch.transformers {
@@ -39,7 +65,7 @@ func (ch *Channel) AddTransformer(t Transformer) {
 	)
 }
 
-func (ch *Channel) RemoveTransformer(t Transformer) {
+func (ch *channel) removeTransformer(t transformer) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 
@@ -57,7 +83,7 @@ func (ch *Channel) RemoveTransformer(t Transformer) {
 	ch.checkEmptyChannel()
 }
 
-func (ch *Channel) AddSubscriber(s Subscriber) {
+func (ch *channel) addSubscriber(s subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 	for _, existing := range ch.subscribers {
@@ -71,7 +97,7 @@ func (ch *Channel) AddSubscriber(s Subscriber) {
 	)
 }
 
-func (ch *Channel) RemoveSubscriber(s Subscriber) {
+func (ch *channel) removeSubscriber(s subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 
@@ -87,8 +113,8 @@ func (ch *Channel) RemoveSubscriber(s Subscriber) {
 	ch.checkEmptyChannel()
 }
 
-func (ch *Channel) checkEmptyChannel() {
-	if !globals.AutoConsolidate{
+func (ch *channel) checkEmptyChannel() {
+	if !globals.AutoConsolidate {
 		return
 	}
 	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
@@ -96,7 +122,13 @@ func (ch *Channel) checkEmptyChannel() {
 	}
 }
 
-func (c *Channel) ProcessDelivery(m *protocol.Command) *protocol.Command {
+func (c *channel) enqueue(m *protocol.Command) {
+	key := []byte(m.Arg3) // address on messages
+	idx := int(c.hash(key)) % len(c.partitions)
+	c.partitions[idx].in <- m
+}
+
+func (c *channel) deliver(m *protocol.Command) *protocol.Command {
 	result := m
 
 	c.mutex.RLock() // Copy transform slice for minimal mutex lock time
@@ -105,7 +137,7 @@ func (c *Channel) ProcessDelivery(m *protocol.Command) *protocol.Command {
 
 	// First, run delivery through all transformers in order
 	for _, transformer := range transformers {
-		transformedMsg, err := transformer.transformDelivery(result)
+		transformedMsg, err := transformer.apply(result)
 		if err != nil {
 			continue
 		}
@@ -127,7 +159,7 @@ func (c *Channel) ProcessDelivery(m *protocol.Command) *protocol.Command {
 
 		go func() {
 			defer wg.Done()
-			s.ConsumeDelivery(msg)
+			s.deliver(msg)
 		}()
 	}
 

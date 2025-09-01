@@ -15,27 +15,44 @@ import (
 //
 // When a delivery is sent through a channel and possibly transformed, the newly
 // transformed delivery is sent to the next channel in the route.
-type Route struct {
+type route struct {
 	broker   *Broker
 	mutex    sync.RWMutex
 	name     string
-	channels map[string]*Channel
+	channels []*channel
 }
 
-// Channel returns existing or creates if missing
-func (r *Route) Channel(name string) *Channel {
+// Checks if a channel exists on the route.
+// Returns channel and index if it does, else nil and -1.
+func (r *route) channelExists(name string) (*channel, int) {
+	var ch *channel = nil
+	idx := -1
+
+	for i, c := range r.channels {
+		if c.name == name {
+			idx = i
+			ch = c
+			break
+		}
+	}
+	return ch, idx
+}
+
+// channel returns existing or creates if missing
+func (r *route) channel(name string) *channel {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	ch, exists := r.channels[name]
-	if !exists {
-		ch = &Channel{
+	ch, idx := r.channelExists(name)
+
+	if idx < 0 {
+		ch = &channel{
 			route:        r,
 			name:         name,
-			transformers: []Transformer{},
-			subscribers:  []Subscriber{},
+			transformers: []transformer{},
+			subscribers:  []subscriber{},
 		}
-		r.channels[name] = ch
+		r.channels = append(r.channels, ch)
 		str.ActionPrint(
 			fmt.Sprintf("Created channel %s.%s", r.name, name),
 		)
@@ -44,14 +61,14 @@ func (r *Route) Channel(name string) *Channel {
 	return ch
 }
 
-func (r *Route) removeChannel(name string) {
+func (r *route) removeChannel(name string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	_, exists := r.channels[name]
-	if !exists {
+	_, idx := r.channelExists(name)
+	if idx < 0 {
 		return
 	}
-	delete(r.channels, name)
+	removeAt(r.channels, idx)
 
 	if len(r.channels) == 0 {
 		r.broker.removeEmptyRoute(r.name)
@@ -60,10 +77,10 @@ func (r *Route) removeChannel(name string) {
 
 // Sends the delivery down the route with each transformed delivery being passed
 // on to the next channel.
-func (r *Route) ProcessDelivery(sm *protocol.Command) {
+func (r *route) deliver(sm *protocol.Command) {
 	r.mutex.RLock()
 	// copy map for minimal mutex lock time
-	channels := make([]*Channel, 0, len(r.channels))
+	channels := make([]*channel, 0, len(r.channels))
 	for _, c := range r.channels {
 		channels = append(channels, c)
 	}
@@ -71,6 +88,6 @@ func (r *Route) ProcessDelivery(sm *protocol.Command) {
 
 	cur := sm
 	for _, ch := range channels {
-		cur = ch.ProcessDelivery(cur)
+		cur = ch.deliver(cur)
 	}
 }

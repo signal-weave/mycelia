@@ -14,7 +14,7 @@ import (
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
 var majorVersion int = 0 // Proud version
-var minorVersion int = 9 // Real version
+var minorVersion int = 10 // Real version
 var patchVersion int = 0 // Sucky verison
 
 func main() {

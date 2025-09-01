@@ -1,4 +1,3 @@
-// route_test.go
 package routing
 
 import (
@@ -10,12 +9,12 @@ import (
 )
 
 func TestRoute_Channel_CreateAndReuse(t *testing.T) {
-	r := &Route{
+	r := &route{
 		name:     "r1",
-		channels: make(map[string]*Channel),
+		channels: []*channel{},
 	}
 
-	c1 := r.Channel("cA")
+	c1 := r.channel("cA")
 	if c1 == nil {
 		t.Fatalf("expected non-nil channel")
 	}
@@ -23,14 +22,14 @@ func TestRoute_Channel_CreateAndReuse(t *testing.T) {
 		t.Fatalf("channel fields not initialized correctly")
 	}
 	// Reuse same name ⇒ same pointer
-	c2 := r.Channel("cA")
+	c2 := r.channel("cA")
 	if c1 != c2 {
 		t.Fatalf(
 			"expected Channel to return the same pointer for existing name",
 		)
 	}
 	// New name ⇒ new channel
-	_ = r.Channel("cB")
+	_ = r.channel("cB")
 	if len(r.channels) != 2 {
 		t.Fatalf("expected 2 channels in map, got %d", len(r.channels))
 	}
@@ -51,24 +50,24 @@ func TestRoute_ProcessDelivery_MultiChannel_OrderAgnostic(t *testing.T) {
 
 	globals.TransformTimeout = 2 * time.Second
 
-	r := &Route{
+	r := &route{
 		name:     "r2",
-		channels: make(map[string]*Channel),
+		channels: []*channel{},
 	}
 
 	// Build two channels with one transformer each and a subscriber each.
 	// NOTE: Route.ProcessDelivery iterates over map entries in indeterminate
 	// order.
-	chA := r.Channel("chA")
-	chA.AddTransformer(*NewTransformer(addrA))
-	chA.AddSubscriber(*NewSubscriber(subAddr1))
+	chA := r.channel("chA")
+	chA.addTransformer(*newTransformer(addrA))
+	chA.addSubscriber(*newSubscriber(subAddr1))
 
-	chB := r.Channel("chB")
-	chB.AddTransformer(*NewTransformer(addrB))
-	chB.AddSubscriber(*NewSubscriber(subAddr2))
+	chB := r.channel("chB")
+	chB.addTransformer(*newTransformer(addrB))
+	chB.addSubscriber(*newSubscriber(subAddr2))
 
 	in := msg("x")
-	r.ProcessDelivery(in)
+	r.deliver(in)
 
 	// Because route iterates channels in undefined order, valid outcomes are:
 	//   Order A→B: sub1 gets "A:x", sub2 gets "B:A:x"
@@ -99,21 +98,21 @@ func TestRoute_ProcessDelivery_MultiChannel_OrderAgnostic(t *testing.T) {
 func TestRoute_removeChannel_RemovesEntry_NoBrokerCall(t *testing.T) {
 	// We avoid triggering broker.removeEmptyRoute by leaving one channel
 	// behind.
-	r := &Route{
+	r := &route{
 		name:     "r3",
-		channels: make(map[string]*Channel),
+		channels: []*channel{},
 	}
-	_ = r.Channel("keep")
-	_ = r.Channel("drop")
+	_ = r.channel("keep")
+	_ = r.channel("drop")
 
 	// Should remove "drop" without panicking (broker may be nil) and without
 	// trying to remove the route itself (since one channel remains).
 	r.removeChannel("drop")
 
-	if _, exists := r.channels["drop"]; exists {
+	if _, idx := r.channelExists("drop"); idx > -1 {
 		t.Fatalf("expected channel 'drop' to be removed")
 	}
-	if _, exists := r.channels["keep"]; !exists {
+	if _, idx := r.channelExists("keep"); idx < 0 {
 		t.Fatalf("expected channel 'keep' to remain")
 	}
 }

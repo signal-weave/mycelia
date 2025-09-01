@@ -23,13 +23,13 @@ func TestChannel_ProcessDelivery_TransformsInOrder_AndFanout(t *testing.T) {
 
 	// Build channel (route not required here; we don't call Remove* which
 	// triggers checkEmptyChannel).
-	ch := &Channel{name: "chanA"}
-	ch.AddTransformer(*NewTransformer(t1Addr))
-	ch.AddTransformer(*NewTransformer(t2Addr))
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	ch := &channel{name: "chanA"}
+	ch.addTransformer(*newTransformer(t1Addr))
+	ch.addTransformer(*newTransformer(t2Addr))
+	ch.addSubscriber(*newSubscriber(subAddr))
 
 	in := msg("hello")
-	out := ch.ProcessDelivery(in)
+	out := ch.deliver(in)
 
 	// Expect sequential transform: out = P2:(P1:(hello))
 	want := "P2:P1:hello"
@@ -62,13 +62,13 @@ func TestChannel_ProcessDelivery_SkipsFailedTransformer(t *testing.T) {
 
 	globals.TransformTimeout = 1 * time.Second
 
-	ch := &Channel{name: "chanB"}
-	ch.AddTransformer(*NewTransformer(badAddr))
-	ch.AddTransformer(*NewTransformer(okAddr))
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	ch := &channel{name: "chanB"}
+	ch.addTransformer(*newTransformer(badAddr))
+	ch.addTransformer(*newTransformer(okAddr))
+	ch.addSubscriber(*newSubscriber(subAddr))
 
 	in := msg("x")
-	out := ch.ProcessDelivery(in)
+	out := ch.deliver(in)
 
 	want := "OK:x"
 	if string(out.Payload) != want {
@@ -92,14 +92,14 @@ func TestChannel_AddSubscriber_Deduplicates(t *testing.T) {
 	subAddr, gotBody, stop := test.MockOneWayServer(t)
 	t.Cleanup(stop)
 
-	ch := &Channel{name: "chanC"}
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	ch := &channel{name: "chanC"}
+	ch.addSubscriber(*newSubscriber(subAddr))
 	// attempt to add duplicate
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	ch.addSubscriber(*newSubscriber(subAddr))
 
 	// No transformers; message should be forwarded as-is once.
 	in := msg("once")
-	_ = ch.ProcessDelivery(in)
+	_ = ch.deliver(in)
 
 	// Expect exactly one delivery.
 	select {

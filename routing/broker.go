@@ -29,13 +29,13 @@ type server interface {
 type Broker struct {
 	ManagingServer server
 	mutex          sync.RWMutex
-	routes         map[string]*Route
+	routes         map[string]*route
 }
 
 func NewBroker(s server) *Broker {
 	return &Broker{
 		ManagingServer: s,
-		routes:         map[string]*Route{},
+		routes:         map[string]*route{},
 	}
 }
 
@@ -55,15 +55,15 @@ func (b *Broker) HandleBytes(input []byte) {
 // -------Route Management------------------------------------------------------
 
 // Route returns existing or creates if missing.
-func (b *Broker) Route(name string) *Route {
+func (b *Broker) Route(name string) *route {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	r, ok := b.routes[name]
 	if !ok {
-		r = &Route{
+		r = &route{
 			broker:   b,
 			name:     name,
-			channels: map[string]*Channel{},
+			channels: []*channel{},
 		}
 		b.routes[name] = r
 		str.ActionPrint(
@@ -107,9 +107,12 @@ func (b *Broker) HandleCommand(cmd *protocol.Command) error {
 }
 
 func (b *Broker) handleDelivery(cmd *protocol.Command) {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
 	switch cmd.CmdType {
 	case globals.CMD_SEND:
-		b.Route(cmd.Arg1).ProcessDelivery(cmd)
+		b.Route(cmd.Arg1).deliver(cmd)
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for delivery from %s",
@@ -121,16 +124,19 @@ func (b *Broker) handleDelivery(cmd *protocol.Command) {
 }
 
 func (b *Broker) handleTransformer(cmd *protocol.Command) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	switch cmd.CmdType {
 
 	case globals.CMD_ADD:
-		t := NewTransformer(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(*t)
+		t := newTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).channel(cmd.Arg2).addTransformer(*t)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(t.Address)
 
 	case globals.CMD_REMOVE:
-		t := NewTransformer(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(*t)
+		t := newTransformer(cmd.Arg3)
+		b.Route(cmd.Arg1).channel(cmd.Arg2).removeTransformer(*t)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(t.Address)
 
 	default:
@@ -147,18 +153,21 @@ func (b *Broker) handleTransformer(cmd *protocol.Command) {
 }
 
 func (b *Broker) handleSubscriber(cmd *protocol.Command) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	switch cmd.CmdType {
 
 	case globals.CMD_ADD:
 		// Args: route, channel, address, nil
-		s := NewSubscriber(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(*s)
+		s := newSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).channel(cmd.Arg2).addSubscriber(*s)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(s.Address)
 
 	case globals.CMD_REMOVE:
 		// Args: route, channel, address, nil
-		s := NewSubscriber(cmd.Arg3)
-		b.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(*s)
+		s := newSubscriber(cmd.Arg3)
+		b.Route(cmd.Arg1).channel(cmd.Arg2).removeSubscriber(*s)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(s.Address)
 
 	default:
