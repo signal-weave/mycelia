@@ -5,117 +5,141 @@ import (
 	"time"
 
 	"mycelia/globals"
+	"mycelia/protocol"
 	"mycelia/test"
 )
 
-func TestChannel_ProcessDelivery_TransformsInOrder_AndFanout(t *testing.T) {
-	// Transformer #1 and #2 echo back "P1:" + body and "P2:" + body respectively.
-	t1Addr, stop1 := test.MockTwoWayServer(t, "P1:")
-	t.Cleanup(stop1)
-	t2Addr, stop2 := test.MockTwoWayServer(t, "P2:")
-	t.Cleanup(stop2)
-
-	// Subscriber sink to observe final payload sent by channel fan-out.
-	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
-	t.Cleanup(stopSub)
-
-	globals.TransformTimeout = 2 * time.Second
-
-	// Build channel (route not required here; we don't call Remove* which
-	// triggers checkEmptyChannel).
-	ch := &Channel{name: "chanA"}
-	ch.AddTransformer(*NewTransformer(t1Addr))
-	ch.AddTransformer(*NewTransformer(t2Addr))
-	ch.AddSubscriber(*NewSubscriber(subAddr))
-
-	in := msg("hello")
-	out := ch.ProcessDelivery(in)
-
-	// Expect sequential transform: out = P2:(P1:(hello))
-	want := "P2:P1:hello"
-	if string(out.Payload) != want {
-		t.Fatalf(
-			"unexpected transformed payload: got %q want %q",
-			string(out.Payload), want,
-		)
-	}
-
-	// Ensure subscriber received the transformed payload.
-	select {
-	case got := <-gotBody:
-		if got != want {
-			t.Fatalf("subscriber saw wrong body: got %q want %q", got, want)
-		}
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for subscriber to receive payload")
-	}
-}
-
-func TestChannel_ProcessDelivery_SkipsFailedTransformer(t *testing.T) {
-	// First transformer fails to dial; second works.
-	badAddr := "127.0.0.1:1" // likely closed
-	okAddr, stop := test.MockTwoWayServer(t, "OK:")
-	t.Cleanup(stop)
-
-	subAddr, gotBody, stopSub := test.MockOneWayServer(t)
-	t.Cleanup(stopSub)
-
+// Verifies transformation + fan-out: one transformer, two subscribers.
+// The subscribers should both receive the transformed payload.
+func TestChannel_FanoutAndTransform(t *testing.T) {
+	// Tune globals for the unit test
+	globals.DefaultNumPartitions = 1
 	globals.TransformTimeout = 1 * time.Second
+	globals.AutoConsolidate = false
+	globals.PrintTree = false
 
-	ch := &Channel{name: "chanB"}
-	ch.AddTransformer(*NewTransformer(badAddr))
-	ch.AddTransformer(*NewTransformer(okAddr))
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	// Transformer (echoes prefix + payload)
+	const prefix = "X:"
+	xAddr, stopX := test.MockTwoWayServer(t, prefix)
+	defer stopX()
 
-	in := msg("x")
-	out := ch.ProcessDelivery(in)
+	// Two subscribers that capture bodies they receive
+	s1Addr, got1, stop1 := test.MockOneWayServer(t)
+	defer stop1()
+	s2Addr, got2, stop2 := test.MockOneWayServer(t)
+	defer stop2()
 
-	want := "OK:x"
-	if string(out.Payload) != want {
-		t.Fatalf(
-			"unexpected payload after skipping failed transformer: got %q want %q",
-			string(out.Payload), want,
-		)
+	// Build a minimal route and create the channel under test
+	r := &route{name: "r", channels: []*channel{}}
+	ch := r.channel("c") // creates channel if missing
+
+	// Wire a transformer + two subscribers onto the channel
+	ch.addTransformer(transformer{Address: xAddr})
+	ch.addSubscriber(subscriber{Address: s1Addr})
+	ch.addSubscriber(subscriber{Address: s2Addr})
+
+	// Enqueue a single delivery (Arg3 is the hashing key for partitions)
+	const body = "hello"
+	cmd := protocol.NewCommand(
+		globals.OBJ_DELIVERY,
+		globals.CMD_SEND,
+		"client", "uid-1",
+		r.name, ch.name, "hash-key", "",
+		[]byte(body),
+	)
+	ch.enqueue(cmd)
+
+	// Expect both subscribers to receive the transformed payload
+	want := prefix + body
+
+	select {
+	case got := <-got1:
+		if got != want {
+			t.Fatalf("subscriber1 got %q, want %q", got, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for subscriber1")
 	}
 
 	select {
-	case got := <-gotBody:
+	case got := <-got2:
 		if got != want {
-			t.Fatalf("subscriber saw wrong body: got %q want %q", got, want)
+			t.Fatalf("subscriber2 got %q, want %q", got, want)
 		}
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for subscriber to receive payload")
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for subscriber2")
 	}
 }
 
-func TestChannel_AddSubscriber_Deduplicates(t *testing.T) {
-	subAddr, gotBody, stop := test.MockOneWayServer(t)
-	t.Cleanup(stop)
+// Burst test using multiple one-shot subscribers, because MockOneWayServer
+// accepts a single connection and single read per instance.
+func TestChannel_Burst_AllDelivered_WithManyOneShotSubscribers(t *testing.T) {
+	globals.DefaultNumPartitions = 2
+	globals.TransformTimeout = 1 * time.Second
+	globals.AutoConsolidate = false
+	globals.PrintTree = false
 
-	ch := &Channel{name: "chanC"}
-	ch.AddSubscriber(*NewSubscriber(subAddr))
-	// attempt to add duplicate
-	ch.AddSubscriber(*NewSubscriber(subAddr))
+	// Transformer echoes prefix + body
+	const prefix = "T:"
+	xAddr, stopX := test.MockTwoWayServer(t, prefix)
+	defer stopX()
 
-	// No transformers; message should be forwarded as-is once.
-	in := msg("once")
-	_ = ch.ProcessDelivery(in)
+	// Build route/channel under test
+	r := &route{name: "r2", channels: []*channel{}}
+	ch := r.channel("c2")
+	ch.addTransformer(transformer{Address: xAddr})
 
-	// Expect exactly one delivery.
-	select {
-	case got := <-gotBody:
-		if got != "once" {
-			t.Fatalf("subscriber saw wrong body: got %q want %q", got, "once")
+	// Spin up N one-shot subscribers (each captures exactly one body)
+	total := 10
+	type subRec struct {
+		addr string
+		got  <-chan string
+		stop func()
+	}
+	var subs []subRec
+	for i := 0; i < total; i++ {
+		addr, got, stop := test.MockOneWayServer(t)
+		subs = append(subs, subRec{addr: addr, got: got, stop: stop})
+		ch.addSubscriber(subscriber{Address: addr})
+	}
+	defer func() {
+		for _, s := range subs {
+			s.stop()
 		}
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for subscriber to receive payload")
+	}()
+
+	// Enqueue N messages (same hash key is fine; they’ll hit partitions)
+	for i := 0; i < total; i++ {
+		cmd := protocol.NewCommand(
+			globals.OBJ_DELIVERY,
+			globals.CMD_SEND,
+			"client", "uid-burst",
+			r.name, ch.name, "same-key", "",
+			[]byte("m"),
+		)
+		ch.enqueue(cmd)
 	}
 
-	// Ensure no second delivery sneaks in.
-	select {
-	case extra := <-gotBody:
-		t.Fatalf("received duplicate delivery: %q", extra)
-	case <-time.After(200 * time.Millisecond):
-		// good: no duplicate
+	// Collect exactly one delivery per one-shot subscriber
+	deadline := time.After(3 * time.Second)
+	received := 0
+	want := prefix + "m"
+	for received < total {
+		select {
+		case <-deadline:
+			t.Fatalf("received %d/%d deliveries in time", received, total)
+		default:
+			for _, s := range subs {
+				select {
+				case got := <-s.got:
+					if got != want {
+						t.Fatalf("subscriber got %q, want %q", got, want)
+					}
+					received++
+				default:
+				}
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 }

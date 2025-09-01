@@ -11,21 +11,21 @@ import (
 	"mycelia/str"
 )
 
-// Transformer intercepts deliveries, processes them, and returns modified
+// transformer intercepts deliveries, processes them, and returns modified
 // deliveries.
-type Transformer struct {
+type transformer struct {
 	Address string
 }
 
-func NewTransformer(address string) *Transformer {
-	return &Transformer{
+func newTransformer(address string) *transformer {
+	return &transformer{
 		Address: address,
 	}
 }
 
-// transformDelivery sends the delivery to the transformer service and waits for
+// apply sends the delivery to the transformer service and waits for
 // response.
-func (t *Transformer) transformDelivery(m *protocol.Command) (*protocol.Command, error) {
+func (t *transformer) apply(m *protocol.Command) (*protocol.Command, error) {
 	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
 	str.ActionPrint(actionMsg)
 

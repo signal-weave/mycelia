@@ -29,12 +29,12 @@ func TestTransformer_transformDelivery_Success(t *testing.T) {
 	addr, stop := test.MockTwoWayServer(t, "XFORM:")
 	defer stop()
 
-	tr := NewTransformer(addr)
+	tr := newTransformer(addr)
 	in := newMsg("hello")
 	// Ensure timeout is comfortably long for CI
 	globals.TransformTimeout = 2 * time.Second
 
-	out, err := tr.transformDelivery(in)
+	out, err := tr.apply(in)
 	if err != nil {
 		t.Fatalf("transformDelivery error: %v", err)
 	}
@@ -55,10 +55,10 @@ func TestTransformer_transformDelivery_Success(t *testing.T) {
 }
 
 func TestTransformer_transformDelivery_DialFailure_ReturnsOriginal(t *testing.T) {
-	tr := NewTransformer("127.0.0.1:1") // very likely closed
+	tr := newTransformer("127.0.0.1:1") // very likely closed
 	in := newMsg("ignored")
 
-	out, err := tr.transformDelivery(in)
+	out, err := tr.apply(in)
 	if err == nil {
 		t.Fatalf("expected dial error, got nil")
 	}
@@ -76,11 +76,11 @@ func TestTransformer_transformDelivery_ReadError_ReturnsOriginal(t *testing.T) {
 	addr, gotBody, stop := test.MockOneWayServer(t)
 	defer stop()
 
-	tr := NewTransformer(addr)
+	tr := newTransformer(addr)
 	in := newMsg("payload-abc")
 	globals.TransformTimeout = 1 * time.Second
 
-	out, err := tr.transformDelivery(in)
+	out, err := tr.apply(in)
 	if err == nil {
 		t.Fatalf("expected read error, got nil")
 	}

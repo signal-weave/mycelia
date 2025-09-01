@@ -6,7 +6,7 @@ package globals
 // -----------------------------------------------------------------------------
 
 const (
-	Developer = "Signa lWeave"
+	Developer = "Signal Weave"
 )
 
 // -------Memory Values---------------------------------------------------------
@@ -16,6 +16,10 @@ const (
 	BytesInMegabyte = 1024 * BytesInKilobyte
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
+
+// The number of protocol.Commands that a mycelia channel partition can hold at
+// any maximum.
+const PartitionChanSize = 128
 
 // -------Verbosity-------------------------------------------------------------
 

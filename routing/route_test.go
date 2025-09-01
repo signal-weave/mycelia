@@ -1,4 +1,3 @@
-// route_test.go
 package routing
 
 import (
@@ -6,114 +5,104 @@ import (
 	"time"
 
 	"mycelia/globals"
+	"mycelia/protocol"
 	"mycelia/test"
 )
 
-func TestRoute_Channel_CreateAndReuse(t *testing.T) {
-	r := &Route{
-		name:     "r1",
-		channels: make(map[string]*Channel),
-	}
+// route.enqueue should push into the *first* channel; partition forwards to the next channel.
+func TestRoute_Enqueue_TransformsAndForwardsToNextChannel(t *testing.T) {
+	// Test tuning
+	globals.DefaultNumPartitions = 1
+	globals.TransformTimeout = 1 * time.Second
+	globals.AutoConsolidate = false
+	globals.PrintTree = false
 
-	c1 := r.Channel("cA")
-	if c1 == nil {
-		t.Fatalf("expected non-nil channel")
-	}
-	if c1.route != r || c1.name != "cA" {
-		t.Fatalf("channel fields not initialized correctly")
-	}
-	// Reuse same name ⇒ same pointer
-	c2 := r.Channel("cA")
-	if c1 != c2 {
-		t.Fatalf(
-			"expected Channel to return the same pointer for existing name",
-		)
-	}
-	// New name ⇒ new channel
-	_ = r.Channel("cB")
-	if len(r.channels) != 2 {
-		t.Fatalf("expected 2 channels in map, got %d", len(r.channels))
+	// Transformer on c1: echoes prefix + body
+	const prefix = "R:"
+	xAddr, stopX := test.MockTwoWayServer(t, prefix)
+	defer stopX()
+
+	// Subscriber on c2: captures bodies
+	subAddr, got, stopSub := test.MockOneWayServer(t)
+	defer stopSub()
+
+	// Build route with two channels: c1 (transformer), c2 (subscriber)
+	r := &route{name: "r", channels: []*channel{}}
+	c1 := r.channel("c1")
+	c2 := r.channel("c2")
+
+	c1.addTransformer(transformer{Address: xAddr})
+	c2.addSubscriber(subscriber{Address: subAddr})
+
+	// Send a delivery via route.enqueue (must enter c1, then forward to c2)
+	body := "hello"
+	cmd := protocol.NewCommand(
+		globals.OBJ_DELIVERY,
+		globals.CMD_SEND,
+		"client", "uid-route",
+		r.name, c1.name, "key", "",
+		[]byte(body),
+	)
+	r.enqueue(cmd)
+
+	// Expect subscriber on c2 to receive transformed payload
+	want := prefix + body
+	select {
+	case gotBody := <-got:
+		if gotBody != want {
+			t.Fatalf("subscriber got %q, want %q", gotBody, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for subscriber on next channel")
 	}
 }
 
-func TestRoute_ProcessDelivery_MultiChannel_OrderAgnostic(t *testing.T) {
-	// Two transformers; each echoes back "<PFX>:<body>"
-	addrA, stopA := test.MockTwoWayServer(t, "A:")
-	t.Cleanup(stopA)
-	addrB, stopB := test.MockTwoWayServer(t, "B:")
-	t.Cleanup(stopB)
+// getNextChannel should return the next channel, or nil when at the end.
+func TestRoute_GetNextChannel(t *testing.T) {
+	globals.DefaultNumPartitions = 1
+	globals.AutoConsolidate = false
 
-	// Each channel gets its own subscriber sink to observe what it receives
-	subAddr1, got1, stopS1 := test.MockOneWayServer(t)
-	t.Cleanup(stopS1)
-	subAddr2, got2, stopS2 := test.MockOneWayServer(t)
-	t.Cleanup(stopS2)
+	r := &route{name: "r2", channels: []*channel{}}
+	c1 := r.channel("c1")
+	c2 := r.channel("c2")
+	c3 := r.channel("c3")
 
-	globals.TransformTimeout = 2 * time.Second
-
-	r := &Route{
-		name:     "r2",
-		channels: make(map[string]*Channel),
+	if next := r.getNextChannel(c1); next == nil || next.name != c2.name {
+		t.Fatalf("getNextChannel(c1) = %v, want c2", next)
 	}
-
-	// Build two channels with one transformer each and a subscriber each.
-	// NOTE: Route.ProcessDelivery iterates over map entries in indeterminate
-	// order.
-	chA := r.Channel("chA")
-	chA.AddTransformer(*NewTransformer(addrA))
-	chA.AddSubscriber(*NewSubscriber(subAddr1))
-
-	chB := r.Channel("chB")
-	chB.AddTransformer(*NewTransformer(addrB))
-	chB.AddSubscriber(*NewSubscriber(subAddr2))
-
-	in := msg("x")
-	r.ProcessDelivery(in)
-
-	// Because route iterates channels in undefined order, valid outcomes are:
-	//   Order A→B: sub1 gets "A:x", sub2 gets "B:A:x"
-	//   Order B→A: sub1 gets "A:B:x", sub2 gets "B:x"
-	var gotFirst, gotSecond string
-	select {
-	case gotFirst = <-got1:
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for subscriber 1")
+	if next := r.getNextChannel(c2); next == nil || next.name != c3.name {
+		t.Fatalf("getNextChannel(c2) = %v, want c3", next)
 	}
-	select {
-	case gotSecond = <-got2:
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for subscriber 2")
-	}
-
-	// Accept either valid ordering
-	okAB := (gotFirst == "A:x" && gotSecond == "B:A:x")
-	okBA := (gotFirst == "A:B:x" && gotSecond == "B:x")
-	if !(okAB || okBA) {
-		t.Fatalf(
-			"unexpected pair of deliveries: sub1=%q sub2=%q",
-			gotFirst, gotSecond,
-		)
+	if next := r.getNextChannel(c3); next != nil {
+		t.Fatalf("getNextChannel(c3) = %v, want nil", next)
 	}
 }
 
-func TestRoute_removeChannel_RemovesEntry_NoBrokerCall(t *testing.T) {
-	// We avoid triggering broker.removeEmptyRoute by leaving one channel
-	// behind.
-	r := &Route{
-		name:     "r3",
-		channels: make(map[string]*Channel),
-	}
-	_ = r.Channel("keep")
-	_ = r.Channel("drop")
+// removeChannel should remove by name and maintain order of remaining channels.
+func TestRoute_RemoveChannel(t *testing.T) {
+	globals.DefaultNumPartitions = 1
+	globals.AutoConsolidate = false
 
-	// Should remove "drop" without panicking (broker may be nil) and without
-	// trying to remove the route itself (since one channel remains).
-	r.removeChannel("drop")
+	r := &route{name: "r3", channels: []*channel{}}
+	c1 := r.channel("c1")
+	c2 := r.channel("c2")
+	_ = c1
+	_ = c2
 
-	if _, exists := r.channels["drop"]; exists {
-		t.Fatalf("expected channel 'drop' to be removed")
+	// Remove the first channel
+	r.removeChannel("c1")
+
+	// The only remaining channel should be c2, and it should now be first
+	if len(r.channels) != 1 {
+		t.Fatalf("len(channels) = %d, want 1", len(r.channels))
 	}
-	if _, exists := r.channels["keep"]; !exists {
-		t.Fatalf("expected channel 'keep' to remain")
+	if r.channels[0].name != "c2" {
+		t.Fatalf("remaining channel = %s, want c2", r.channels[0].name)
+	}
+
+	// Removing a non-existent channel should be a no-op (no panic, no change)
+	r.removeChannel("does-not-exist")
+	if len(r.channels) != 1 || r.channels[0].name != "c2" {
+		t.Fatalf("route changed unexpectedly after removing non-existent channel")
 	}
 }

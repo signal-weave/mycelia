@@ -38,6 +38,9 @@ var TransformTimeout time.Duration = time.Duration(5) * time.Second
 // Clients need any one of these to have permission.
 var SecurityTokens []string = []string{}
 
+// The default number of partitions a channel is created with.
+var DefaultNumPartitions int = 4
+
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
 }

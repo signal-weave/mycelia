@@ -18,7 +18,6 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 	oldPrint := globals.PrintTree
 	oldXform := globals.TransformTimeout
 	oldAutoCon := globals.AutoConsolidate
-	oldDoRecovery := system.DoRecovery
 	t.Cleanup(func() {
 		globals.Address = oldAddr
 		globals.Port = oldPort
@@ -26,7 +25,6 @@ func TestParseRuntimeConfigurable_UpdatesGlobals(t *testing.T) {
 		globals.PrintTree = oldPrint
 		globals.TransformTimeout = oldXform
 		globals.AutoConsolidate = oldAutoCon
-		system.DoRecovery = oldDoRecovery
 	})
 
 	addr := "127.0.0.1"

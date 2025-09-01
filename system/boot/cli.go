@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"mycelia/globals"
-	"mycelia/system"
 )
 
 // ParseRuntimeArgs parses only runtime flags validates, and returns error.
@@ -38,11 +37,6 @@ func parseRuntimeArgs(argv []string) error {
 	fs.BoolVar(
 		&globals.AutoConsolidate, "consolidate", globals.AutoConsolidate,
 		cleanHelp,
-	)
-
-	recoveryHelp := "Whether to recover using the shutdown report file"
-	fs.BoolVar(
-		&system.DoRecovery, "do-recovery", system.DoRecovery, recoveryHelp,
 	)
 
 	verbosityHelp := `0 - None

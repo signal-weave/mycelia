@@ -1,11 +1,9 @@
 package cache
 
 import (
-	"encoding/json"
-	"mycelia/errgo"
+	"fmt"
+	"mycelia/globals"
 	"mycelia/str"
-	"mycelia/system"
-	"os"
 	"slices"
 	"sync"
 )
@@ -85,6 +83,7 @@ type routeShape struct {
 func (rs *routeShape) Channel(name string) *channelShape {
 	rs.Mutex.Lock()
 	defer rs.Mutex.Unlock()
+
 	c, exists := rs.Channels[name]
 	if !exists {
 		c = newChannelShape()
@@ -127,40 +126,12 @@ func (bs *brokerShape) Route(name string) *routeShape {
 // The cached broker structure
 var BrokerShape *brokerShape = NewBrokerShape()
 
-// -------Broker Routing Structure----------------------------------------------
-
-// Snapshot the shape of the broker + runtime parameters and write it out as a
-// shutdown report.
-func WriteSnapshot() {
-	WriteReport(false)
-}
-
-// Writes a report of the current broker statistics, setting the shutdown status
-// to fasle.
-// gracefulShutdown (bool) is false when snapshotting at runtime and true when
-// shutting down expectedly - If broker was shut down unexpectedly it should be
-// false becasue it never ran through the shutdown process which flips it to
-// true.
-func WriteReport(gracefulShutdown bool) {
-	reportData := system.NewSystemData()
-
-	reportData.ShutdownReport.GracefulShutdown = &gracefulShutdown
-
-	routeData := errgo.ValueOrPanic(SerializeBrokerShape())
-	reportData.Routes = routeData
-
-	jsonData := errgo.ValueOrPanic(json.MarshalIndent(reportData, "", "    "))
-	file := errgo.ValueOrPanic(os.Create(system.ShutdownReportFile))
-	defer file.Close()
-
-	_, err := file.WriteString(string(jsonData))
-	errgo.PanicIfError(err)
-	str.ActionPrint("Snapshot ShutdownReport json created in exe directory.")
-}
+// -------Serializers----------------------------------------------
 
 // Boy howdy, is this function ugoly, but necessary.
 // The cached data is slightly simpler in shape for simplicity, so there are
-// some extra steps taken here to conform it.
+// some extra steps taken here to conform it to expected values for config files
+// or shutdown reports.
 func SerializeBrokerShape() (*[]map[string]any, error) {
 	bs := BrokerShape
 	bs.Mutex.RLock()
@@ -201,4 +172,45 @@ func SerializeBrokerShape() (*[]map[string]any, error) {
 	}
 
 	return &routes, nil
+}
+
+func PrintBrokerStructure() {
+	if !globals.PrintTree {
+		return
+	}
+
+	routeExpr := "  | - [route] %s\n"
+	channelExpr := "        | - [channel] %s\n"
+	transformerExpr := "              | - [transformer] %s\n"
+	subscriberExpr := "              | - [subscriber] %s\n"
+
+	str.PrintCenteredHeader("Broker Shape")
+	fmt.Println("\n[broker]")
+
+	bs := BrokerShape
+	bs.Mutex.RLock()
+	for routeName, rshape := range bs.Routes {
+		fmt.Printf(routeExpr, routeName)
+
+		rshape.Mutex.RLock()
+		for channelName, cshape := range rshape.Channels {
+			fmt.Printf(channelExpr, channelName)
+
+			cshape.Mutex.RLock()
+			// Print transformers first (to match current format)
+			for _, addr := range cshape.Transformers {
+				fmt.Printf(transformerExpr, addr)
+			}
+			// Then print subscribers
+			for _, addr := range cshape.Subscribers {
+				fmt.Printf(subscriberExpr, addr)
+			}
+			cshape.Mutex.RUnlock()
+		}
+		rshape.Mutex.RUnlock()
+	}
+	bs.Mutex.RUnlock()
+
+	str.PrintAsciiLine()
+	fmt.Println()
 }

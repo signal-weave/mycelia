@@ -2,8 +2,9 @@ package routing
 
 import (
 	"fmt"
-	"slices"
+	"hash/fnv"
 	"sync"
+	"sync/atomic"
 
 	"mycelia/globals"
 	"mycelia/protocol"
@@ -17,29 +18,70 @@ import (
 // More than one channel may exist in a route - Subscribers choose which
 // transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
 // by one channel will then be sent to the next channel in a route.
-type Channel struct {
-	route        *Route
-	mutex        sync.RWMutex
-	name         string
-	transformers []Transformer
-	subscribers  []Subscriber
+type channel struct {
+	mutex sync.RWMutex
+	route *route
+	name  string
+
+	hash func([]byte) uint32
+
+	transformers []transformer
+	subscribers  []subscriber
+
+	// The authoritative slices.
+	// Load these after editing to get fresh copy.
+	tSnap atomic.Value
+	sSnap atomic.Value
+
+	partitions []*partition
 }
 
-func (ch *Channel) AddTransformer(t Transformer) {
+func newChannel(r *route, name string, numPartitions int) *channel {
+	hash := func(b []byte) uint32 {
+		h := fnv.New32a()
+		_, _ = h.Write(b)
+		return h.Sum32()
+	}
+
+	ch := &channel{
+		route: r,
+		name:  name,
+		hash:  hash,
+	}
+	ch.tSnap.Store([]transformer{})
+	ch.sSnap.Store([]subscriber{})
+
+	partitions := []*partition{}
+	for range numPartitions {
+		np := newPartition(r, ch)
+		partitions = append(partitions, np)
+		np.in = make(chan *protocol.Command, globals.PartitionChanSize)
+		go np.start()
+	}
+	ch.partitions = partitions
+
+	return ch
+}
+
+func (ch *channel) addTransformer(t transformer) {
 	ch.mutex.Lock()
-	defer ch.mutex.Unlock()
 	for _, existing := range ch.transformers {
 		if existing.Address == t.Address {
+			ch.mutex.Unlock()
 			return
 		}
 	}
 	ch.transformers = append(ch.transformers, t)
+	snap := append([]transformer(nil), ch.transformers...)
+	ch.mutex.Unlock()
+	ch.tSnap.Store(snap)
+
 	str.ActionPrint(
 		fmt.Sprintf("Added transformer at address: %s", t.Address),
 	)
 }
 
-func (ch *Channel) RemoveTransformer(t Transformer) {
+func (ch *channel) removeTransformer(t transformer) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 
@@ -57,21 +99,25 @@ func (ch *Channel) RemoveTransformer(t Transformer) {
 	ch.checkEmptyChannel()
 }
 
-func (ch *Channel) AddSubscriber(s Subscriber) {
+func (ch *channel) addSubscriber(s subscriber) {
 	ch.mutex.Lock()
-	defer ch.mutex.Unlock()
 	for _, existing := range ch.subscribers {
 		if existing.Address == s.Address {
+			ch.mutex.Unlock()
 			return
 		}
 	}
 	ch.subscribers = append(ch.subscribers, s)
+	snap := append([]subscriber(nil), ch.subscribers...)
+	ch.mutex.Unlock()
+	ch.sSnap.Store(snap)
+
 	str.ActionPrint(
 		fmt.Sprintf("Added subscriber at address: %s", s.Address),
 	)
 }
 
-func (ch *Channel) RemoveSubscriber(s Subscriber) {
+func (ch *channel) removeSubscriber(s subscriber) {
 	ch.mutex.Lock()
 	defer ch.mutex.Unlock()
 
@@ -87,50 +133,34 @@ func (ch *Channel) RemoveSubscriber(s Subscriber) {
 	ch.checkEmptyChannel()
 }
 
-func (ch *Channel) checkEmptyChannel() {
-	if !globals.AutoConsolidate{
+func (ch *channel) checkEmptyChannel() {
+	if !globals.AutoConsolidate {
 		return
 	}
 	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
+		ch.mutex.Lock()
+		parts := ch.partitions
+		ch.partitions = nil
+		ch.mutex.Unlock()
+
+		for _, p := range parts {
+			p.stop()
+		}
+
 		ch.route.removeChannel(ch.name)
 	}
 }
 
-func (c *Channel) ProcessDelivery(m *protocol.Command) *protocol.Command {
-	result := m
-
-	c.mutex.RLock() // Copy transform slice for minimal mutex lock time
-	transformers := slices.Clone(c.transformers)
+func (c *channel) enqueue(m *protocol.Command) {
+	c.mutex.RLock()
+	parts := c.partitions
 	c.mutex.RUnlock()
 
-	// First, run delivery through all transformers in order
-	for _, transformer := range transformers {
-		transformedMsg, err := transformer.transformDelivery(result)
-		if err != nil {
-			continue
-		}
-		result = transformedMsg
+	if len(parts) == 0 {
+		return // Channel is closed / removed
 	}
 
-	c.mutex.RLock() // Copy subscriber slice for minimal mutex lock time
-	subscribers := slices.Clone(c.subscribers)
-	c.mutex.RUnlock()
-
-	// Second, run transformed delivery through all subscribers.
-	// --- fan-out delivery ---
-	var wg sync.WaitGroup
-	wg.Add(len(subscribers))
-
-	for _, sub := range subscribers {
-		s := sub // capture cause loops use pointers for tracking
-		msg := result
-
-		go func() {
-			defer wg.Done()
-			s.ConsumeDelivery(msg)
-		}()
-	}
-
-	wg.Wait()
-	return result
+	key := []byte(m.Arg3) // address on messages
+	idx := int(c.hash(key)) % len(c.partitions)
+	c.partitions[idx].in <- m
 }

@@ -6,6 +6,7 @@ import (
 
 	"mycelia/errgo"
 	"mycelia/globals"
+	"mycelia/str"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,6 +44,24 @@ func NewCommand(
 		Arg4:         arg4,
 		Payload:      payload,
 	}
+}
+
+// Prints each field on the command...
+func (cmd *Command) PrintValues() {
+	str.PrintAsciiLine()
+	fmt.Println("ObjType:", cmd.ObjType)
+	fmt.Println("CmdType:", cmd.CmdType)
+
+	fmt.Println("ReturnAddress:", cmd.ReturnAdress)
+	fmt.Println("UID:", cmd.UID)
+
+	fmt.Println("Arg1:", cmd.Arg1)
+	fmt.Println("Arg2:", cmd.Arg2)
+	fmt.Println("Arg3:", cmd.Arg3)
+	fmt.Println("Arg4:", cmd.Arg4)
+
+	fmt.Println("Payload:", string(cmd.Payload))
+	str.PrintAsciiLine()
 }
 
 // parseProtoVer extracts only the protocol version and returns it along with
