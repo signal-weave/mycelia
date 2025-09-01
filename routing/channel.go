@@ -3,14 +3,13 @@ package routing
 import (
 	"fmt"
 	"hash/fnv"
+	"math/rand/v2"
 	"sync"
 	"sync/atomic"
 
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
-
-	"github.com/google/uuid"
 )
 
 // Channels are the subscription buckets that fill routes. A subscriber
@@ -162,7 +161,7 @@ func (c *channel) enqueue(m *protocol.Command) {
 		return // Channel is closed / removed
 	}
 
-	key := fmt.Sprintf("%s%s", m.Arg3, uuid.NewString()) // address + rand
+	key := fmt.Sprintf("%s%d", m.Arg3, rand.IntN(12345)) // address + rand
 	idx := int(c.hash([]byte(key))) % len(c.partitions)
 	c.partitions[idx].in <- m
 }
