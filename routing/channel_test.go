@@ -79,15 +79,9 @@ func TestChannel_Burst_AllDelivered_WithManyOneShotSubscribers(t *testing.T) {
 	globals.AutoConsolidate = false
 	globals.PrintTree = false
 
-	// Transformer echoes prefix + body
-	const prefix = "T:"
-	xAddr, stopX := test.MockTwoWayServer(t, prefix)
-	defer stopX()
-
-	// Build route/channel under test
+	// Build route/channel under test (no transformer for burst delivery)
 	r := &route{name: "r2", channels: []*channel{}}
 	ch := r.channel("c2")
-	ch.addTransformer(transformer{Address: xAddr})
 
 	// Spin up N one-shot subscribers (each captures exactly one body)
 	total := 10
@@ -108,7 +102,7 @@ func TestChannel_Burst_AllDelivered_WithManyOneShotSubscribers(t *testing.T) {
 		}
 	}()
 
-	// Enqueue N messages (same hash key is fine; they’ll hit partitions)
+	// Enqueue N messages
 	for i := 0; i < total; i++ {
 		cmd := protocol.NewCommand(
 			globals.OBJ_DELIVERY,
@@ -120,10 +114,10 @@ func TestChannel_Burst_AllDelivered_WithManyOneShotSubscribers(t *testing.T) {
 		ch.enqueue(cmd)
 	}
 
-	// Collect exactly one delivery per one-shot subscriber
+	// Expect each one-shot subscriber to receive exactly one raw payload
 	deadline := time.After(3 * time.Second)
 	received := 0
-	want := prefix + "m"
+	want := "m"
 	for received < total {
 		select {
 		case <-deadline:

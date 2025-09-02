@@ -1,10 +1,8 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 
 	"mycelia/comm"
@@ -24,11 +22,15 @@ func NewServer(address string, port int) *Server {
 // Servers are responsible for translating raw TCP string input into routable
 // messages.
 type Server struct {
-	Broker   *routing.Broker
-	address  string
-	port     int
+	jobs     chan net.Conn
 	listener net.Listener
-	mutex    sync.RWMutex
+
+	Broker *routing.Broker
+
+	address string
+	port    int
+
+	mutex sync.RWMutex
 }
 
 func (s *Server) GetAddress() string {
@@ -39,32 +41,38 @@ func (s *Server) GetPort() int {
 	return s.port
 }
 
+// Spins up the server...
+// Caps concurrency and avoids spawning unbound go routines.
+func (server *Server) serve() error {
+	if server.jobs == nil {
+		server.jobs = make(chan net.Conn, 1024)
+	}
+
+	for range globals.WorkerCount {
+		go func() {
+			for c := range server.jobs {
+				server.HandleConnection(c)
+			}
+		}()
+	}
+
+	for !globals.PerformShutdown.Load() {
+		c, err := server.listener.Accept()
+		if err != nil {
+			return err
+		}
+		server.jobs <- c
+	}
+
+	return nil
+}
+
 // Run ...
 func (server *Server) Run() {
 	if server.listener == nil {
 		server.UpdateListener()
 	}
-
-	strPort := strconv.Itoa(server.port)
-	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
-	str.SprintfLn("Listening on %s", fullAddress)
-
-	for !globals.PerformShutdown.Load() {
-		server.mutex.RLock()
-		l := server.listener
-		server.mutex.RUnlock()
-
-		conn, err := l.Accept()
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				continue
-			}
-			eMsg := fmt.Sprintf("Listener accept error %v", err)
-			str.ErrorPrint(eMsg)
-			continue
-		}
-		go server.HandleConnection(conn)
-	}
+	server.serve()
 }
 
 func (server *Server) Shutdown() {
@@ -77,6 +85,9 @@ func (server *Server) Shutdown() {
 
 	if l != nil {
 		_ = l.Close()
+	}
+	if server.jobs != nil {
+		close(server.jobs)
 	}
 }
 
@@ -115,22 +126,20 @@ func (server *Server) UpdateListener() {
 // Handle incoming data stream.
 func (server *Server) HandleConnection(conn net.Conn) {
 	defer conn.Close()
-	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
-	str.ActionPrint(aMsg)
-
 	str.ActionPrint(
-		fmt.Sprintf("Processing message from %s", conn.RemoteAddr().String()),
+		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
 	)
+
+	resp := comm.NewConnResponder(conn)
 
 	for {
 		frame, err := comm.ReadFrameU32(conn)
 		if err != nil {
-			_ = comm.WriteFrameU32(
-				conn, []byte("ERR: invalid frame:"+err.Error()),
-			)
+			_ = resp.Write([]byte("ERR: invalid frame:" + err.Error()))
 			return
 		}
 		if len(frame) == 0 {
+			_ = resp.Write([]byte("ERR: empty frame:"))
 			continue
 		}
 

@@ -16,6 +16,8 @@ import (
 //
 // Duration examples: 500ms, 3s, 2m, 1h.
 func parseRuntimeArgs(argv []string) error {
+	// ! REMEMBER TO UPDATE fs.Usage() STRING WHEN ADDING / REMOVING CLI VARS !
+
 	fs := flag.NewFlagSet("runtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
 
@@ -32,6 +34,9 @@ func parseRuntimeArgs(argv []string) error {
 		&globals.TransformTimeout, "xform-timeout", globals.TransformTimeout,
 		xformTimeoutHelp,
 	)
+
+	workersHelp := "The number of server workers to allocate to the listener"
+	fs.IntVar(&globals.WorkerCount, "workers", globals.WorkerCount, workersHelp)
 
 	cleanHelp := "Whether to auto-consolidate router shape on component removal"
 	fs.BoolVar(
@@ -50,6 +55,7 @@ func parseRuntimeArgs(argv []string) error {
 
   -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
+  -workers int		   The server listener worker count (1-1024)
   -verbosity int       0, 1, 2, or 3
   -print-tree          Print router tree at startup
   -xform-timeout dur   Transformer timeout
@@ -83,6 +89,9 @@ func validateRuntimeConfig() error {
 	if globals.TransformTimeout <= 0 {
 		return errors.New("xform-timeout must be > 0")
 	}
+	if globals.WorkerCount <= 0 || globals.WorkerCount > 1024 {
+		return fmt.Errorf("invalid worker count %d", globals.WorkerCount)
+	}
 	return nil
 }
 
@@ -94,7 +103,9 @@ func isIPLiteral(s string) bool {
 // isValidHostname does a syntax-only RFC-1123 style check (no DNS lookups).
 // - total length <= 253
 // - labels are 1..63 chars, [A-Za-z0-9-], no leading/trailing '-'
-var hostnameLabelRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$`)
+var hostnameLabelRE = regexp.MustCompile(
+	`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$`,
+)
 
 func isValidHostname(s string) bool {
 	if len(s) == 0 || len(s) > 253 {

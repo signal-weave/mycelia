@@ -2,7 +2,10 @@ package comm
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+	"mycelia/errgo"
+	"mycelia/globals"
 	"net"
 )
 
@@ -36,15 +39,34 @@ func ReadFrameU32(conn net.Conn) ([]byte, error) {
 	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
 		return nil, err
 	}
-
 	n := binary.BigEndian.Uint32(hdr[:])
+
 	if n == 0 {
-		return []byte{}, nil
+		return nil, nil
+	}
+	if n > globals.BytesInMegabyte {
+		// sanity limit of 1MB
+		return nil, errgo.NewError(
+			fmt.Sprintf("Frame too large: %d bytes", n), globals.VERB_WRN,
+		)
 	}
 
-	buf := make([]byte, n)
+	p := BufPool.Get().(*[]byte)
+	buf := *p
+	if cap(buf) < int(n) {
+		buf = make([]byte, n) // fallback if frame > pooled buffer
+	} else {
+		buf = buf[:n]
+	}
+
 	if _, err := io.ReadFull(conn, buf); err != nil {
+		BufPool.Put(p) // return to pool before leaving
 		return nil, err
 	}
-	return buf, nil
+
+	out := make([]byte, n)
+	copy(out, buf)
+
+	BufPool.Put(p) // return buffer for reuse
+	return out, nil
 }
