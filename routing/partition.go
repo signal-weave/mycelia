@@ -37,7 +37,7 @@ func (p *partition) loop() {
 
 		var err error
 
-		ts := p.channel.tSnap.Load().([]transformer)
+		ts := p.channel.loadTransformers()
 		result := m
 		for _, t := range ts {
 			result, err = t.apply(result)
@@ -49,7 +49,7 @@ func (p *partition) loop() {
 			continue
 		}
 
-		ss := p.channel.sSnap.Load().([]subscriber)
+		ss := p.channel.loadSubscribers()
 		var wg sync.WaitGroup
 		wg.Add(len(ss))
 

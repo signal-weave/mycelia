@@ -41,6 +41,14 @@ func (s *Server) GetPort() int {
 	return s.port
 }
 
+// Run ...
+func (server *Server) Run() {
+	if server.listener == nil {
+		server.UpdateListener()
+	}
+	server.serve()
+}
+
 // Spins up the server...
 // Caps concurrency and avoids spawning unbound go routines.
 func (server *Server) serve() error {
@@ -61,18 +69,13 @@ func (server *Server) serve() error {
 		if err != nil {
 			return err
 		}
+
+		// Go runtime selects an unblocked worker when we push the
+		// listener.Accept() into a channel of multiple objects.
 		server.jobs <- c
 	}
 
 	return nil
-}
-
-// Run ...
-func (server *Server) Run() {
-	if server.listener == nil {
-		server.UpdateListener()
-	}
-	server.serve()
 }
 
 func (server *Server) Shutdown() {

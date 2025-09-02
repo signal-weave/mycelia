@@ -125,11 +125,13 @@ func (b *Broker) handleTransformer(cmd *protocol.Command) {
 	switch cmd.CmdType {
 
 	case globals.CMD_ADD:
+		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).addTransformer(*t)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(t.Address)
 
 	case globals.CMD_REMOVE:
+		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).removeTransformer(*t)
 		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(t.Address)
@@ -143,7 +145,7 @@ func (b *Broker) handleTransformer(cmd *protocol.Command) {
 		return
 	}
 
-	cache.PrintBrokerStructure()
+	b.printStructure()
 }
 
 func (b *Broker) handleSubscriber(cmd *protocol.Command) {
@@ -169,7 +171,7 @@ func (b *Broker) handleSubscriber(cmd *protocol.Command) {
 		return
 	}
 
-	cache.PrintBrokerStructure()
+	b.printStructure()
 }
 
 func (b *Broker) handleGlobals(cmd *protocol.Command) {
@@ -206,5 +208,34 @@ func (b *Broker) handleActions(cmd *protocol.Command) {
 			),
 		)
 		return
+	}
+}
+
+// -------Utils-----------------------------------------------------------------
+
+// PrintStructure pretty-prints the broker structure.
+func (b *Broker) printStructure() {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	fmt.Println("[broker]")
+	for _, r := range b.routes {
+		fmt.Printf("  | - [route] %s\n", r.name)
+
+		r.mutex.RLock()
+		for _, ch := range r.channels {
+			fmt.Printf("        | - [channel] %s\n", ch.name)
+
+			// Transformers
+			for _, t := range ch.loadTransformers() {
+				fmt.Printf("              | - [transformer] %s\n", t.Address)
+			}
+
+			// Subscribers
+			for _, s := range ch.loadSubscribers() {
+				fmt.Printf("              | - [subscriber] %s\n", s.Address)
+			}
+		}
+		r.mutex.RUnlock()
 	}
 }
