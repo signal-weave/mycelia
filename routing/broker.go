@@ -8,7 +8,6 @@ import (
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
-	"mycelia/system/cache"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -128,13 +127,11 @@ func (b *Broker) handleTransformer(cmd *protocol.Command) {
 		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).addTransformer(*t)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(t.Address)
 
 	case globals.CMD_REMOVE:
 		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).removeTransformer(*t)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(t.Address)
 
 	default:
 		str.WarningPrint(
@@ -154,13 +151,11 @@ func (b *Broker) handleSubscriber(cmd *protocol.Command) {
 		// Args: route, channel, address, nil
 		s := newSubscriber(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).addSubscriber(*s)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(s.Address)
 
 	case globals.CMD_REMOVE:
 		// Args: route, channel, address, nil
 		s := newSubscriber(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).removeSubscriber(*s)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(s.Address)
 
 	default:
 		str.WarningPrint(
