@@ -1,14 +1,13 @@
 package server
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"strconv"
 	"sync"
 
+	"mycelia/comm"
 	"mycelia/globals"
 	"mycelia/routing"
 	"mycelia/str"
@@ -119,11 +118,16 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
 	str.ActionPrint(aMsg)
 
-	// TODO: Print values for address of sender.
+	str.ActionPrint(
+		fmt.Sprintf("Processing message from %s", conn.RemoteAddr().String()),
+	)
+
 	for {
-		frame, err := readFrame(conn)
+		frame, err := comm.ReadFrameU32(conn)
 		if err != nil {
-			// EOF or other error—close connection
+			_ = comm.WriteFrameU32(
+				conn, []byte("ERR: invalid frame:"+err.Error()),
+			)
 			return
 		}
 		if len(frame) == 0 {
@@ -132,24 +136,4 @@ func (server *Server) HandleConnection(conn net.Conn) {
 
 		server.Broker.HandleBytes(frame)
 	}
-}
-
-// Read the frame's byte stream until the message header's worth of bytes have
-// been consumed, then return a buffer of those bytes or error.
-func readFrame(conn net.Conn) ([]byte, error) {
-	const lenU32 = 4
-	var hdr [lenU32]byte
-	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
-		return nil, err
-	}
-	n := binary.BigEndian.Uint32(hdr[:])
-	if n == 0 {
-		return []byte{}, nil
-	}
-
-	buf := make([]byte, n)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		return nil, err
-	}
-	return buf, nil
 }
