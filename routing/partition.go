@@ -1,8 +1,10 @@
 package routing
 
 import (
-	"mycelia/protocol"
 	"sync"
+
+	"mycelia/globals"
+	"mycelia/protocol"
 )
 
 // A worker that manages the communication between transformers and subscribers
@@ -68,6 +70,14 @@ func (p *partition) loop() {
 		// pass to next channel
 		if next := p.route.getNextChannel(p.channel); next != nil {
 			next.enqueue(result)
+		} else {
+			// If no remaining channels, inform sender their message was sent.
+			if result.AckPlcy == globals.ACK_PLCY_ONSENT {
+				result.Response.AckType = globals.ACK_TYPE_SENT
+				result.Responder.Write(
+					protocol.EncodeResopnseV1(*result.Response),
+				)
+			}
 		}
 	}
 }

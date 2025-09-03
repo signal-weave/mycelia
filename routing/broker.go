@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/protocol"
@@ -40,9 +41,9 @@ func NewBroker(s server) *Broker {
 
 // Handles the raw byte form of a object, hot off a socket, converts it to an
 // object, and forwards it to the object handler.
-func (b *Broker) HandleBytes(input []byte) {
+func (b *Broker) HandleBytes(input []byte, resp *comm.ConnResponder) {
 	// Parse byte stream -> object.
-	cmd, err := protocol.ParseLine(input)
+	cmd, err := protocol.DecodeFrame(input, resp)
 	if err != nil {
 		return
 	}
@@ -114,7 +115,7 @@ func (b *Broker) handleDelivery(cmd *protocol.Object) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for delivery from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
@@ -137,7 +138,7 @@ func (b *Broker) handleTransformer(cmd *protocol.Object) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for transformer from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
@@ -162,7 +163,7 @@ func (b *Broker) handleSubscriber(cmd *protocol.Object) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for subscriber from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
@@ -187,7 +188,7 @@ func (b *Broker) handleGlobals(cmd *protocol.Object) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for globals from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
@@ -203,7 +204,7 @@ func (b *Broker) handleActions(cmd *protocol.Object) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for action from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return

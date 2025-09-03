@@ -157,9 +157,9 @@ Mycelia employs a custom protocl as outlined:
 
 ## Fixed field sized header
 ```
-+---------+--------+-------------+-------------+
-| u32 len | u8 ver | u8 obj_type | u8 cmd_type |
-+---------+--------+-------------+-------------+
++---------+--------+-------------+-------------+---------------+
+| u32 len | u8 ver | u8 obj_type | u8 cmd_type | u8 ack policy |
++---------+--------+-------------+-------------+---------------+
 ```
 The fixed header contains 4 fields: a message length prefix, a protocol version
 and object type, and a command type field.
@@ -196,3 +196,12 @@ header.
 +-----------------+
 ```
 And finally the message payload that would be delivered to external sources.
+
+## Responses
+```
++---------+------------+--------------+
+| u16 len | u8 len uid | u8 ack value |
++---------+------------+--------------+
+```
+The broker will send back a 3 field response comprised of a message length
+prefix field, the corresponding uid, and the ack/nack value.

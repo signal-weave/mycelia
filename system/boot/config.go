@@ -15,11 +15,11 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Mycelia will check for a Mycelia_Config.json file in the same directory as the .exe
-// file.
+// Mycelia will check for a Mycelia_Config.json file in the same directory as
+// the .exe file.
 
-// The Mycelia_Config.json file acts as an alternative or addition to providing values
-// on startup.
+// The Mycelia_Config.json file acts as an alternative or addition to providing
+// values on startup.
 
 // It will overwrite any CLI values that were placed in it if they were also
 // provided by CLI.
@@ -148,7 +148,7 @@ func parseRouteCmds(routeData []map[string]any) {
 				cmd := protocol.NewObject(
 					globals.OBJ_TRANSFORMER,
 					globals.CMD_ADD,
-					addr,
+					uint8(0),
 					id,
 					routeName,
 					channelName,
@@ -170,7 +170,7 @@ func parseRouteCmds(routeData []map[string]any) {
 				cmd := protocol.NewObject(
 					globals.OBJ_SUBSCRIBER,
 					globals.CMD_ADD,
-					addr,
+					uint8(0),
 					id,
 					routeName,
 					channelName,

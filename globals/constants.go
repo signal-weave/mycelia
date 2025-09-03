@@ -66,6 +66,26 @@ const (
 	CMD_SIGTERM uint8 = 50
 )
 
+const (
+	// Sender does not wish to receive ack.
+	ACK_PLCY_NOREPLY uint8 = 0
+
+	// Sender wants to get ack when broker delivers to final subscriber.
+	// This often means sending the ack back after the final channel has
+	// processed the message object.
+	ACK_PLCY_ONSENT  uint8 = 1
+)
+
+const (
+	ACK_TYPE_UNKNOWN uint8 = 0 // Undetermined
+	ACK_TYPE_SENT    uint8 = 1 // Partition sent
+
+	// This isn't used by the broker, but its here for clarity.
+	// Client APIs do use this value when timing out trying to connect to the
+	// broker.
+	ACK_TYPE_TIMEOUT uint8 = 10
+)
+
 // -------Terminal--------------------------------------------------------------
 
 const (

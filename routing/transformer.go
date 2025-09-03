@@ -60,16 +60,16 @@ func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 	transformedDelivery := protocol.NewObject(
 		m.ObjType,
 		m.CmdType,
-
-		m.ReturnAdress,
+		m.AckPlcy,
 		m.UID,
-
 		m.Arg1,
 		m.Arg2,
 		m.Arg3,
 		m.Arg4,
 		buffer[:n],
 	)
+	transformedDelivery.Responder = m.Responder
+	transformedDelivery.Response = m.Response
 
 	str.ActionPrint(
 		fmt.Sprintf("Transformed delivery at: %s", t.Address),

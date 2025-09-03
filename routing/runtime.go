@@ -39,7 +39,7 @@ func updateGlobals(cmd *protocol.Object) bool {
 	if err != nil {
 		wMsg := fmt.Sprintf(
 			"Could not parse payload for globals update from %s",
-			cmd.ReturnAdress,
+			cmd.Responder.C.RemoteAddr().String(),
 		)
 		errgo.NewError(wMsg, globals.VERB_WRN)
 		return false
@@ -49,21 +49,21 @@ func updateGlobals(cmd *protocol.Object) bool {
 	if rv.SecurityToken == nil {
 		str.ErrorPrint(
 			fmt.Sprintf("Message lacks security token from %s",
-				cmd.ReturnAdress),
+				cmd.Responder.C.RemoteAddr().String()),
 		)
 	} else {
 		if !slices.Contains(globals.SecurityTokens, *rv.SecurityToken) {
 			str.ErrorPrint(
 				fmt.Sprintf(
 					"Unauthorized user attempting globals update from %s",
-					cmd.ReturnAdress,
+					cmd.Responder.C.RemoteAddr().String(),
 				),
 			)
 			return false
 		}
 	}
 
-	unpackGlobals(rv, cmd.ReturnAdress)
+	unpackGlobals(rv, cmd.Responder.C.RemoteAddr().String())
 	globals.PrintDynamicValues()
 	return true
 }

@@ -138,13 +138,12 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	for {
 		frame, err := comm.ReadFrameU32(conn)
 		if err != nil {
-			_ = resp.Write([]byte("ERR: invalid or empty frame:" + err.Error()))
 			return
 		}
 		if len(frame) == 0 {
 			continue
 		}
 
-		server.Broker.HandleBytes(frame)
+		server.Broker.HandleBytes(frame, resp)
 	}
 }
