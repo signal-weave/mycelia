@@ -45,9 +45,9 @@ func TestPartition_TransformAndForwardToNextChannel(t *testing.T) {
 	p := c1.partitions[0]
 
 	// Build a delivery (Arg3 is used as the hash key by channels; for partition
-	// we directly feed the command).
+	// we directly feed the object).
 	body := "data"
-	cmd := protocol.NewCommand(
+	cmd := protocol.NewObject(
 		globals.OBJ_DELIVERY,
 		globals.CMD_SEND,
 		"client", "uid-partition",
@@ -107,7 +107,7 @@ func TestPartition_FanoutThenForward(t *testing.T) {
 	p := c1.partitions[0]
 
 	body := "m"
-	cmd := protocol.NewCommand(
+	cmd := protocol.NewObject(
 		globals.OBJ_DELIVERY,
 		globals.CMD_SEND,
 		"client", "uid-fanout",

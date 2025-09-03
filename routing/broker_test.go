@@ -43,39 +43,39 @@ func TestBroker_DeliveryThroughTransformerToSubscriber(t *testing.T) {
 	const channel = "inmem"
 
 	// 1) Add transformer
-	addX := protocol.NewCommand(
+	addX := protocol.NewObject(
 		globals.OBJ_TRANSFORMER,
 		globals.CMD_ADD,
 		"tester", "uid-x",
 		route, channel, xformAddr, "",
 		nil,
 	)
-	if err := br.HandleCommand(addX); err != nil {
+	if err := br.HandleObject(addX); err != nil {
 		t.Fatalf("add transformer failed: %v", err)
 	}
 
 	// 2) Add subscriber
-	addS := protocol.NewCommand(
+	addS := protocol.NewObject(
 		globals.OBJ_SUBSCRIBER,
 		globals.CMD_ADD,
 		"tester", "uid-s",
 		route, channel, subAddr, "",
 		nil,
 	)
-	if err := br.HandleCommand(addS); err != nil {
+	if err := br.HandleObject(addS); err != nil {
 		t.Fatalf("add subscriber failed: %v", err)
 	}
 
 	// 3) Send a delivery
 	orig := "hello!"
-	send := protocol.NewCommand(
+	send := protocol.NewObject(
 		globals.OBJ_DELIVERY,
 		globals.CMD_SEND,
 		"client-1", "uid-d",
 		route, channel, "hash-key", "",
 		[]byte(orig),
 	)
-	if err := br.HandleCommand(send); err != nil {
+	if err := br.HandleObject(send); err != nil {
 		t.Fatalf("send failed: %v", err)
 	}
 

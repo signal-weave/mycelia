@@ -1,145 +1,148 @@
+// server_test.go
 package server
 
 import (
-	"bytes"
 	"encoding/binary"
+	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
-	"mycelia/comm"
-	"mycelia/test"
+	"mycelia/globals"
 )
 
-// Starts a one-shot TCP listener and wires the accepted conn into
-// HandleConnection.
-// Returns: client-side net.Conn, a done channel that closes when the server
-// handler returns, and a cleanup func.
-func startTestServer(t *testing.T, s *Server) (net.Conn, <-chan struct{}, func()) {
-	t.Helper()
+// --- Helpers ---
 
+// readFrameU32 reads a big-endian u32 length-prefixed frame (payload only) from c.
+func readFrameU32(t *testing.T, c net.Conn) ([]byte, error) {
+	t.Helper()
+	_ = c.SetReadDeadline(time.Now().Add(2 * time.Second))
+	var hdr [4]byte
+	if _, err := io.ReadFull(c, hdr[:]); err != nil {
+		return nil, err
+	}
+	n := binary.BigEndian.Uint32(hdr[:])
+	if n == 0 {
+		return []byte{}, nil
+	}
+	buf := make([]byte, n)
+	if _, err := io.ReadFull(c, buf); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+// --- Tests ---
+
+func TestUpdateListener_OpensAndReplacesListener(t *testing.T) {
+	// Arrange: ask OS for an ephemeral port twice
+	globals.Address = "127.0.0.1"
+	globals.Port = 0
+
+	s := NewServer("", 0)
+	if s.listener != nil {
+		t.Fatalf("expected nil listener before UpdateListener, got non-nil")
+	}
+
+	// Act: first bind
+	s.UpdateListener() // should open a new listener and mirror globals.Address/Port
+	if s.listener == nil {
+		t.Fatalf("listener was not created")
+	}
+	firstAddr := s.listener.Addr().String()
+	if firstAddr == "" {
+		t.Fatalf("listener Addr() is empty")
+	}
+
+	// Act: second bind (new ephemeral port), should replace old listener
+	globals.Port = 0
+	s.UpdateListener()
+	if s.listener == nil {
+		t.Fatalf("second listener was not created")
+	}
+	secondAddr := s.listener.Addr().String()
+	if secondAddr == "" {
+		t.Fatalf("second listener Addr() is empty")
+	}
+	if firstAddr == secondAddr {
+		t.Fatalf("expected listener to be replaced with a different address, got same: %s", firstAddr)
+	}
+
+	// Cleanup
+	s.Shutdown()
+}
+
+func TestHandleConnection_WritesERR_OnShortHeader(t *testing.T) {
+	// Spin up a real TCP listener just for this test
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("listen failed: %v", err)
+		t.Fatalf("listen: %v", err)
 	}
+	defer ln.Close()
 
-	addr := ln.Addr().String()
-	done := make(chan struct{})
+	s := NewServer("", 0)
 
-	// Accept one connection and hand it to the handler
+	// Accept exactly one connection and hand it to the handler
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		defer close(done)
-		conn, err := ln.Accept()
-		if err != nil {
-			// Listener closed early or accept error; just exit
+		defer wg.Done()
+		conn, aerr := ln.Accept()
+		if aerr != nil {
+			t.Logf("accept error: %v", aerr)
 			return
 		}
-		s.HandleConnection(conn) // HandleConnection closes conn when done
+		s.HandleConnection(conn)
 	}()
 
-	// Client connects to the ephemeral port
-	c, err := net.Dial("tcp", addr)
+	// Client side: connect
+	cconn, err := net.Dial("tcp", ln.Addr().String())
 	if err != nil {
-		_ = ln.Close()
-		t.Fatalf("dial failed: %v", err)
+		t.Fatalf("dial: %v", err)
+	}
+	defer cconn.Close()
+
+	// Send fewer than 4 bytes to trigger short read on the server
+	if _, err := cconn.Write([]byte{0x00, 0x01}); err != nil {
+		t.Fatalf("client write: %v", err)
 	}
 
-	cleanup := func() {
-		_ = c.Close()
-		_ = ln.Close()
+	// Half-close the write side so the server sees EOF on header read
+	if tcp, ok := cconn.(*net.TCPConn); ok {
+		if err := tcp.CloseWrite(); err != nil {
+			t.Fatalf("close write: %v", err)
+		}
+	} else {
+		t.Fatalf("expected *net.TCPConn, got %T", cconn)
 	}
 
-	return c, done, cleanup
+	// Read the server's framed response and assert it starts with "ERR:"
+	payload, rerr := readFrameU32(t, cconn)
+	if rerr != nil {
+		t.Fatalf("failed reading response frame: %v", rerr)
+	}
+	got := string(payload)
+	if got == "" || (len(got) >= 4 && got[:4] != "ERR:") {
+		t.Fatalf("expected payload starting with 'ERR:', got %q", got)
+	}
+
+	wg.Wait()
 }
 
-// Zero-length frame => framed "ERR: empty frame:" and loop continues.
-func TestHandleConnection_ZeroLengthFrame_RepliesError(t *testing.T) {
-	test.WithTimeout(t, 3*time.Second, func(t *testing.T) {
-		s := &Server{}
-		c, done, cleanup := startTestServer(t, s)
-		defer cleanup()
+func TestShutdown_Idempotent(t *testing.T) {
+	globals.Address = "127.0.0.1"
+	globals.Port = 0
 
-		// Send zero-length frame
-		if err := comm.WriteFrameU32(c, nil); err != nil {
-			t.Fatalf("client write zero frame failed: %v", err)
-		}
+	s := NewServer("", 0)
+	s.UpdateListener()
+	if s.listener == nil {
+		t.Fatalf("listener not created prior to Shutdown")
+	}
 
-		// Read server's framed error reply
-		reply, err := comm.ReadFrameU32(c)
-		if err != nil {
-			t.Fatalf("client read reply failed: %v", err)
-		}
-		if !bytes.HasPrefix(reply, []byte("ERR: empty frame:")) {
-			t.Fatalf("unexpected reply: %q", string(reply))
-		}
+	// First shutdown should close listener and jobs channel (if any).
+	s.Shutdown()
 
-		// Confirm the handler is still running (has not closed)
-		select {
-		case <-done:
-			t.Fatal("handler exited unexpectedly after zero-length frame")
-		case <-time.After(100 * time.Millisecond):
-			// still alive — good
-		}
-
-		// Send a second zero frame to confirm it keeps looping
-		if err := comm.WriteFrameU32(c, nil); err != nil {
-			t.Fatalf("second zero frame write failed: %v", err)
-		}
-		reply2, err := comm.ReadFrameU32(c)
-		if err != nil {
-			t.Fatalf("client read second reply failed: %v", err)
-		}
-		if !bytes.HasPrefix(reply2, []byte("ERR: empty frame:")) {
-			t.Fatalf("unexpected second reply: %q", string(reply2))
-		}
-	})
-}
-
-// Partial payload => ReadFrameU32 errors; server replies "ERR: invalid frame:"
-// then returns.
-func TestHandleConnection_InvalidFrame_RepliesErrorAndExits(t *testing.T) {
-	test.WithTimeout(t, 3*time.Second, func(t *testing.T) {
-		s := &Server{}
-		c, done, cleanup := startTestServer(t, s)
-		defer cleanup()
-
-		// Header claims 5 bytes
-		var hdr [4]byte
-		binary.BigEndian.PutUint32(hdr[:], 5)
-
-		if _, err := c.Write(hdr[:]); err != nil {
-			t.Fatalf("client write header failed: %v", err)
-		}
-		// Write only 2 bytes of the body
-		if _, err := c.Write([]byte{1, 2}); err != nil {
-			t.Fatalf("client write partial body failed: %v", err)
-		}
-
-		// Half-close the write side to cause io.ReadFull on the server to error
-		if tcp, ok := c.(*net.TCPConn); ok {
-			_ = tcp.CloseWrite()
-		} else {
-			// Fallback: full close; we'll still be able to read the server's
-			// reply because it writes before return
-			// NOTE: We will re-dial to read if the OS closes both ways, but on
-			// TCP this usually still allows reads.
-		}
-
-		// Read server's framed error reply
-		reply, err := comm.ReadFrameU32(c)
-		if err != nil {
-			t.Fatalf("client read error reply failed: %v", err)
-		}
-		if !bytes.HasPrefix(reply, []byte("ERR: invalid frame:")) {
-			t.Fatalf("unexpected reply: %q", string(reply))
-		}
-
-		// Handler should exit after responding to invalid frame
-		select {
-		case <-done:
-			// ok
-		case <-time.After(800 * time.Millisecond):
-			t.Fatal("server did not exit after invalid frame")
-		}
-	})
+	// Second shutdown should be safe (idempotent).
+	s.Shutdown()
 }

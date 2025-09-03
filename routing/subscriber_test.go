@@ -13,7 +13,7 @@ func TestSubscriber_ConsumeDelivery_SendsPayload(t *testing.T) {
 	defer stop()
 
 	sub := newSubscriber(addr)
-	msg := &protocol.Command{
+	msg := &protocol.Object{
 		Payload: []byte("hello, world"),
 	}
 
@@ -32,7 +32,7 @@ func TestSubscriber_ConsumeDelivery_SendsPayload(t *testing.T) {
 func TestSubscriber_ConsumeDelivery_DialFailure_NoPanic(t *testing.T) {
 	// Port 1 is almost always closed locally; dialing should fail quickly.
 	sub := newSubscriber("127.0.0.1:1")
-	msg := &protocol.Command{Payload: []byte("ignored")}
+	msg := &protocol.Object{Payload: []byte("ignored")}
 	// Should not panic; function handles error internally.
 	sub.deliver(msg)
 }

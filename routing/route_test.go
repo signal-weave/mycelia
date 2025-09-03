@@ -36,7 +36,7 @@ func TestRoute_Enqueue_TransformsAndForwardsToNextChannel(t *testing.T) {
 
 	// Send a delivery via route.enqueue (must enter c1, then forward to c2)
 	body := "hello"
-	cmd := protocol.NewCommand(
+	cmd := protocol.NewObject(
 		globals.OBJ_DELIVERY,
 		globals.CMD_SEND,
 		"client", "uid-route",

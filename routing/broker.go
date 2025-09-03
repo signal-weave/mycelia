@@ -21,10 +21,10 @@ type server interface {
 
 // -------Base Broker Details---------------------------------------------------
 
-// The primary route orchestrator.
-// Takes the incoming byte stream and runs it through the command parser where
-// a generated command object is created and then runs the command through the
-// route structure.
+// The primary object orchestrator.
+// Takes the incoming byte stream and runs it through the object parser where
+// a generated object is created and then runs the object through the route
+// structure.
 type Broker struct {
 	ManagingServer server
 	mutex          sync.RWMutex
@@ -38,17 +38,17 @@ func NewBroker(s server) *Broker {
 	}
 }
 
-// Handles the raw byte form of a command, hot off a socket, converts it to a
-// command object, and forwards it to the command handler.
+// Handles the raw byte form of a object, hot off a socket, converts it to an
+// object, and forwards it to the object handler.
 func (b *Broker) HandleBytes(input []byte) {
-	// Parse byte stream -> command object.
+	// Parse byte stream -> object.
 	cmd, err := protocol.ParseLine(input)
 	if err != nil {
 		return
 	}
 
-	// Handle command object
-	b.HandleCommand(cmd)
+	// Handle object
+	b.HandleObject(cmd)
 }
 
 // -------Route Management------------------------------------------------------
@@ -81,11 +81,11 @@ func (b *Broker) removeEmptyRoute(name string) {
 	}
 }
 
-// -------Command Handling------------------------------------------------------
+// -------Object Handling------------------------------------------------------
 
-// Handles the command object generated from the incoming byte stream.
+// Handles the object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
-func (b *Broker) HandleCommand(cmd *protocol.Command) error {
+func (b *Broker) HandleObject(cmd *protocol.Object) error {
 	switch cmd.ObjType {
 	case globals.OBJ_DELIVERY:
 		b.handleDelivery(cmd)
@@ -105,11 +105,12 @@ func (b *Broker) HandleCommand(cmd *protocol.Command) error {
 	return nil
 }
 
-func (b *Broker) handleDelivery(cmd *protocol.Command) {
+func (b *Broker) handleDelivery(cmd *protocol.Object) {
 	switch cmd.CmdType {
 
 	case globals.CMD_SEND:
 		b.route(cmd.Arg1).enqueue(cmd)
+
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for delivery from %s",
@@ -120,7 +121,7 @@ func (b *Broker) handleDelivery(cmd *protocol.Command) {
 	}
 }
 
-func (b *Broker) handleTransformer(cmd *protocol.Command) {
+func (b *Broker) handleTransformer(cmd *protocol.Object) {
 	switch cmd.CmdType {
 
 	case globals.CMD_ADD:
@@ -145,8 +146,9 @@ func (b *Broker) handleTransformer(cmd *protocol.Command) {
 	b.printStructure()
 }
 
-func (b *Broker) handleSubscriber(cmd *protocol.Command) {
+func (b *Broker) handleSubscriber(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_ADD:
 		// Args: route, channel, address, nil
 		s := newSubscriber(cmd.Arg3)
@@ -169,8 +171,9 @@ func (b *Broker) handleSubscriber(cmd *protocol.Command) {
 	b.printStructure()
 }
 
-func (b *Broker) handleGlobals(cmd *protocol.Command) {
+func (b *Broker) handleGlobals(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_UPDATE:
 		hasPermission := updateGlobals(cmd)
 		if !hasPermission {
@@ -191,8 +194,9 @@ func (b *Broker) handleGlobals(cmd *protocol.Command) {
 	}
 }
 
-func (b *Broker) handleActions(cmd *protocol.Command) {
+func (b *Broker) handleActions(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_SIGTERM:
 		b.ManagingServer.Shutdown()
 
@@ -213,6 +217,7 @@ func (b *Broker) printStructure() {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
+	str.PrintCenteredHeader("Broker Shape")
 	fmt.Println("[broker]")
 	for _, r := range b.routes {
 		fmt.Printf("  | - [route] %s\n", r.name)
@@ -233,4 +238,5 @@ func (b *Broker) printStructure() {
 		}
 		r.mutex.RUnlock()
 	}
+	str.PrintAsciiLine()
 }

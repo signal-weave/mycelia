@@ -17,7 +17,7 @@ const (
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
-// The number of protocol.Commands that a mycelia channel partition can hold at
+// The number of protocol.Object that a mycelia channel partition can hold at
 // any maximum.
 const PartitionChanSize = 128
 
@@ -31,7 +31,7 @@ const (
 	VERB_ERR = 1 // Error printing
 
 	// The VERB_WRN verbosity level is reserved for when clients have sent the
-	// broker bad data, such as an undialable address, or a fake command.
+	// broker bad data, such as an undialable address, or a fake object.
 	VERB_WRN = 2 // Warning + error printing
 
 	// The VERB_ACT verbosity level is reserved for when actions the user may
@@ -40,7 +40,7 @@ const (
 	VERB_ACT = 3 // Action + warning + error printing
 )
 
-// -------Commands--------------------------------------------------------------
+// -------Objects---------------------------------------------------------------
 
 const (
 	OBJ_UNKNOWN uint8 = 0

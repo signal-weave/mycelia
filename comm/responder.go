@@ -24,12 +24,14 @@ func NewConnResponder(conn net.Conn) *ConnResponder {
 	}
 }
 
+// Send the given payload back to the connection's return address.
 func (r *ConnResponder) Write(b []byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return WriteFrameU32(r.c, b)
 }
 
+// Closes connection...
 func (r *ConnResponder) Close() error {
 	return r.c.Close()
 }

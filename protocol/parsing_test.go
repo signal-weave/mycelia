@@ -60,46 +60,46 @@ func TestParseLine_V1_Success(t *testing.T) {
 	)
 	line := append([]byte{1}, body...)
 
-	cmd, err := ParseLine(line)
+	obj, err := ParseLine(line)
 	if err != nil {
 		t.Fatalf("ParseLine returned error: %v", err)
 	}
-	if cmd == nil {
-		t.Fatalf("ParseLine returned nil *Command")
+	if obj == nil {
+		t.Fatalf("ParseLine returned nil *object")
 	}
 
-	if cmd.ObjType != 5 || cmd.CmdType != 9 {
-		t.Fatalf("header mismatch: obj=%d cmd=%d", cmd.ObjType, cmd.CmdType)
+	if obj.ObjType != 5 || obj.CmdType != 9 {
+		t.Fatalf("header mismatch: obj=%d cmd=%d", obj.ObjType, obj.CmdType)
 	}
-	if cmd.UID != "uid-123" {
-		t.Fatalf("UID mismatch: %q", cmd.UID)
+	if obj.UID != "uid-123" {
+		t.Fatalf("UID mismatch: %q", obj.UID)
 	}
-	if cmd.ReturnAdress != "127.0.0.1:5500" {
-		t.Fatalf("Sender mismatch: %q", cmd.ReturnAdress)
+	if obj.ReturnAdress != "127.0.0.1:5500" {
+		t.Fatalf("Sender mismatch: %q", obj.ReturnAdress)
 	}
-	if cmd.Arg1 != "a1" || cmd.Arg2 != "a2" || cmd.Arg3 != "a3" ||
-		cmd.Arg4 != "a4" {
+	if obj.Arg1 != "a1" || obj.Arg2 != "a2" || obj.Arg3 != "a3" ||
+		obj.Arg4 != "a4" {
 		t.Fatalf(
-			"args mismatch: %q %q %q %q", cmd.Arg1, cmd.Arg2,
-			cmd.Arg3, cmd.Arg4,
+			"args mismatch: %q %q %q %q", obj.Arg1, obj.Arg2,
+			obj.Arg3, obj.Arg4,
 		)
 	}
-	if string(cmd.Payload) != "hello" {
-		t.Fatalf("payload mismatch: %q", cmd.Payload)
+	if string(obj.Payload) != "hello" {
+		t.Fatalf("payload mismatch: %q", obj.Payload)
 	}
 }
 
 func TestParseLine_UnknownVersion(t *testing.T) {
 	// Version 2 is not supported; any trailing bytes are irrelevant.
 	line := []byte{2, 0xDE, 0xAD, 0xBE, 0xEF}
-	cmd, err := ParseLine(line)
+	obj, err := ParseLine(line)
 	if err == nil {
 		t.Fatalf("expected error for unknown version, got nil")
 	}
-	if cmd != nil {
-		t.Fatalf("expected nil *Command on error, got %#v", cmd)
+	if obj != nil {
+		t.Fatalf("expected nil *object on error, got %#v", obj)
 	}
-	if !strings.Contains(err.Error(), "Unable to parse command!") {
+	if !strings.Contains(err.Error(), "Unable to parse object!") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

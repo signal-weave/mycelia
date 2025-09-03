@@ -145,7 +145,7 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := transformer["address"].(string)
-				cmd := protocol.NewCommand(
+				cmd := protocol.NewObject(
 					globals.OBJ_TRANSFORMER,
 					globals.CMD_ADD,
 					addr,
@@ -167,7 +167,7 @@ func parseRouteCmds(routeData []map[string]any) {
 				}
 				id := uuid.New().String()
 				addr := subscriber["address"].(string)
-				cmd := protocol.NewCommand(
+				cmd := protocol.NewObject(
 					globals.OBJ_SUBSCRIBER,
 					globals.CMD_ADD,
 					addr,

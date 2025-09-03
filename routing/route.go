@@ -113,7 +113,7 @@ func (r *route) removeChannel(name string) {
 // Sends the message down the channel. The channel's partition will send it to
 // the next channel so routes are only concerned about sending to the first
 // channel.
-func (r *route) enqueue(msg *protocol.Command) {
+func (r *route) enqueue(msg *protocol.Object) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 

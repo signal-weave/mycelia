@@ -103,11 +103,11 @@ func TestParseRouteCmds_GeneratesCommands(t *testing.T) {
 	}
 
 	// Helper to read fields regardless of pointer/value slice element.
-	get := func(i int) *protocol.Command {
+	get := func(i int) *protocol.Object {
 		switch c := any(system.CommandList[i]).(type) {
-		case *protocol.Command:
+		case *protocol.Object:
 			return c
-		case protocol.Command:
+		case protocol.Object:
 			return &c
 		default:
 			t.Fatalf("unexpected CommandList element type at %d", i)

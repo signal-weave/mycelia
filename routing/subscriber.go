@@ -19,7 +19,7 @@ func newSubscriber(address string) *subscriber {
 }
 
 // Forwards the delivery to the client represented by the consumer object.
-func (c *subscriber) deliver(m *protocol.Command) {
+func (c *subscriber) deliver(m *protocol.Object) {
 	fmt.Println("Attempting to dial", c.Address)
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {

@@ -29,28 +29,28 @@ func TestDecodeV1_Success(t *testing.T) {
 		"hello, world",
 	)
 
-	cmd, err := decodeV1(data)
+	obj, err := decodeV1(data)
 	if err != nil {
 		t.Fatalf("decodeV1 returned error: %v", err)
 	}
-	if cmd == nil {
-		t.Fatalf("decodeV1 returned nil command")
+	if obj == nil {
+		t.Fatalf("decodeV1 returned nil object")
 	}
 
-	if cmd.ObjType != 1 || cmd.CmdType != 2 {
-		t.Fatalf("unexpected header: got obj=%d cmd=%d", cmd.ObjType, cmd.CmdType)
+	if obj.ObjType != 1 || obj.CmdType != 2 {
+		t.Fatalf("unexpected header: got obj=%d cmd=%d", obj.ObjType, obj.CmdType)
 	}
-	if cmd.UID != "uid-123" {
-		t.Fatalf("UID mismatch: got %q", cmd.UID)
+	if obj.UID != "uid-123" {
+		t.Fatalf("UID mismatch: got %q", obj.UID)
 	}
-	if cmd.ReturnAdress != "127.0.0.1:5500" {
-		t.Fatalf("Sender mismatch: got %q", cmd.ReturnAdress)
+	if obj.ReturnAdress != "127.0.0.1:5500" {
+		t.Fatalf("Sender mismatch: got %q", obj.ReturnAdress)
 	}
-	if cmd.Arg1 != "a1" || cmd.Arg2 != "a2" || cmd.Arg3 != "a3" || cmd.Arg4 != "a4" {
-		t.Fatalf("Args mismatch: %q %q %q %q", cmd.Arg1, cmd.Arg2, cmd.Arg3, cmd.Arg4)
+	if obj.Arg1 != "a1" || obj.Arg2 != "a2" || obj.Arg3 != "a3" || obj.Arg4 != "a4" {
+		t.Fatalf("Args mismatch: %q %q %q %q", obj.Arg1, obj.Arg2, obj.Arg3, obj.Arg4)
 	}
-	if string(cmd.Payload) != "hello, world" {
-		t.Fatalf("Payload mismatch: got %q", cmd.Payload)
+	if string(obj.Payload) != "hello, world" {
+		t.Fatalf("Payload mismatch: got %q", obj.Payload)
 	}
 }
 
@@ -65,12 +65,12 @@ func TestDecodeV1_Error_UnaccountedData(t *testing.T) {
 	// Append an extra stray byte to force the "Unaccounted data in reader" path.
 	data = append(data, 0xFF)
 
-	cmd, err := decodeV1(data)
+	obj, err := decodeV1(data)
 	if err == nil {
 		t.Fatalf("expected error for unaccounted data, got nil")
 	}
-	if cmd != nil {
-		t.Fatalf("expected nil command on error, got: %#v", cmd)
+	if obj != nil {
+		t.Fatalf("expected nil object on error, got: %#v", obj)
 	}
 	if !strings.Contains(err.Error(), "Unaccounted data in reader") {
 		t.Fatalf("unexpected error: %v", err)
@@ -96,12 +96,12 @@ func TestDecodeV1_Error_TruncatedPayload(t *testing.T) {
 	data = append(data, decl...)
 	data = append(data, []byte("hi")...)
 
-	cmd, err := decodeV1(data)
+	obj, err := decodeV1(data)
 	if err == nil {
 		t.Fatalf("expected error due to truncated payload, got nil")
 	}
-	if cmd != nil {
-		t.Fatalf("expected nil command on payload parse error, got: %#v", cmd)
+	if obj != nil {
+		t.Fatalf("expected nil object on payload parse error, got: %#v", obj)
 	}
 	if !strings.Contains(err.Error(), "Unable to parse payload") {
 		t.Fatalf("unexpected error: %v", err)

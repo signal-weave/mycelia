@@ -9,7 +9,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Version 1 command decoding.
+// Version 1 object decoding.
 // -----------------------------------------------------------------------------
 // *Note that this is a messaging protocol, not a file transfer protocol
 // -----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ import (
 // +-------------+---------------------+
 
 // which is then followed by 4 uint8 sized byte fields that act as arguments for
-// the command type in the fixed header.
+// the object type in the fixed header.
 // Because these are byte streams, all arguments are considered string types
 // unless the executor casts them to another type.
 
@@ -48,9 +48,9 @@ import (
 // +-----------------+
 // -----------------------------------------------------------------------------
 
-func decodeV1(data []byte) (*Command, error) {
+func decodeV1(data []byte) (*Object, error) {
 	r := bytes.NewReader(data)
-	cmd := &Command{}
+	cmd := &Object{}
 
 	// ObjType + CmdType
 	cmd, err := parseBaseHeader(r, cmd)
@@ -87,7 +87,7 @@ func decodeV1(data []byte) (*Command, error) {
 }
 
 // Parses the header after version: obj_type, and cmd_type from message.
-func parseBaseHeader(r io.Reader, cmd *Command) (*Command, error) {
+func parseBaseHeader(r io.Reader, cmd *Object) (*Object, error) {
 	if err := readU8(r, &cmd.ObjType); err != nil {
 		wMsg := fmt.Sprintf(
 			"Unable to parse u8 ObjType field from message: %s", err,
@@ -108,7 +108,7 @@ func parseBaseHeader(r io.Reader, cmd *Command) (*Command, error) {
 }
 
 // Parses the UID and sender address from the reader.
-func parseTrackingHeader(r io.Reader, cmd *Command) (*Command, error) {
+func parseTrackingHeader(r io.Reader, cmd *Object) (*Object, error) {
 	// UID field comes before sender address field.
 	uid, err := readStringU8(r)
 	if err != nil {
@@ -134,7 +134,7 @@ func parseTrackingHeader(r io.Reader, cmd *Command) (*Command, error) {
 }
 
 // Parse the four argument fields from the reader.
-func parseArgumentFields(r io.Reader, cmd *Command) (*Command, error) {
+func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 	arg1, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",

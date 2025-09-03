@@ -40,7 +40,7 @@ func TestChannel_FanoutAndTransform(t *testing.T) {
 
 	// Enqueue a single delivery (Arg3 is the hashing key for partitions)
 	const body = "hello"
-	cmd := protocol.NewCommand(
+	cmd := protocol.NewObject(
 		globals.OBJ_DELIVERY,
 		globals.CMD_SEND,
 		"client", "uid-1",
@@ -104,7 +104,7 @@ func TestChannel_Burst_AllDelivered_WithManyOneShotSubscribers(t *testing.T) {
 
 	// Enqueue N messages
 	for i := 0; i < total; i++ {
-		cmd := protocol.NewCommand(
+		cmd := protocol.NewObject(
 			globals.OBJ_DELIVERY,
 			globals.CMD_SEND,
 			"client", "uid-burst",

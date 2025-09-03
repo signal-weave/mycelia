@@ -10,8 +10,8 @@ import (
 	"mycelia/test"
 )
 
-func newMsg(body string) *protocol.Command {
-	return &protocol.Command{
+func newMsg(body string) *protocol.Object {
+	return &protocol.Object{
 		ObjType:      1,
 		CmdType:      2,
 		UID:          "uid-123",
@@ -39,7 +39,7 @@ func TestTransformer_transformDelivery_Success(t *testing.T) {
 		t.Fatalf("transformDelivery error: %v", err)
 	}
 	if out == nil {
-		t.Fatalf("expected non-nil *Command")
+		t.Fatalf("expected non-nil *object")
 	}
 	if string(out.Payload) != "XFORM:hello" {
 		t.Fatalf("unexpected transformed payload: %q", string(out.Payload))
@@ -63,7 +63,7 @@ func TestTransformer_transformDelivery_DialFailure_ReturnsOriginal(t *testing.T)
 		t.Fatalf("expected dial error, got nil")
 	}
 	if out != in {
-		t.Fatalf("expected original command to be returned on error")
+		t.Fatalf("expected original object to be returned on error")
 	}
 	if !strings.Contains(err.Error(), "Could not dial transformer") {
 		t.Fatalf("unexpected error: %v", err)
@@ -85,7 +85,7 @@ func TestTransformer_transformDelivery_ReadError_ReturnsOriginal(t *testing.T) {
 		t.Fatalf("expected read error, got nil")
 	}
 	if out != in {
-		t.Fatalf("expected original command to be returned on read error")
+		t.Fatalf("expected original object to be returned on read error")
 	}
 	if !strings.Contains(err.Error(), "Error reading from transformer") {
 		t.Fatalf("unexpected error: %v", err)

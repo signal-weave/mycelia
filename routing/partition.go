@@ -11,7 +11,7 @@ import (
 type partition struct {
 	route   *route
 	channel *channel
-	in      chan *protocol.Command
+	in      chan *protocol.Object
 	wg      sync.WaitGroup
 }
 
