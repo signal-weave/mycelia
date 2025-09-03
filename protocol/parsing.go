@@ -14,9 +14,9 @@ import (
 // The main protocol version detection and parsing version handling.
 // -----------------------------------------------------------------------------
 
-// A command is an object that is decoded from the incoming byte stream and ran
+// An object is a struct that is decoded from the incoming byte stream and ran
 // through the system.
-type Command struct {
+type Object struct {
 	ObjType uint8
 	CmdType uint8
 
@@ -29,11 +29,11 @@ type Command struct {
 	Payload []byte
 }
 
-func NewCommand(
+func NewObject(
 	objType, cmdType uint8,
 	returnAdress, uid, arg1, arg2, arg3, arg4 string,
-	payload []byte) *Command {
-	return &Command{
+	payload []byte) *Object {
+	return &Object{
 		ObjType:      objType,
 		CmdType:      cmdType,
 		ReturnAdress: returnAdress,
@@ -46,8 +46,8 @@ func NewCommand(
 	}
 }
 
-// Prints each field on the command...
-func (cmd *Command) PrintValues() {
+// Prints each field on the object...
+func (cmd *Object) PrintValues() {
 	str.PrintAsciiLine()
 	fmt.Println("ObjType:", cmd.ObjType)
 	fmt.Println("CmdType:", cmd.CmdType)
@@ -75,7 +75,7 @@ func parseProtoVer(data []byte) (uint8, []byte, error) {
 	return ver, data[u8len:], nil
 }
 
-func ParseLine(line []byte) (*Command, error) {
+func ParseLine(line []byte) (*Object, error) {
 	version, rest, err := parseProtoVer(line)
 	if err != nil {
 		wMsg := fmt.Sprintf("Read protocol version: %v", err)
@@ -83,8 +83,8 @@ func ParseLine(line []byte) (*Command, error) {
 		return nil, wErr
 	}
 
-	// The broker always works off of the same types of command objects.
-	// Command objects may evolve over time, adding new fields for new
+	// The broker always works off of the same types of objects.
+	// Message objects may evolve over time, adding new fields for new
 	// functionality, but the broker should remain compatible with previous
 	// client side API versions.
 
@@ -94,13 +94,13 @@ func ParseLine(line []byte) (*Command, error) {
 	// the corresponding parsing logic.
 
 	// This is mainly because early on there was uncertainty if the protocol and
-	// command structure was done right, and we reserved the ability to update
+	// object structure was done right, and we reserved the ability to update
 	// it as we go.
 	switch version {
 	case 1:
 		return decodeV1(rest)
 	default:
-		wErr := errgo.NewError("Unable to parse command!", globals.VERB_WRN)
+		wErr := errgo.NewError("Unable to parse object!", globals.VERB_WRN)
 		return nil, wErr
 	}
 }

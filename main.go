@@ -32,7 +32,7 @@ func startServer() {
 	server := server.NewServer(globals.Address, globals.Port)
 	if len(system.CommandList) > 0 {
 		for _, cmd := range system.CommandList {
-			server.Broker.HandleCommand(cmd)
+			server.Broker.HandleObject(cmd)
 		}
 	}
 

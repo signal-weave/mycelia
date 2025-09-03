@@ -8,17 +8,13 @@ import (
 )
 
 type MyceliaError interface {
-	Msg() string
+	Error() string
 	Verbosity() int
 }
 
 type myError struct {
 	msg       string
 	verbosity int
-}
-
-func (me myError) Msg() string {
-	return me.msg
 }
 
 func (me myError) Verbosity() int {
@@ -43,13 +39,13 @@ func AnnounceError(e MyceliaError) {
 	switch e.Verbosity() {
 
 	case globals.VERB_ERR:
-		str.ErrorPrint(e.Msg())
+		str.ErrorPrint(e.Error())
 
 	case globals.VERB_WRN:
-		str.WarningPrint(e.Msg())
+		str.WarningPrint(e.Error())
 
 	case globals.VERB_ACT:
-		str.ActionPrint(e.Msg())
+		str.ActionPrint(e.Error())
 
 	}
 }

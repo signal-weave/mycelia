@@ -3,7 +3,6 @@ package routing
 import (
 	"fmt"
 	"hash/fnv"
-	"math/rand/v2"
 	"sync"
 	"sync/atomic"
 
@@ -53,11 +52,11 @@ func newChannel(r *route, name string, numPartitions int) *channel {
 	ch.sSnap.Store([]subscriber{})
 
 	partitions := []*partition{}
-	for range numPartitions {
+	for i := 0; i < numPartitions; i++ {
 		np := newPartition(r, ch)
 		partitions = append(partitions, np)
-		np.in = make(chan *protocol.Command, globals.PartitionChanSize)
-		go np.start()
+		np.in = make(chan *protocol.Object, globals.PartitionChanSize)
+		np.start()
 	}
 	ch.partitions = partitions
 
@@ -177,7 +176,7 @@ func (ch *channel) checkEmptyChannel() {
 	}
 }
 
-func (c *channel) enqueue(m *protocol.Command) {
+func (c *channel) enqueue(m *protocol.Object) {
 	c.mutex.RLock()
 	parts := c.partitions
 	c.mutex.RUnlock()
@@ -186,7 +185,6 @@ func (c *channel) enqueue(m *protocol.Command) {
 		return // Channel is closed / removed
 	}
 
-	key := fmt.Sprintf("%s%d", m.Arg3, rand.IntN(12345)) // address + rand
-	idx := int(c.hash([]byte(key))) % len(parts)
+	idx := int(c.hash([]byte(m.Arg3))) % len(parts)
 	parts[idx].in <- m
 }

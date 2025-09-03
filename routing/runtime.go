@@ -14,7 +14,7 @@ import (
 
 // -----------------------------------------------------------------------------
 // Herein are functions for the broker to update the runtime values of globals.
-// It contains security handling and command parsing.
+// It contains security handling and object parsing.
 // -----------------------------------------------------------------------------
 
 // The payload struct sent from a globals object by a client.
@@ -33,7 +33,7 @@ type runtimeUpdater struct {
 // Verify that the values and sender are valid and then update the globals, if
 // they are.
 // Returns if the user was verified or not.
-func updateGlobals(cmd *protocol.Command) bool {
+func updateGlobals(cmd *protocol.Object) bool {
 	var rv runtimeUpdater
 	err := json.Unmarshal(cmd.Payload, &rv)
 	if err != nil {

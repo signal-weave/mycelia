@@ -138,11 +138,10 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	for {
 		frame, err := comm.ReadFrameU32(conn)
 		if err != nil {
-			_ = resp.Write([]byte("ERR: invalid frame:" + err.Error()))
+			_ = resp.Write([]byte("ERR: invalid or empty frame:" + err.Error()))
 			return
 		}
 		if len(frame) == 0 {
-			_ = resp.Write([]byte("ERR: empty frame:"))
 			continue
 		}
 
