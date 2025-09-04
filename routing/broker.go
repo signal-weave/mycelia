@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sync"
 
+	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/protocol"
 	"mycelia/str"
-	"mycelia/system/cache"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -22,10 +22,10 @@ type server interface {
 
 // -------Base Broker Details---------------------------------------------------
 
-// The primary route orchestrator.
-// Takes the incoming byte stream and runs it through the command parser where
-// a generated command object is created and then runs the command through the
-// route structure.
+// The primary object orchestrator.
+// Takes the incoming byte stream and runs it through the object parser where
+// a generated object is created and then runs the object through the route
+// structure.
 type Broker struct {
 	ManagingServer server
 	mutex          sync.RWMutex
@@ -39,17 +39,16 @@ func NewBroker(s server) *Broker {
 	}
 }
 
-// Handles the raw byte form of a command, hot off a socket, converts it to a
-// command object, and forwards it to the command handler.
-func (b *Broker) HandleBytes(input []byte) {
-	// Parse byte stream -> command object.
-	cmd, err := protocol.ParseLine(input)
+// Handles the raw byte form of a object, hot off a socket, converts it to an
+// object, and forwards it to the object handler.
+func (b *Broker) HandleBytes(input []byte, resp *comm.ConnResponder) {
+	// Parse byte stream -> object.
+	obj, err := protocol.DecodeFrame(input, resp)
 	if err != nil {
 		return
 	}
 
-	// Handle command object
-	b.HandleCommand(cmd)
+	b.HandleObject(obj)
 }
 
 // -------Route Management------------------------------------------------------
@@ -82,11 +81,11 @@ func (b *Broker) removeEmptyRoute(name string) {
 	}
 }
 
-// -------Command Handling------------------------------------------------------
+// -------Object Handling------------------------------------------------------
 
-// Handles the command object generated from the incoming byte stream.
+// Handles the object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
-func (b *Broker) HandleCommand(cmd *protocol.Command) error {
+func (b *Broker) HandleObject(cmd *protocol.Object) error {
 	switch cmd.ObjType {
 	case globals.OBJ_DELIVERY:
 		b.handleDelivery(cmd)
@@ -106,74 +105,75 @@ func (b *Broker) HandleCommand(cmd *protocol.Command) error {
 	return nil
 }
 
-func (b *Broker) handleDelivery(cmd *protocol.Command) {
+func (b *Broker) handleDelivery(cmd *protocol.Object) {
 	switch cmd.CmdType {
 
 	case globals.CMD_SEND:
 		b.route(cmd.Arg1).enqueue(cmd)
+
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for delivery from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
 	}
 }
 
-func (b *Broker) handleTransformer(cmd *protocol.Command) {
+func (b *Broker) handleTransformer(cmd *protocol.Object) {
 	switch cmd.CmdType {
 
 	case globals.CMD_ADD:
+		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).addTransformer(*t)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddTransformer(t.Address)
 
 	case globals.CMD_REMOVE:
+		// Args: route, channel, address, nil
 		t := newTransformer(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).removeTransformer(*t)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveTransformer(t.Address)
 
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for transformer from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
 	}
 
-	cache.PrintBrokerStructure()
+	b.printStructure()
 }
 
-func (b *Broker) handleSubscriber(cmd *protocol.Command) {
+func (b *Broker) handleSubscriber(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_ADD:
 		// Args: route, channel, address, nil
 		s := newSubscriber(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).addSubscriber(*s)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).AddSubscriber(s.Address)
 
 	case globals.CMD_REMOVE:
 		// Args: route, channel, address, nil
 		s := newSubscriber(cmd.Arg3)
 		b.route(cmd.Arg1).channel(cmd.Arg2).removeSubscriber(*s)
-		cache.BrokerShape.Route(cmd.Arg1).Channel(cmd.Arg2).RemoveSubscriber(s.Address)
 
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for subscriber from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
 	}
 
-	cache.PrintBrokerStructure()
+	b.printStructure()
 }
 
-func (b *Broker) handleGlobals(cmd *protocol.Command) {
+func (b *Broker) handleGlobals(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_UPDATE:
 		hasPermission := updateGlobals(cmd)
 		if !hasPermission {
@@ -187,24 +187,56 @@ func (b *Broker) handleGlobals(cmd *protocol.Command) {
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for globals from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
 	}
 }
 
-func (b *Broker) handleActions(cmd *protocol.Command) {
+func (b *Broker) handleActions(cmd *protocol.Object) {
 	switch cmd.CmdType {
+
 	case globals.CMD_SIGTERM:
 		b.ManagingServer.Shutdown()
 
 	default:
 		str.WarningPrint(
 			fmt.Sprintf("Unknown command type for action from %s",
-				cmd.ReturnAdress,
+				cmd.Responder.C.RemoteAddr().String(),
 			),
 		)
 		return
 	}
+}
+
+// -------Utils-----------------------------------------------------------------
+
+// PrintStructure pretty-prints the broker structure.
+func (b *Broker) printStructure() {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	str.PrintCenteredHeader("Broker Shape")
+	fmt.Println("[broker]")
+	for _, r := range b.routes {
+		fmt.Printf("  | - [route] %s\n", r.name)
+
+		r.mutex.RLock()
+		for _, ch := range r.channels {
+			fmt.Printf("        | - [channel] %s\n", ch.name)
+
+			// Transformers
+			for _, t := range ch.loadTransformers() {
+				fmt.Printf("              | - [transformer] %s\n", t.Address)
+			}
+
+			// Subscribers
+			for _, s := range ch.loadSubscribers() {
+				fmt.Printf("              | - [subscriber] %s\n", s.Address)
+			}
+		}
+		r.mutex.RUnlock()
+	}
+	str.PrintAsciiLine()
 }

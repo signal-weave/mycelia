@@ -13,7 +13,7 @@ import (
 var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
 
 var majorVersion int = 0  // Proud version
-var minorVersion int = 10 // Real version
+var minorVersion int = 11 // Real version
 var patchVersion int = 0  // Sucky verison
 
 func main() {
@@ -32,7 +32,7 @@ func startServer() {
 	server := server.NewServer(globals.Address, globals.Port)
 	if len(system.CommandList) > 0 {
 		for _, cmd := range system.CommandList {
-			server.Broker.HandleCommand(cmd)
+			server.Broker.HandleObject(cmd)
 		}
 	}
 

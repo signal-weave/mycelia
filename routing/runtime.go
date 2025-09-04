@@ -14,7 +14,7 @@ import (
 
 // -----------------------------------------------------------------------------
 // Herein are functions for the broker to update the runtime values of globals.
-// It contains security handling and command parsing.
+// It contains security handling and object parsing.
 // -----------------------------------------------------------------------------
 
 // The payload struct sent from a globals object by a client.
@@ -33,13 +33,13 @@ type runtimeUpdater struct {
 // Verify that the values and sender are valid and then update the globals, if
 // they are.
 // Returns if the user was verified or not.
-func updateGlobals(cmd *protocol.Command) bool {
+func updateGlobals(cmd *protocol.Object) bool {
 	var rv runtimeUpdater
 	err := json.Unmarshal(cmd.Payload, &rv)
 	if err != nil {
 		wMsg := fmt.Sprintf(
 			"Could not parse payload for globals update from %s",
-			cmd.ReturnAdress,
+			cmd.Responder.C.RemoteAddr().String(),
 		)
 		errgo.NewError(wMsg, globals.VERB_WRN)
 		return false
@@ -49,21 +49,21 @@ func updateGlobals(cmd *protocol.Command) bool {
 	if rv.SecurityToken == nil {
 		str.ErrorPrint(
 			fmt.Sprintf("Message lacks security token from %s",
-				cmd.ReturnAdress),
+				cmd.Responder.C.RemoteAddr().String()),
 		)
 	} else {
 		if !slices.Contains(globals.SecurityTokens, *rv.SecurityToken) {
 			str.ErrorPrint(
 				fmt.Sprintf(
 					"Unauthorized user attempting globals update from %s",
-					cmd.ReturnAdress,
+					cmd.Responder.C.RemoteAddr().String(),
 				),
 			)
 			return false
 		}
 	}
 
-	unpackGlobals(rv, cmd.ReturnAdress)
+	unpackGlobals(rv, cmd.Responder.C.RemoteAddr().String())
 	globals.PrintDynamicValues()
 	return true
 }

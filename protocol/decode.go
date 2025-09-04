@@ -17,14 +17,14 @@ import (
 // level and the callers give more context creating them instead.
 //------------------------------------------------------------------------------
 
+//--------Integers--------------------------------------------------------------
+
 func readU8(r io.Reader, out *uint8) error {
 	// endian is irrelevent for 1 byte but Read() requires it.
 	return binary.Read(r, binary.BigEndian, out)
 }
 
-func readU32(r io.Reader, out *uint32) error {
-	return binary.Read(r, binary.BigEndian, out)
-}
+//--------Strings---------------------------------------------------------------
 
 // Read string up to 65535 characters long.
 func readStringU8(r io.Reader) (string, error) {
@@ -74,6 +74,8 @@ func readStringU32(r io.Reader) (string, error) {
 	return string(buf), nil
 }
 
+//--------Bytes-----------------------------------------------------------------
+
 // Read bytes up to 65535 bytes long.
 func readBytesU16(r io.Reader) ([]byte, error) {
 	n, err := readU16Len(r)
@@ -105,6 +107,8 @@ func readBytesU32(r io.Reader) ([]byte, error) {
 	}
 	return buf, nil
 }
+
+//--------Field Prefixes--------------------------------------------------------
 
 // Read from the io.Reader up to 255 bytes forwards.
 func readU8Len(r io.Reader) (uint8, error) {

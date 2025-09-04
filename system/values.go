@@ -28,7 +28,7 @@ var exeDir = GetExecDirectory()
 var ConfigFile = fmt.Sprintf("%s/Mycelia_Config.json", exeDir)
 
 // Parse command type funcs append their command to this list.
-var CommandList = []*protocol.Command{}
+var CommandList = []*protocol.Object{}
 
 // -------System Runtime Data Structures----------------------------------------
 

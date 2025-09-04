@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/str"
@@ -14,14 +15,28 @@ import (
 // The main protocol version detection and parsing version handling.
 // -----------------------------------------------------------------------------
 
-// A command is an object that is decoded from the incoming byte stream and ran
+// A response represents the ack value and the corresponding message's UID to
+// send back to the producer.
+type Response struct {
+	AckType uint8
+	UID     string
+}
+
+// An object is a struct that is decoded from the incoming byte stream and ran
 // through the system.
-type Command struct {
+//
+// Objects contain a com.ConnResponder for communicating with the sender and a
+// protocol.Response for encoding a response with ack status and corresponding
+// UID to send to the sender via the object.Responder.
+type Object struct {
+	Responder *comm.ConnResponder
+	Response  *Response
+
 	ObjType uint8
 	CmdType uint8
+	AckPlcy uint8
 
-	ReturnAdress string
-	UID          string
+	UID string
 
 	Arg1, Arg2 string
 	Arg3, Arg4 string
@@ -29,38 +44,44 @@ type Command struct {
 	Payload []byte
 }
 
-func NewCommand(
-	objType, cmdType uint8,
-	returnAdress, uid, arg1, arg2, arg3, arg4 string,
-	payload []byte) *Command {
-	return &Command{
-		ObjType:      objType,
-		CmdType:      cmdType,
-		ReturnAdress: returnAdress,
-		UID:          uid,
-		Arg1:         arg1,
-		Arg2:         arg2,
-		Arg3:         arg3,
-		Arg4:         arg4,
-		Payload:      payload,
+func NewObject(
+	objType, cmdType, AckPlcy uint8,
+	uid, arg1, arg2, arg3, arg4 string,
+	payload []byte) *Object {
+
+	return &Object{
+		Response: &Response{
+			UID:     uid,
+			AckType: globals.ACK_TYPE_UNKNOWN,
+		},
+
+		ObjType: objType,
+		CmdType: cmdType,
+		AckPlcy: AckPlcy,
+		UID:     uid,
+		Arg1:    arg1,
+		Arg2:    arg2,
+		Arg3:    arg3,
+		Arg4:    arg4,
+		Payload: payload,
 	}
 }
 
-// Prints each field on the command...
-func (cmd *Command) PrintValues() {
+// Prints each field on the object...
+func (obj *Object) PrintValues() {
 	str.PrintAsciiLine()
-	fmt.Println("ObjType:", cmd.ObjType)
-	fmt.Println("CmdType:", cmd.CmdType)
+	fmt.Println("ObjType:", obj.ObjType)
+	fmt.Println("CmdType:", obj.CmdType)
 
-	fmt.Println("ReturnAddress:", cmd.ReturnAdress)
-	fmt.Println("UID:", cmd.UID)
+	fmt.Println("ReturnAddress:", obj.Responder.C.RemoteAddr().String())
+	fmt.Println("UID:", obj.UID)
 
-	fmt.Println("Arg1:", cmd.Arg1)
-	fmt.Println("Arg2:", cmd.Arg2)
-	fmt.Println("Arg3:", cmd.Arg3)
-	fmt.Println("Arg4:", cmd.Arg4)
+	fmt.Println("Arg1:", obj.Arg1)
+	fmt.Println("Arg2:", obj.Arg2)
+	fmt.Println("Arg3:", obj.Arg3)
+	fmt.Println("Arg4:", obj.Arg4)
 
-	fmt.Println("Payload:", string(cmd.Payload))
+	fmt.Println("Payload:", string(obj.Payload))
 	str.PrintAsciiLine()
 }
 
@@ -75,7 +96,7 @@ func parseProtoVer(data []byte) (uint8, []byte, error) {
 	return ver, data[u8len:], nil
 }
 
-func ParseLine(line []byte) (*Command, error) {
+func DecodeFrame(line []byte, resp *comm.ConnResponder) (*Object, error) {
 	version, rest, err := parseProtoVer(line)
 	if err != nil {
 		wMsg := fmt.Sprintf("Read protocol version: %v", err)
@@ -83,8 +104,8 @@ func ParseLine(line []byte) (*Command, error) {
 		return nil, wErr
 	}
 
-	// The broker always works off of the same types of command objects.
-	// Command objects may evolve over time, adding new fields for new
+	// The broker always works off of the same types of objects.
+	// Message objects may evolve over time, adding new fields for new
 	// functionality, but the broker should remain compatible with previous
 	// client side API versions.
 
@@ -94,13 +115,13 @@ func ParseLine(line []byte) (*Command, error) {
 	// the corresponding parsing logic.
 
 	// This is mainly because early on there was uncertainty if the protocol and
-	// command structure was done right, and we reserved the ability to update
+	// object structure was done right, and we reserved the ability to update
 	// it as we go.
 	switch version {
 	case 1:
-		return decodeV1(rest)
+		return decodeV1(rest, resp)
 	default:
-		wErr := errgo.NewError("Unable to parse command!", globals.VERB_WRN)
+		wErr := errgo.NewError("Unable to parse object!", globals.VERB_WRN)
 		return nil, wErr
 	}
 }

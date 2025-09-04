@@ -1,8 +1,10 @@
 package routing
 
 import (
-	"mycelia/protocol"
 	"sync"
+
+	"mycelia/globals"
+	"mycelia/protocol"
 )
 
 // A worker that manages the communication between transformers and subscribers
@@ -11,7 +13,7 @@ import (
 type partition struct {
 	route   *route
 	channel *channel
-	in      chan *protocol.Command
+	in      chan *protocol.Object
 	wg      sync.WaitGroup
 }
 
@@ -37,7 +39,7 @@ func (p *partition) loop() {
 
 		var err error
 
-		ts := p.channel.tSnap.Load().([]transformer)
+		ts := p.channel.loadTransformers()
 		result := m
 		for _, t := range ts {
 			result, err = t.apply(result)
@@ -49,7 +51,7 @@ func (p *partition) loop() {
 			continue
 		}
 
-		ss := p.channel.sSnap.Load().([]subscriber)
+		ss := p.channel.loadSubscribers()
 		var wg sync.WaitGroup
 		wg.Add(len(ss))
 
@@ -68,6 +70,12 @@ func (p *partition) loop() {
 		// pass to next channel
 		if next := p.route.getNextChannel(p.channel); next != nil {
 			next.enqueue(result)
+		} else {
+			// If no remaining channels, inform sender the message was sent.
+			if result.AckPlcy == globals.ACK_PLCY_ONSENT {
+				result.Response.AckType = globals.ACK_TYPE_SENT
+				result.Responder.Write(protocol.EncodeResponseV1(*result.Response))
+			}
 		}
 	}
 }

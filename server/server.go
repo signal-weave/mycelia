@@ -1,14 +1,11 @@
 package server
 
 import (
-	"encoding/binary"
-	"errors"
 	"fmt"
-	"io"
 	"net"
-	"strconv"
 	"sync"
 
+	"mycelia/comm"
 	"mycelia/globals"
 	"mycelia/routing"
 	"mycelia/str"
@@ -25,11 +22,15 @@ func NewServer(address string, port int) *Server {
 // Servers are responsible for translating raw TCP string input into routable
 // messages.
 type Server struct {
-	Broker   *routing.Broker
-	address  string
-	port     int
+	jobs     chan net.Conn
 	listener net.Listener
-	mutex    sync.RWMutex
+
+	Broker *routing.Broker
+
+	address string
+	port    int
+
+	mutex sync.RWMutex
 }
 
 func (s *Server) GetAddress() string {
@@ -45,27 +46,36 @@ func (server *Server) Run() {
 	if server.listener == nil {
 		server.UpdateListener()
 	}
+	server.serve()
+}
 
-	strPort := strconv.Itoa(server.port)
-	fullAddress := fmt.Sprintf("%s:%s", server.address, strPort)
-	str.SprintfLn("Listening on %s", fullAddress)
+// Spins up the server...
+// Caps concurrency and avoids spawning unbound go routines.
+func (server *Server) serve() error {
+	if server.jobs == nil {
+		server.jobs = make(chan net.Conn, 1024)
+	}
+
+	for range globals.WorkerCount {
+		go func() {
+			for c := range server.jobs {
+				server.HandleConnection(c)
+			}
+		}()
+	}
 
 	for !globals.PerformShutdown.Load() {
-		server.mutex.RLock()
-		l := server.listener
-		server.mutex.RUnlock()
-
-		conn, err := l.Accept()
+		c, err := server.listener.Accept()
 		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				continue
-			}
-			eMsg := fmt.Sprintf("Listener accept error %v", err)
-			str.ErrorPrint(eMsg)
-			continue
+			return err
 		}
-		go server.HandleConnection(conn)
+
+		// Go runtime selects an unblocked worker when we push the
+		// listener.Accept() into a channel of multiple objects.
+		server.jobs <- c
 	}
+
+	return nil
 }
 
 func (server *Server) Shutdown() {
@@ -78,6 +88,9 @@ func (server *Server) Shutdown() {
 
 	if l != nil {
 		_ = l.Close()
+	}
+	if server.jobs != nil {
+		close(server.jobs)
 	}
 }
 
@@ -115,41 +128,21 @@ func (server *Server) UpdateListener() {
 
 // Handle incoming data stream.
 func (server *Server) HandleConnection(conn net.Conn) {
-	defer conn.Close()
-	aMsg := fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String())
-	str.ActionPrint(aMsg)
+	str.ActionPrint(
+		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
+	)
 
-	// TODO: Print values for address of sender.
+	resp := comm.NewConnResponder(conn)
+
 	for {
-		frame, err := readFrame(conn)
+		frame, err := comm.ReadFrameU32(conn)
 		if err != nil {
-			// EOF or other error—close connection
 			return
 		}
 		if len(frame) == 0 {
 			continue
 		}
 
-		server.Broker.HandleBytes(frame)
+		server.Broker.HandleBytes(frame, resp)
 	}
-}
-
-// Read the frame's byte stream until the message header's worth of bytes have
-// been consumed, then return a buffer of those bytes or error.
-func readFrame(conn net.Conn) ([]byte, error) {
-	const lenU32 = 4
-	var hdr [lenU32]byte
-	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
-		return nil, err
-	}
-	n := binary.BigEndian.Uint32(hdr[:])
-	if n == 0 {
-		return []byte{}, nil
-	}
-
-	buf := make([]byte, n)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		return nil, err
-	}
-	return buf, nil
 }

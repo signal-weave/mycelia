@@ -3,7 +3,6 @@ package routing
 import (
 	"fmt"
 	"hash/fnv"
-	"math/rand/v2"
 	"sync"
 	"sync/atomic"
 
@@ -53,11 +52,11 @@ func newChannel(r *route, name string, numPartitions int) *channel {
 	ch.sSnap.Store([]subscriber{})
 
 	partitions := []*partition{}
-	for range numPartitions {
+	for i := 0; i < numPartitions; i++ {
 		np := newPartition(r, ch)
 		partitions = append(partitions, np)
-		np.in = make(chan *protocol.Command, globals.PartitionChanSize)
-		go np.start()
+		np.in = make(chan *protocol.Object, globals.PartitionChanSize)
+		np.start()
 	}
 	ch.partitions = partitions
 
@@ -84,7 +83,6 @@ func (ch *channel) addTransformer(t transformer) {
 
 func (ch *channel) removeTransformer(t transformer) {
 	ch.mutex.Lock()
-	defer ch.mutex.Unlock()
 
 	for i, transformer := range ch.transformers {
 		if t.Address == transformer.Address {
@@ -94,6 +92,11 @@ func (ch *channel) removeTransformer(t transformer) {
 			break
 		}
 	}
+
+	snap := append([]transformer(nil), ch.transformers...)
+	ch.mutex.Unlock()
+	ch.tSnap.Store(snap)
+
 	str.ActionPrint(
 		fmt.Sprintf("Removed transformer for address: %s", t.Address),
 	)
@@ -120,7 +123,6 @@ func (ch *channel) addSubscriber(s subscriber) {
 
 func (ch *channel) removeSubscriber(s subscriber) {
 	ch.mutex.Lock()
-	defer ch.mutex.Unlock()
 
 	for i, subscriber := range ch.subscribers {
 		if s.Address == subscriber.Address {
@@ -128,17 +130,39 @@ func (ch *channel) removeSubscriber(s subscriber) {
 			break
 		}
 	}
+
+	snap := append([]subscriber(nil), ch.subscribers...)
+	ch.mutex.Unlock()
+	ch.sSnap.Store(snap)
+
 	str.ActionPrint(
 		fmt.Sprintf("Removed subscriber for address: %s", s.Address),
 	)
 	ch.checkEmptyChannel()
 }
 
+func (ch *channel) loadSubscribers() []subscriber {
+	if v := ch.sSnap.Load(); v != nil {
+		return v.([]subscriber)
+	}
+	return nil
+}
+
+func (ch *channel) loadTransformers() []transformer {
+	if v := ch.tSnap.Load(); v != nil {
+		return v.([]transformer)
+	}
+	return nil
+}
+
 func (ch *channel) checkEmptyChannel() {
 	if !globals.AutoConsolidate {
 		return
 	}
-	if len(ch.subscribers) == 0 && len(ch.transformers) == 0 {
+
+	subs := ch.loadSubscribers()
+	trans := ch.loadTransformers()
+	if len(subs) == 0 && len(trans) == 0 {
 		ch.mutex.Lock()
 		parts := ch.partitions
 		ch.partitions = nil
@@ -152,7 +176,7 @@ func (ch *channel) checkEmptyChannel() {
 	}
 }
 
-func (c *channel) enqueue(m *protocol.Command) {
+func (c *channel) enqueue(m *protocol.Object) {
 	c.mutex.RLock()
 	parts := c.partitions
 	c.mutex.RUnlock()
@@ -161,7 +185,6 @@ func (c *channel) enqueue(m *protocol.Command) {
 		return // Channel is closed / removed
 	}
 
-	key := fmt.Sprintf("%s%d", m.Arg3, rand.IntN(12345)) // address + rand
-	idx := int(c.hash([]byte(key))) % len(c.partitions)
-	c.partitions[idx].in <- m
+	idx := int(c.hash([]byte(m.Arg3))) % len(parts)
+	parts[idx].in <- m
 }

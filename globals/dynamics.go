@@ -41,6 +41,9 @@ var SecurityTokens []string = []string{}
 // The default number of partitions a channel is created with.
 var DefaultNumPartitions int = 4
 
+// The number of workers to allocate to the server listener.
+var WorkerCount int = 4
+
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
 }

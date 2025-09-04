@@ -25,7 +25,7 @@ func newTransformer(address string) *transformer {
 
 // apply sends the delivery to the transformer service and waits for
 // response.
-func (t *transformer) apply(m *protocol.Command) (*protocol.Command, error) {
+func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
@@ -57,19 +57,19 @@ func (t *transformer) apply(m *protocol.Command) (*protocol.Command, error) {
 	}
 
 	// Create new delivery with transformed body
-	transformedDelivery := protocol.NewCommand(
+	transformedDelivery := protocol.NewObject(
 		m.ObjType,
 		m.CmdType,
-
-		m.ReturnAdress,
+		m.AckPlcy,
 		m.UID,
-
 		m.Arg1,
 		m.Arg2,
 		m.Arg3,
 		m.Arg4,
 		buffer[:n],
 	)
+	transformedDelivery.Responder = m.Responder
+	transformedDelivery.Response = m.Response
 
 	str.ActionPrint(
 		fmt.Sprintf("Transformed delivery at: %s", t.Address),

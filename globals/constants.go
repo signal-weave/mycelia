@@ -17,7 +17,7 @@ const (
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
-// The number of protocol.Commands that a mycelia channel partition can hold at
+// The number of protocol.Object that a mycelia channel partition can hold at
 // any maximum.
 const PartitionChanSize = 128
 
@@ -31,7 +31,7 @@ const (
 	VERB_ERR = 1 // Error printing
 
 	// The VERB_WRN verbosity level is reserved for when clients have sent the
-	// broker bad data, such as an undialable address, or a fake command.
+	// broker bad data, such as an undialable address, or a fake object.
 	VERB_WRN = 2 // Warning + error printing
 
 	// The VERB_ACT verbosity level is reserved for when actions the user may
@@ -40,7 +40,7 @@ const (
 	VERB_ACT = 3 // Action + warning + error printing
 )
 
-// -------Commands--------------------------------------------------------------
+// -------Objects---------------------------------------------------------------
 
 const (
 	OBJ_UNKNOWN uint8 = 0
@@ -64,6 +64,30 @@ const (
 	CMD_UPDATE uint8 = 20
 
 	CMD_SIGTERM uint8 = 50
+)
+
+const (
+	// Sender does not wish to receive ack.
+	ACK_PLCY_NOREPLY uint8 = 0
+
+	// Sender wants to get ack when broker delivers to final subscriber.
+	// This often means sending the ack back after the final channel has
+	// processed the message object.
+	ACK_PLCY_ONSENT uint8 = 1
+)
+
+const (
+	ACK_TYPE_UNKNOWN uint8 = 0 // Undetermined
+
+	// Broker was able to and finished sending message to subscribers.
+	ACK_TYPE_SENT uint8 = 1
+
+	// This isn't used by the broker, but its here for clarity.
+	// Client APIs do use this value when timing out trying to connect to the
+	// broker.
+	// If no ack was gotten before the timeout time, a response with ACK_TIMEOUT
+	// is generated and returned instead.
+	ACK_TYPE_TIMEOUT uint8 = 10
 )
 
 // -------Terminal--------------------------------------------------------------
