@@ -23,10 +23,6 @@ func NewConnResponder(conn net.Conn) *ConnResponder {
 func (r *ConnResponder) Write(b []byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return WriteFrameU32(r.C, b)
-}
-
-// Closes connection...
-func (r *ConnResponder) Close() error {
-	return r.C.Close()
+	_, err := r.C.Write(b)
+	return err
 }

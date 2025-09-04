@@ -43,13 +43,12 @@ func NewBroker(s server) *Broker {
 // object, and forwards it to the object handler.
 func (b *Broker) HandleBytes(input []byte, resp *comm.ConnResponder) {
 	// Parse byte stream -> object.
-	cmd, err := protocol.DecodeFrame(input, resp)
+	obj, err := protocol.DecodeFrame(input, resp)
 	if err != nil {
 		return
 	}
 
-	// Handle object
-	b.HandleObject(cmd)
+	b.HandleObject(obj)
 }
 
 // -------Route Management------------------------------------------------------

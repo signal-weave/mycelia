@@ -128,7 +128,6 @@ func (server *Server) UpdateListener() {
 
 // Handle incoming data stream.
 func (server *Server) HandleConnection(conn net.Conn) {
-	defer conn.Close()
 	str.ActionPrint(
 		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
 	)

@@ -93,6 +93,12 @@ func decodeV1(data []byte, resp *comm.ConnResponder) (*Object, error) {
 	}
 	obj.Payload = payload
 
+	response := &Response{
+		UID:     obj.UID,
+		AckType: globals.ACK_TYPE_UNKNOWN,
+	}
+	obj.Response = response
+
 	if r.Len() != 0 {
 		obj = nil
 		err = errgo.NewError("Unaccounted data in reader", globals.VERB_WRN)
@@ -194,7 +200,7 @@ func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 //--------Encoding--------------------------------------------------------------
 
 // Encodes a protocol.Response object into []byte.
-func EncodeResopnseV1(response Response) []byte {
+func EncodeResponseV1(response Response) []byte {
 	body := bytes.NewBuffer(nil)
 	_ = writeString8(body, response.UID)
 	writeU8(body, response.AckType)
