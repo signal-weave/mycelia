@@ -73,16 +73,20 @@ const (
 	// Sender wants to get ack when broker delivers to final subscriber.
 	// This often means sending the ack back after the final channel has
 	// processed the message object.
-	ACK_PLCY_ONSENT  uint8 = 1
+	ACK_PLCY_ONSENT uint8 = 1
 )
 
 const (
 	ACK_TYPE_UNKNOWN uint8 = 0 // Undetermined
-	ACK_TYPE_SENT    uint8 = 1 // Partition sent
+
+	// Broker was able to and finished sending message to subscribers.
+	ACK_TYPE_SENT uint8 = 1
 
 	// This isn't used by the broker, but its here for clarity.
 	// Client APIs do use this value when timing out trying to connect to the
 	// broker.
+	// If no ack was gotten before the timeout time, a response with ACK_TIMEOUT
+	// is generated and returned instead.
 	ACK_TYPE_TIMEOUT uint8 = 10
 )
 
