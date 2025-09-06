@@ -3,6 +3,7 @@ package routing
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"sync"
 
 	"mycelia/globals"
@@ -18,30 +19,29 @@ import (
 // When a delivery is sent through a channel and possibly transformed, the newly
 // transformed delivery is sent to the next channel in the route.
 type route struct {
-	broker   *Broker
-	mutex    sync.RWMutex
-	name     string
-	channels []*channel
+	broker     *Broker
+	mutex      sync.RWMutex
+	name       string
+	channels   []*channel
+	deadLetter *channel
 }
 
-// channel returns existing or creates if missing.
-func (r *route) channel(name string) *channel {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+func newRoute(broker *Broker, name string) *route {
+	channels := []*channel{}
 
-	ch := r.getChannel(name)
-
-	if ch == nil {
-		ch = newChannel(
-			r,
-			name,
-			globals.DefaultNumPartitions,
-		)
-		r.channels = append(r.channels, ch)
-		str.ActionPrint(fmt.Sprintf("Created channel %s.%s", r.name, name))
+	r := route{
+		broker:   broker,
+		name:     name,
+		channels: channels,
 	}
 
-	return ch
+	// Create a channel specifically for undelivered/missrouted/errored messages
+	// for cleanup later. Dead-letters have 2 partitions, as there should be far
+	// less bad messages going through the route than good messages.
+	deadLetter := newChannel(&r, globals.DeadLetter, 2, globals.SelStratPubSub)
+	r.deadLetter = deadLetter
+
+	return &r
 }
 
 // Checks if a channel exists on the route.
@@ -49,13 +49,49 @@ func (r *route) channel(name string) *channel {
 func (r *route) getChannel(name string) *channel {
 	var ch *channel = nil
 
+	r.mutex.RLock()
 	for _, c := range r.channels {
 		if c.name == name {
 			ch = c
 			break
 		}
 	}
+	r.mutex.RUnlock()
+
 	return ch
+}
+
+// Creates a new channel and adds it to the route from the given obj.
+// Arg2 is the channel name, arg3 is the selection strategy.
+//
+// If the channel already exists, a response is sent with an ack value of
+// globals.ACK_TYPE_CHANNEL_ALREADY_EXISTS.
+func (r *route) createChannel(obj *protocol.Object) {
+	// Args: route, name, strategy, nil
+	ch := r.getChannel(obj.Arg2)
+	if ch != nil {
+		if obj.Responder != nil {
+			obj.Response.Ack = globals.ACK_CHANNEL_ALREADY_EXISTS
+			obj.Responder.Write(protocol.EncodeResponse(obj))
+		}
+		return
+	}
+
+	i, err := strconv.Atoi(obj.Arg3)
+	if err != nil {
+		str.WarningPrint(
+			fmt.Sprintf(
+				"Unable to parse new channel selection strategy from %s",
+				obj.Responder.C.RemoteAddr().String(),
+			),
+		)
+	}
+	strat := globals.SelectionStrategy(i)
+
+	ch = newChannel(r, obj.Arg2, globals.DefaultNumPartitions, strat)
+	r.mutex.Lock()
+	r.channels = append(r.channels, ch)
+	r.mutex.Unlock()
 }
 
 // Returns the channel in next sequential order after the given channel.
@@ -118,6 +154,7 @@ func (r *route) enqueue(msg *protocol.Object) {
 	defer r.mutex.RUnlock()
 
 	if len(r.channels) == 0 {
+		r.deadLetter.enqueue(msg)
 		return
 	}
 	r.channels[0].enqueue(msg)

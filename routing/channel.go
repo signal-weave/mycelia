@@ -33,10 +33,13 @@ type channel struct {
 	tSnap atomic.Value
 	sSnap atomic.Value
 
+	selector   selector
 	partitions []*partition
 }
 
-func newChannel(r *route, name string, numPartitions int) *channel {
+func newChannel(
+	r *route, name string, numPartitions int, strat globals.SelectionStrategy,
+) *channel {
 	hash := func(b []byte) uint32 {
 		h := fnv.New32a()
 		_, _ = h.Write(b)
@@ -52,13 +55,15 @@ func newChannel(r *route, name string, numPartitions int) *channel {
 	ch.sSnap.Store([]subscriber{})
 
 	partitions := []*partition{}
-	for i := 0; i < numPartitions; i++ {
+	for range numPartitions {
 		np := newPartition(r, ch)
 		partitions = append(partitions, np)
 		np.in = make(chan *protocol.Object, globals.PartitionChanSize)
 		np.start()
 	}
 	ch.partitions = partitions
+
+	ch.selector = newSelector(ch, strat)
 
 	return ch
 }
@@ -103,6 +108,14 @@ func (ch *channel) removeTransformer(t transformer) {
 	ch.checkEmptyChannel()
 }
 
+// Atomicly load the transformers list without having to lock the mutex.
+func (ch *channel) loadTransformers() []transformer {
+	if v := ch.tSnap.Load(); v != nil {
+		return v.([]transformer)
+	}
+	return nil
+}
+
 func (ch *channel) addSubscriber(s subscriber) {
 	ch.mutex.Lock()
 	for _, existing := range ch.subscribers {
@@ -141,6 +154,7 @@ func (ch *channel) removeSubscriber(s subscriber) {
 	ch.checkEmptyChannel()
 }
 
+// Atomicly load the subscriber list without having to lock the mutex.
 func (ch *channel) loadSubscribers() []subscriber {
 	if v := ch.sSnap.Load(); v != nil {
 		return v.([]subscriber)
@@ -148,11 +162,10 @@ func (ch *channel) loadSubscribers() []subscriber {
 	return nil
 }
 
-func (ch *channel) loadTransformers() []transformer {
-	if v := ch.tSnap.Load(); v != nil {
-		return v.([]transformer)
-	}
-	return nil
+// Get the selected subscribers to forward a message to using channel's
+// selection strategy.
+func (ch *channel) selectSubscribers() []subscriber {
+	return ch.selector.Select()
 }
 
 func (ch *channel) checkEmptyChannel() {

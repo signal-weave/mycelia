@@ -51,7 +51,7 @@ func (p *partition) loop() {
 			continue
 		}
 
-		ss := p.channel.loadSubscribers()
+		ss := p.channel.selectSubscribers()
 		var wg sync.WaitGroup
 		wg.Add(len(ss))
 
@@ -73,8 +73,8 @@ func (p *partition) loop() {
 		} else {
 			// If no remaining channels, inform sender the message was sent.
 			if result.AckPlcy == globals.ACK_PLCY_ONSENT {
-				result.Response.AckType = globals.ACK_TYPE_SENT
-				result.Responder.Write(protocol.EncodeResponseV1(*result.Response))
+				result.Response.Ack = globals.ACK_SENT
+				result.Responder.Write(protocol.EncodeResponse(result))
 			}
 		}
 	}

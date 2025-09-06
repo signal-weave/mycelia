@@ -18,8 +18,8 @@ import (
 // A response represents the ack value and the corresponding message's UID to
 // send back to the producer.
 type Response struct {
-	AckType uint8
-	UID     string
+	Ack uint8
+	UID string
 }
 
 // An object is a struct that is decoded from the incoming byte stream and ran
@@ -29,6 +29,8 @@ type Response struct {
 // protocol.Response for encoding a response with ack status and corresponding
 // UID to send to the sender via the object.Responder.
 type Object struct {
+	protocol uint8
+
 	Responder *comm.ConnResponder
 	Response  *Response
 
@@ -51,8 +53,8 @@ func NewObject(
 
 	return &Object{
 		Response: &Response{
-			UID:     uid,
-			AckType: globals.ACK_TYPE_UNKNOWN,
+			UID: uid,
+			Ack: globals.ACK_UNKNOWN,
 		},
 
 		ObjType: objType,
@@ -73,7 +75,9 @@ func (obj *Object) PrintValues() {
 	fmt.Println("ObjType:", obj.ObjType)
 	fmt.Println("CmdType:", obj.CmdType)
 
-	fmt.Println("ReturnAddress:", obj.Responder.C.RemoteAddr().String())
+	if obj.Responder != nil {
+		fmt.Println("ReturnAddress:", obj.Responder.C.RemoteAddr().String())
+	}
 	fmt.Println("UID:", obj.UID)
 
 	fmt.Println("Arg1:", obj.Arg1)
@@ -83,6 +87,13 @@ func (obj *Object) PrintValues() {
 
 	fmt.Println("Payload:", string(obj.Payload))
 	str.PrintAsciiLine()
+}
+
+func (obj *Object) ResponeWithAck(ack uint8) {
+	if obj.Responder != nil {
+		obj.Response.Ack = ack
+		obj.Responder.Write(EncodeResponse(obj))
+	}
 }
 
 // parseProtoVer extracts only the protocol version and returns it along with
@@ -104,6 +115,11 @@ func DecodeFrame(line []byte, resp *comm.ConnResponder) (*Object, error) {
 		return nil, wErr
 	}
 
+	obj := &Object{
+		protocol:  version,
+		Responder: resp,
+	}
+
 	// The broker always works off of the same types of objects.
 	// Message objects may evolve over time, adding new fields for new
 	// functionality, but the broker should remain compatible with previous
@@ -118,10 +134,29 @@ func DecodeFrame(line []byte, resp *comm.ConnResponder) (*Object, error) {
 	// object structure was done right, and we reserved the ability to update
 	// it as we go.
 	switch version {
+
 	case 1:
-		return decodeV1(rest, resp)
+		return decodeV1(rest, obj)
+
 	default:
 		wErr := errgo.NewError("Unable to parse object!", globals.VERB_WRN)
 		return nil, wErr
+	}
+}
+
+func EncodeResponse(obj *Object) []byte {
+	switch obj.protocol {
+
+	case uint8(1):
+		return EncodeResponseV1(*obj.Response)
+
+	default:
+		str.WarningPrint(
+			fmt.Sprintf(
+				"Unable to encode response for %s",
+				obj.Responder.C.RemoteAddr().String(),
+			),
+		)
+		return nil
 	}
 }

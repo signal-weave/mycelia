@@ -13,10 +13,10 @@ import (
 // This is the top of the cli + pre-init/recovery stack.
 // -----------------------------------------------------------------------------
 
-// Startup the program...
+// Read cli / config values...
 func Boot(argv []string) {
 	parseCli(argv)
-	parsePreInitFile()
+	parseConfigFile()
 }
 
 // Parses and stores the runtime flags in public vars.
@@ -31,10 +31,9 @@ func parseCli(argv []string) {
 
 // Check for a Mycelia_Config.json file in the .exe directory.
 // If found -> load values.
-func parsePreInitFile() {
+func parseConfigFile() {
 	_, err := os.Stat(system.ConfigFile)
 	if err == nil {
-		getPreInitData()
+		getConfigData()
 	}
 }
-

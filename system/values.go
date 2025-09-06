@@ -27,8 +27,9 @@ var exeDir = GetExecDirectory()
 
 var ConfigFile = fmt.Sprintf("%s/Mycelia_Config.json", exeDir)
 
-// Parse command type funcs append their command to this list.
-var CommandList = []*protocol.Object{}
+// This is a list of commands used for booting up and pre-configuring the broker
+// based on the Mycelia_Config.json file.
+var ObjectList = []*protocol.Object{}
 
 // -------System Runtime Data Structures----------------------------------------
 

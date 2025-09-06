@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"mycelia/globals"
@@ -29,7 +30,7 @@ import (
 // specify their parent object) that the router should start up with.
 // -----------------------------------------------------------------------------
 
-func getPreInitData() {
+func getConfigData() {
 	_, err := os.Stat(system.ConfigFile)
 	if err != nil {
 		str.ActionPrint("No Mycelia_Config.json found, skipping pre-init process.")
@@ -47,7 +48,7 @@ func getPreInitData() {
 		parseRuntimeConfigurable(*bd.Parameters)
 	}
 	if bd.Routes != nil {
-		parseRouteCmds(*bd.Routes)
+		parseRouteObjects(*bd.Routes)
 	}
 }
 
@@ -106,6 +107,7 @@ the "routes" field, or children of it, could not exist.
       "channels": [
         {
           "name": "inmem",
+		  "strategy": "pub-sub",
           "transformers": [
             { "address": "127.0.0.1:7010" },
             { "address": "10.0.0.52:8008" }
@@ -121,7 +123,7 @@ the "routes" field, or children of it, could not exist.
 }
 ----------------------------------------------------------------------------- */
 
-func parseRouteCmds(routeData []map[string]any) {
+func parseRouteObjects(routeData []map[string]any) {
 	for _, route := range routeData {
 		routeName, _ := route["name"].(string)
 
@@ -135,51 +137,81 @@ func parseRouteCmds(routeData []map[string]any) {
 			if !ok {
 				continue
 			}
-			channelName, _ := channel["name"].(string)
 
-			rawTransformers, _ := channel["transformers"].([]any)
-			for _, t := range rawTransformers {
-				transformer, ok := t.(map[string]any)
-				if !ok {
-					continue
-				}
-				id := uuid.New().String()
-				addr := transformer["address"].(string)
-				cmd := protocol.NewObject(
-					globals.OBJ_TRANSFORMER,
-					globals.CMD_ADD,
-					uint8(0),
-					id,
-					routeName,
-					channelName,
-					addr,
-					"",
-					[]byte{},
-				)
-				system.CommandList = append(system.CommandList, cmd)
-			}
-
-			rawSubscribers, _ := channel["subscribers"].([]any)
-			for _, s := range rawSubscribers {
-				subscriber, ok := s.(map[string]any)
-				if !ok {
-					continue
-				}
-				id := uuid.New().String()
-				addr := subscriber["address"].(string)
-				cmd := protocol.NewObject(
-					globals.OBJ_SUBSCRIBER,
-					globals.CMD_ADD,
-					uint8(0),
-					id,
-					routeName,
-					channelName,
-					addr,
-					"",
-					[]byte{},
-				)
-				system.CommandList = append(system.CommandList, cmd)
-			}
+			parseChannels(channel, routeName)
+			parseTransformers(channel, routeName)
+			parseSubscribers(channel, routeName)
 		}
+	}
+}
+
+func parseChannels(channelData map[string]any, routeName string) {
+	channelName, _ := channelData["name"].(string)
+	strategyName, _ := channelData["strategy"].(string)
+	strategy := strconv.Itoa(int(globals.StrategyValue[strategyName]))
+	id := uuid.New().String()
+
+	obj := protocol.NewObject(
+		globals.OBJ_CHANNEL,
+		globals.CMD_ADD,
+		globals.ACK_PLCY_NOREPLY,
+		id,
+		routeName,
+		channelName,
+		strategy,
+		"",
+		[]byte{},
+	)
+
+	system.ObjectList = append(system.ObjectList, obj)
+}
+
+func parseTransformers(channelData map[string]any, routeName string) {
+	channelName, _ := channelData["name"].(string)
+	rawTransformers, _ := channelData["transformers"].([]any)
+	for _, t := range rawTransformers {
+		transformer, ok := t.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := uuid.New().String()
+		addr := transformer["address"].(string)
+		obj := protocol.NewObject(
+			globals.OBJ_TRANSFORMER,
+			globals.CMD_ADD,
+			globals.ACK_PLCY_NOREPLY,
+			id,
+			routeName,
+			channelName,
+			addr,
+			"",
+			[]byte{},
+		)
+		system.ObjectList = append(system.ObjectList, obj)
+	}
+}
+
+func parseSubscribers(channelData map[string]any, routeName string) {
+	channelName, _ := channelData["name"].(string)
+	rawSubscribers, _ := channelData["subscribers"].([]any)
+	for _, s := range rawSubscribers {
+		subscriber, ok := s.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := uuid.New().String()
+		addr := subscriber["address"].(string)
+		obj := protocol.NewObject(
+			globals.OBJ_SUBSCRIBER,
+			globals.CMD_ADD,
+			globals.ACK_PLCY_NOREPLY,
+			id,
+			routeName,
+			channelName,
+			addr,
+			"",
+			[]byte{},
+		)
+		system.ObjectList = append(system.ObjectList, obj)
 	}
 }

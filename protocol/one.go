@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 )
@@ -61,10 +60,8 @@ import (
 
 //--------Decoding--------------------------------------------------------------
 
-func decodeV1(data []byte, resp *comm.ConnResponder) (*Object, error) {
+func decodeV1(data []byte, obj *Object) (*Object, error) {
 	r := bytes.NewReader(data)
-	obj := &Object{}
-	obj.Responder = resp
 
 	// ObjType + CmdType
 	obj, err := parseBaseHeader(r, obj)
@@ -94,8 +91,8 @@ func decodeV1(data []byte, resp *comm.ConnResponder) (*Object, error) {
 	obj.Payload = payload
 
 	response := &Response{
-		UID:     obj.UID,
-		AckType: globals.ACK_TYPE_UNKNOWN,
+		UID: obj.UID,
+		Ack: globals.ACK_UNKNOWN,
 	}
 	obj.Response = response
 
@@ -203,7 +200,7 @@ func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 func EncodeResponseV1(response Response) []byte {
 	body := bytes.NewBuffer(nil)
 	_ = writeString8(body, response.UID)
-	writeU8(body, response.AckType)
+	writeU8(body, response.Ack)
 
 	full := bytes.NewBuffer(nil)
 	writeU16(full, uint16(body.Len()))
