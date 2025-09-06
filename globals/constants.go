@@ -5,6 +5,8 @@ package globals
 // This is not meant to contain mutable values.
 // -----------------------------------------------------------------------------
 
+// -------Misc------------------------------------------------------------------
+
 const (
 	Developer = "Signal Weave"
 )
@@ -16,10 +18,6 @@ const (
 	BytesInMegabyte = 1024 * BytesInKilobyte
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
-
-// The number of protocol.Object that a mycelia channel partition can hold at
-// any maximum.
-const PartitionChanSize = 128
 
 // -------Verbosity-------------------------------------------------------------
 
@@ -48,6 +46,7 @@ const (
 	OBJ_DELIVERY    uint8 = 1
 	OBJ_TRANSFORMER uint8 = 2
 	OBJ_SUBSCRIBER  uint8 = 3
+	OBJ_CHANNEL     uint8 = 4
 
 	OBJ_GLOBALS uint8 = 20
 
@@ -66,6 +65,8 @@ const (
 	CMD_SIGTERM uint8 = 50
 )
 
+// -------Acks/Nacks------------------------------------------------------------
+
 const (
 	// Sender does not wish to receive ack.
 	ACK_PLCY_NOREPLY uint8 = 0
@@ -77,17 +78,21 @@ const (
 )
 
 const (
-	ACK_TYPE_UNKNOWN uint8 = 0 // Undetermined
+	ACK_UNKNOWN uint8 = 0 // Undetermined
 
 	// Broker was able to and finished sending message to subscribers.
-	ACK_TYPE_SENT uint8 = 1
+	ACK_SENT uint8 = 1
 
 	// This isn't used by the broker, but its here for clarity.
-	// Client APIs do use this value when timing out trying to connect to the
-	// broker.
+	// Client APIs do use this value when timing out while trying to connect to
+	// the broker.
 	// If no ack was gotten before the timeout time, a response with ACK_TIMEOUT
 	// is generated and returned instead.
-	ACK_TYPE_TIMEOUT uint8 = 10
+	ACK_TIMEOUT uint8 = 10
+
+	ACK_CHANNEL_NOT_FOUND      uint8 = 20
+	ACK_CHANNEL_ALREADY_EXISTS uint8 = 21
+	ACK_ROUTE_NOT_FOUND        uint8 = 30
 )
 
 // -------Terminal--------------------------------------------------------------

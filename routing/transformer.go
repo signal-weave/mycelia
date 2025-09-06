@@ -15,6 +15,7 @@ import (
 // deliveries.
 type transformer struct {
 	Address string
+	conn    net.Conn
 }
 
 func newTransformer(address string) *transformer {
@@ -29,13 +30,19 @@ func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
 	str.ActionPrint(actionMsg)
 
-	conn, err := net.Dial("tcp", t.Address)
-	if err != nil {
-		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
-		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
-		return m, wErr // Return original delivery on failure
+	var conn net.Conn
+	var err error = nil
+
+	if t.conn == nil {
+		conn, err = net.Dial("tcp", t.Address)
+		if err != nil {
+			wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
+			wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+			return m, wErr // Return original delivery on failure
+		}
+	} else {
+		conn = t.conn
 	}
-	defer conn.Close()
 
 	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(m.Payload))
@@ -58,22 +65,15 @@ func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 
 	// Create new delivery with transformed body
 	transformedDelivery := protocol.NewObject(
-		m.ObjType,
-		m.CmdType,
-		m.AckPlcy,
+		m.ObjType, m.CmdType, m.AckPlcy,
 		m.UID,
-		m.Arg1,
-		m.Arg2,
-		m.Arg3,
-		m.Arg4,
+		m.Arg1, m.Arg2, m.Arg3, m.Arg4,
 		buffer[:n],
 	)
 	transformedDelivery.Responder = m.Responder
 	transformedDelivery.Response = m.Response
 
-	str.ActionPrint(
-		fmt.Sprintf("Transformed delivery at: %s", t.Address),
-	)
+	str.ActionPrint(fmt.Sprintf("Transformed delivery at: %s", t.Address))
 
 	return transformedDelivery, nil
 }
