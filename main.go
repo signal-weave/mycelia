@@ -30,10 +30,8 @@ func main() {
 // and loads them into the server's broker, then runs the server.
 func startServer() {
 	server := server.NewServer(globals.Address, globals.Port)
-	if len(system.CommandList) > 0 {
-		for _, cmd := range system.CommandList {
-			server.Broker.HandleObject(cmd)
-		}
+	for _, cmd := range system.ObjectList {
+		server.Broker.HandleObject(cmd)
 	}
 
 	server.Run()
