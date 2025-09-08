@@ -20,7 +20,8 @@ import (
 var PerformShutdown atomic.Bool
 
 // The address the server will use to listen for message.
-var Address string = "127.0.0.1"
+// var Address string = "127.0.0.1"
+var Address string = "10.0.0.52"
 
 // The port the server will listen on.
 var Port int = 5000
@@ -32,7 +33,7 @@ var Verbosity int = VERB_ACT // 0=quiet, 1=info, 2=debug, 3=trace...
 
 // Where log messages should go to.
 // Defaults to .log file.
-var LogOutput int = LOG_TO_FILE // 0=.log file, 1=console.
+var LogOutput int = LOG_TO_FILE // 0=.log file, 1=console, 2=both
 
 // Whether to print the broker shape on update.
 var PrintTree bool = false

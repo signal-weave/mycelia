@@ -143,7 +143,7 @@ func (l *Logger) loop() {
 			continue
 		}
 
-		if globals.LogOutput == globals.LOG_TO_FILE {
+		if globals.LogOutput != globals.LOG_TO_CONSOLE{
 			msg, err := formatByVerbosity(*ml)
 			if err != nil {
 				continue
@@ -153,7 +153,8 @@ func (l *Logger) loop() {
 				str.ErrorPrint("Could not write to log buffer.")
 			}
 			flush()
-		} else if globals.LogOutput == globals.LOG_TO_CONSOLE {
+		}
+		if globals.LogOutput != globals.LOG_TO_FILE {
 			str.PrintByVerbosity(ml.msg, ml.verbosity)
 		}
 

@@ -44,8 +44,9 @@ const (
 )
 
 const (
-	LOG_TO_FILE = 0
+	LOG_TO_FILE    = 0
 	LOG_TO_CONSOLE = 1
+	LOG_TO_BOTH    = 2
 )
 
 // -------Objects---------------------------------------------------------------
