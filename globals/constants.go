@@ -16,6 +16,10 @@ const (
 	TimeLayout = "15-04-05-00" // HH-MM-SS-XX
 )
 
+const (
+	PROTOCOL_V1 = uint8(1)
+)
+
 // -------Memory Values---------------------------------------------------------
 
 const (
@@ -44,8 +48,9 @@ const (
 )
 
 const (
-	LOG_TO_FILE = 0
+	LOG_TO_FILE    = 0
 	LOG_TO_CONSOLE = 1
+	LOG_TO_BOTH    = 2
 )
 
 // -------Objects---------------------------------------------------------------

@@ -52,7 +52,8 @@ func parseRuntimeArgs(argv []string) error {
 	globals.UpdateVerbosityEnvironVar()
 
 	logOutputHelp := `0 - .log file
-	1 - console`
+	1 - console
+	2 - both`
 	fs.IntVar(
 		&globals.LogOutput, "log-output", globals.LogOutput, logOutputHelp,
 	)
@@ -63,7 +64,7 @@ func parseRuntimeArgs(argv []string) error {
   -port int            Bind port (1-65535)
   -workers int		   The server listener worker count (1-1024)
   -verbosity int       0, 1, 2, or 3
-  -log-output int	   0: log file || 1: console
+  -log-output int	   0, 1, or 2
   -print-tree          Print router tree at startup
   -xform-timeout dur   Transformer timeout
 
@@ -99,7 +100,7 @@ func validateRuntimeConfig() error {
 	if globals.WorkerCount <= 0 || globals.WorkerCount > 1024 {
 		return fmt.Errorf("invalid worker count %d", globals.WorkerCount)
 	}
-	if globals.LogOutput < 0 || globals.LogOutput > 1 {
+	if globals.LogOutput < 0 || globals.LogOutput > 2 {
 		return fmt.Errorf("invalid log output value %d", globals.LogOutput)
 	}
 	return nil

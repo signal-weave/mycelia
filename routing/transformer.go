@@ -15,7 +15,6 @@ import (
 // deliveries.
 type transformer struct {
 	Address string
-	conn    net.Conn
 }
 
 func newTransformer(address string) *transformer {
@@ -31,19 +30,13 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 		fmt.Sprintf("Transforming delivery via %s", t.Address), obj.UID,
 	)
 
-	var conn net.Conn
-	var err error = nil
-
-	if t.conn == nil {
-		conn, err = net.Dial("tcp", t.Address)
-		if err != nil {
-			wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
-			wErr := errgo.NewError(wMsg, globals.VERB_WRN)
-			return obj, wErr // Return original delivery on failure
-		}
-	} else {
-		conn = t.conn
+	conn, err := net.Dial("tcp", t.Address)
+	if err != nil {
+		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
+		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+		return obj, wErr // Return original delivery on failure
 	}
+	defer conn.Close()
 
 	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(obj.Payload))
@@ -73,6 +66,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 	)
 	transformedDelivery.Responder = obj.Responder
 	transformedDelivery.Response = obj.Response
+	transformedDelivery.Protocol = obj.Protocol
 
 	logging.LogObjectAction(
 		fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID,
