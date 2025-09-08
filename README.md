@@ -155,7 +155,7 @@ Example PreInit.json file:
       ]
     }
   ]
-}}
+}
 ```
 
 # Protocol
