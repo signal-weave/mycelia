@@ -7,6 +7,7 @@ import (
 	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/str"
 )
 
@@ -151,11 +152,9 @@ func EncodeResponse(obj *Object) []byte {
 		return EncodeResponseV1(*obj.Response)
 
 	default:
-		str.WarningPrint(
+		logging.LogSystemWarning(
 			fmt.Sprintf(
-				"Unable to encode response for %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				"Unable to encode response for %s", obj.Responder.RemoteAddr()),
 		)
 		return nil
 	}

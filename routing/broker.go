@@ -7,6 +7,7 @@ import (
 	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
 	"mycelia/str"
 )
@@ -80,7 +81,9 @@ func (b *Broker) createRoute(obj *protocol.Object) *route {
 	if r = b.routes[obj.Arg1]; r == nil {
 		r = newRoute(b, obj.Arg1)
 		b.routes[obj.Arg1] = r
-		str.ActionPrint(fmt.Sprintf("Created route: %s", obj.Arg1))
+		logging.LogObjectAction(
+			fmt.Sprintf("Created route: %s", obj.Arg1), obj.UID,
+		)
 	}
 	return r
 }
@@ -151,10 +154,10 @@ func (b *Broker) handleDelivery(obj *protocol.Object) {
 		r.enqueue(obj) // no channels means route will send to dead letter.
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for delivery from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}
@@ -174,10 +177,10 @@ func (b *Broker) handleChannel(obj *protocol.Object) {
 		return
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for channel from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}
@@ -207,10 +210,10 @@ func (b *Broker) handleTransformer(obj *protocol.Object) {
 		c.removeTransformer(*t)
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for transformer from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}
@@ -240,10 +243,10 @@ func (b *Broker) handleSubscriber(obj *protocol.Object) {
 		c.removeSubscriber(*s)
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for subscriber from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}
@@ -265,10 +268,10 @@ func (b *Broker) handleGlobals(obj *protocol.Object) {
 		}
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for globals from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}
@@ -281,10 +284,10 @@ func (b *Broker) handleActions(obj *protocol.Object) {
 		b.ManagingServer.Shutdown()
 
 	default:
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf("Unknown command type for action from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 		return
 	}

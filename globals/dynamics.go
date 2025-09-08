@@ -28,7 +28,11 @@ var Port int = 5000
 // How much output to send to the console.
 // By default it is 3 until cli or config file adjust - This way we get the most
 // visibility until user narrows view.
-var Verbosity int = 3 // 0=quiet, 1=info, 2=debug, 3=trace...
+var Verbosity int = VERB_ACT // 0=quiet, 1=info, 2=debug, 3=trace...
+
+// Where log messages should go to.
+// Defaults to .log file.
+var LogOutput int = LOG_TO_FILE // 0=.log file, 1=console.
 
 // Whether to print the broker shape on update.
 var PrintTree bool = false
@@ -62,6 +66,7 @@ func PrintDynamicValues() {
 	fmt.Printf("Address: %s\n", Address)
 	fmt.Printf("Port: %v\n", Port)
 	fmt.Printf("Verbosity: %v\n", Verbosity)
+	fmt.Printf("LogOutput: %v\n", LogOutput)
 	fmt.Printf("PrintTree: %v\n", PrintTree)
 	fmt.Printf("TransformTimeout: %s\n", TransformTimeout.String())
 	fmt.Printf("AutoConsolidate: %v\n", AutoConsolidate)

@@ -143,15 +143,19 @@ func (l *Logger) loop() {
 			continue
 		}
 
-		msg, err := formatByVerbosity(*ml)
-		if err != nil {
-			continue
+		if globals.LogOutput == globals.LOG_TO_FILE {
+			msg, err := formatByVerbosity(*ml)
+			if err != nil {
+				continue
+			}
+			_, err = writer.WriteString(msg)
+			if err != nil {
+				str.ErrorPrint("Could not write to log buffer.")
+			}
+			flush()
+		} else if globals.LogOutput == globals.LOG_TO_CONSOLE {
+			str.PrintByVerbosity(ml.msg, ml.verbosity)
 		}
-		_, err = writer.WriteString(msg)
-		if err != nil {
-			str.ErrorPrint("Could not write to log buffer.")
-		}
-		flush()
 
 		if getToday() != l.date {
 			l.rotate()

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 	"mycelia/system"
 
 	"github.com/google/uuid"
@@ -33,11 +33,15 @@ import (
 func getConfigData() {
 	_, err := os.Stat(system.ConfigFile)
 	if err != nil {
-		str.ActionPrint("No Mycelia_Config.json found, skipping pre-init process.")
+		logging.LogSystemAction(
+			"No Mycelia_Config.json found, skipping pre-init process.",
+		)
 	}
 	data, err := os.ReadFile(system.ConfigFile)
 	if err != nil {
-		str.ErrorPrint("Could not import PreInit JSON data - Skipping Pre-Init.")
+		logging.LogSystemError(
+			"Could not import PreInit JSON data - Skipping Pre-Init.",
+		)
 		return
 	}
 
@@ -68,6 +72,9 @@ func parseRuntimeConfigurable(pd system.ParamData) {
 		globals.Verbosity = *pd.Verbosity
 		globals.UpdateVerbosityEnvironVar()
 	}
+	if pd.LogOutput != nil {
+		globals.LogOutput = *pd.LogOutput
+	}
 	if pd.PrintTree != nil {
 		globals.PrintTree = *pd.PrintTree
 	}
@@ -93,6 +100,7 @@ the "routes" field, or children of it, could not exist.
     "address": "0.0.0.0",
     "port": 8080,
     "verbosity": 2,
+	"log-output": 0,
     "print-tree": true,
     "xform-timeout": "45s",
 	"consolidate": true,

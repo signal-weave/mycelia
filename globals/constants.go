@@ -24,7 +24,7 @@ const (
 	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
-// -------Verbosity-------------------------------------------------------------
+// -------Logging-------------------------------------------------------------
 
 const (
 	VERB_NIL = 0 // No printing
@@ -41,6 +41,11 @@ const (
 	// want to know about have taken place, such as when a client connects or
 	// disconnects, or when a route as updated.
 	VERB_ACT = 3 // Action + warning + error printing
+)
+
+const (
+	LOG_TO_FILE = 0
+	LOG_TO_CONSOLE = 1
 )
 
 // -------Objects---------------------------------------------------------------

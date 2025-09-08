@@ -19,6 +19,7 @@ func NewConnResponder(conn net.Conn) *ConnResponder {
 	}
 }
 
+// Shorthand for ConnResponder.C.RemoteAddr().String()
 func (cr *ConnResponder) RemoteAddr() string {
 	return cr.C.RemoteAddr().String()
 }

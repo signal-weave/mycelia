@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 )
 
 // Object representation of the client subscribed to an endpoint, ie. the
@@ -19,24 +19,27 @@ func newSubscriber(address string) *subscriber {
 }
 
 // Forwards the delivery to the client represented by the consumer object.
-func (c *subscriber) deliver(m *protocol.Object) {
-	str.ActionPrint(fmt.Sprintf("Attempting to dial %s", c.Address))
+func (c *subscriber) deliver(obj *protocol.Object) {
+	logging.LogObjectAction(
+		fmt.Sprintf("Attempting to dial %s", c.Address), obj.UID,
+	)
 
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
-		wMsg := fmt.Sprintf("Could not dial %s", c.Address)
-		str.WarningPrint(wMsg)
+		logging.LogObjectWarning(
+			fmt.Sprintf("Could not dial %s", c.Address), obj.UID,
+		)
 		return
 	}
 	defer conn.Close()
 
-	_, err = conn.Write(m.Payload)
+	_, err = conn.Write(obj.Payload)
 	if err != nil {
-		eMsg := fmt.Sprintf("Error sending to %s", c.Address)
-		str.ErrorPrint(eMsg)
+		wMsg := fmt.Sprintf("Error sending to %s", c.Address)
+		logging.LogObjectWarning(wMsg, obj.UID)
 		return
 	}
-	str.ActionPrint(
-		fmt.Sprintf("Wrote delivery to: %s", c.Address),
+	logging.LogObjectAction(
+		fmt.Sprintf("Wrote delivery to: %s", c.Address), obj.UID,
 	)
 }

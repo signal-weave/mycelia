@@ -27,6 +27,7 @@ type ParamData struct {
 	Address          *string   `json:"address"`
 	Port             *int      `json:"port"`
 	Verbosity        *int      `json:"verbosity"`
+	LogOutput        *int      `json:"log-output"`
 	PrintTree        *bool     `json:"print-tree"`
 	TransformTimeout *string   `json:"xform-timeout"`
 	AutoConsolidate  *bool     `json:"consolidate"`
