@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 )
 
 // The primary grouping for message traversal. A route can contain multiple
@@ -79,11 +79,11 @@ func (r *route) createChannel(obj *protocol.Object) {
 
 	i, err := strconv.Atoi(obj.Arg3)
 	if err != nil {
-		str.WarningPrint(
+		logging.LogObjectWarning(
 			fmt.Sprintf(
 				"Unable to parse new channel selection strategy from %s",
-				obj.Responder.C.RemoteAddr().String(),
-			),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 	}
 	strat := globals.SelectionStrategy(i)

@@ -8,8 +8,8 @@ import (
 
 	"mycelia/errgo"
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 )
 
 // -----------------------------------------------------------------------------
@@ -33,13 +33,13 @@ type runtimeUpdater struct {
 // Verify that the values and sender are valid and then update the globals, if
 // they are.
 // Returns if the user was verified or not.
-func updateGlobals(cmd *protocol.Object) bool {
+func updateGlobals(obj *protocol.Object) bool {
 	var rv runtimeUpdater
-	err := json.Unmarshal(cmd.Payload, &rv)
+	err := json.Unmarshal(obj.Payload, &rv)
 	if err != nil {
 		wMsg := fmt.Sprintf(
 			"Could not parse payload for globals update from %s",
-			cmd.Responder.C.RemoteAddr().String(),
+			obj.Responder.C.RemoteAddr().String(),
 		)
 		errgo.NewError(wMsg, globals.VERB_WRN)
 		return false
@@ -47,23 +47,24 @@ func updateGlobals(cmd *protocol.Object) bool {
 
 	// Is user authorized
 	if rv.SecurityToken == nil {
-		str.ErrorPrint(
+		logging.LogObjectError(
 			fmt.Sprintf("Message lacks security token from %s",
-				cmd.Responder.C.RemoteAddr().String()),
+				obj.Responder.RemoteAddr(),
+			), obj.UID,
 		)
 	} else {
 		if !slices.Contains(globals.SecurityTokens, *rv.SecurityToken) {
-			str.ErrorPrint(
+			logging.LogObjectError(
 				fmt.Sprintf(
 					"Unauthorized user attempting globals update from %s",
-					cmd.Responder.C.RemoteAddr().String(),
-				),
+					obj.Responder.RemoteAddr(),
+				), obj.UID,
 			)
 			return false
 		}
 	}
 
-	unpackGlobals(rv, cmd.Responder.C.RemoteAddr().String())
+	unpackGlobals(rv, obj.Responder.C.RemoteAddr().String())
 	globals.PrintDynamicValues()
 	return true
 }
@@ -89,7 +90,7 @@ func unpackGlobals(ru runtimeUpdater, sender string) {
 			wMsg := fmt.Sprintf(
 				"Unable to parse transform timeout expr from %s", sender,
 			)
-			str.WarningPrint(wMsg)
+			logging.LogSystemWarning(wMsg)
 		} else {
 			globals.TransformTimeout = newTimeout
 		}

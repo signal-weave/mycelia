@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 )
 
 // Channels are the subscription buckets that fill routes. A subscriber
@@ -81,7 +81,7 @@ func (ch *channel) addTransformer(t transformer) {
 	ch.mutex.Unlock()
 	ch.tSnap.Store(snap)
 
-	str.ActionPrint(
+	logging.LogSystemAction(
 		fmt.Sprintf("Added transformer at address: %s", t.Address),
 	)
 }
@@ -102,7 +102,7 @@ func (ch *channel) removeTransformer(t transformer) {
 	ch.mutex.Unlock()
 	ch.tSnap.Store(snap)
 
-	str.ActionPrint(
+	logging.LogSystemAction(
 		fmt.Sprintf("Removed transformer for address: %s", t.Address),
 	)
 	ch.checkEmptyChannel()
@@ -129,7 +129,7 @@ func (ch *channel) addSubscriber(s subscriber) {
 	ch.mutex.Unlock()
 	ch.sSnap.Store(snap)
 
-	str.ActionPrint(
+	logging.LogSystemAction(
 		fmt.Sprintf("Added subscriber at address: %s", s.Address),
 	)
 }
@@ -148,7 +148,7 @@ func (ch *channel) removeSubscriber(s subscriber) {
 	ch.mutex.Unlock()
 	ch.sSnap.Store(snap)
 
-	str.ActionPrint(
+	logging.LogSystemAction(
 		fmt.Sprintf("Removed subscriber for address: %s", s.Address),
 	)
 	ch.checkEmptyChannel()

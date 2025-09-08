@@ -3,6 +3,7 @@ package globals
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,8 @@ import (
 // Shared, or "global", dynamic values that are referenced between packages.
 // This is not meant to contain constant values.
 // -----------------------------------------------------------------------------
+
+// -------Pseudo-Constants------------------------------------------------------
 
 // If the server should begin the shutdown process.
 var PerformShutdown atomic.Bool
@@ -23,7 +26,13 @@ var Address string = "127.0.0.1"
 var Port int = 5000
 
 // How much output to send to the console.
-var Verbosity int = 0 // 0=quiet, 1=info, 2=debug, 3=trace...
+// By default it is 3 until cli or config file adjust - This way we get the most
+// visibility until user narrows view.
+var Verbosity int = VERB_ACT // 0=quiet, 1=info, 2=debug, 3=trace...
+
+// Where log messages should go to.
+// Defaults to .log file.
+var LogOutput int = LOG_TO_FILE // 0=.log file, 1=console.
 
 // Whether to print the broker shape on update.
 var PrintTree bool = false
@@ -44,6 +53,10 @@ var DefaultNumPartitions int = 4
 // The number of workers to allocate to the server listener.
 var WorkerCount int = 4
 
+// How many days a log file should be kept around.
+// If set to 0, log file cleanup is ignored.
+var MaxLogAge int = 14
+
 func UpdateVerbosityEnvironVar() {
 	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
 }
@@ -53,6 +66,7 @@ func PrintDynamicValues() {
 	fmt.Printf("Address: %s\n", Address)
 	fmt.Printf("Port: %v\n", Port)
 	fmt.Printf("Verbosity: %v\n", Verbosity)
+	fmt.Printf("LogOutput: %v\n", LogOutput)
 	fmt.Printf("PrintTree: %v\n", PrintTree)
 	fmt.Printf("TransformTimeout: %s\n", TransformTimeout.String())
 	fmt.Printf("AutoConsolidate: %v\n", AutoConsolidate)
@@ -68,3 +82,22 @@ func PrintDynamicValues() {
 
 	fmt.Println("-------------------------------------------------")
 }
+
+// -------Directories and Files-------------------------------------------------
+
+// The directory the program is running from.
+func GetExecDirectory() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	exeDir := filepath.Dir(exePath)
+	return exeDir
+}
+
+// The directory the .exe file is ran rome.
+var ExeDir = GetExecDirectory()
+
+// The directory for log and chunk files.
+var LogDirectory = filepath.Join(ExeDir, "logs")

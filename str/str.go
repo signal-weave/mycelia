@@ -3,7 +3,6 @@
 package str
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -21,17 +20,6 @@ func SprintfLn(formatStr string, args ...string) {
 	}
 	msg := fmt.Sprintf(formatStr, interfaceArgs...)
 	fmt.Println(msg)
-}
-
-// Converts []*string to []string
-func ConvertPtrTokens(ptrs []*string) []string {
-	out := make([]string, 0, len(ptrs))
-	for _, p := range ptrs {
-		if p != nil {
-			out = append(out, *p)
-		}
-	}
-	return out
 }
 
 func ActionPrint(s string) {
@@ -55,18 +43,19 @@ func ErrorPrint(s string) {
 	fmt.Println("[ERROR] - " + s)
 }
 
-func DebugPrintLn(s string) {
-	msg := fmt.Sprintf("[DEBUG] - %s", s)
-	fmt.Println(msg)
-}
-
-func PrettyPrintStrKeyJson(data map[string]any) {
-	b, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		fmt.Println("Could not pretty print json data")
+func PrintByVerbosity(s string, v int) {
+	if globals.Verbosity == globals.VERB_NIL {
 		return
 	}
-	fmt.Println(string(b))
+	if v == globals.VERB_ACT && globals.Verbosity >= v {
+		ActionPrint(s)
+	}
+	if v == globals.VERB_WRN && globals.Verbosity >= v {
+		WarningPrint(s)
+	}
+	if v == globals.VERB_ERR && globals.Verbosity >= v {
+		ErrorPrint(s)
+	}
 }
 
 // Returns the current terminal width if it can be found else 80.

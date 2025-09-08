@@ -4,7 +4,7 @@ package errgo
 
 import (
 	"mycelia/globals"
-	"mycelia/str"
+	"mycelia/logging"
 )
 
 type MyceliaError interface {
@@ -30,22 +30,22 @@ func NewError(msg string, verbosity int) error {
 		verbosity: verbosity,
 		msg:       msg,
 	}
-	AnnounceError(e)
+	LogError(e)
 
 	return e
 }
 
-func AnnounceError(e MyceliaError) {
+func LogError(e MyceliaError) {
 	switch e.Verbosity() {
 
 	case globals.VERB_ERR:
-		str.ErrorPrint(e.Error())
+		logging.LogSystemError(e.Error())
 
 	case globals.VERB_WRN:
-		str.WarningPrint(e.Error())
+		logging.LogSystemWarning(e.Error())
 
 	case globals.VERB_ACT:
-		str.ActionPrint(e.Error())
+		logging.LogSystemAction(e.Error())
 
 	}
 }

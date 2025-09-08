@@ -7,8 +7,8 @@ import (
 
 	"mycelia/errgo"
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/protocol"
-	"mycelia/str"
 )
 
 // transformer intercepts deliveries, processes them, and returns modified
@@ -26,9 +26,10 @@ func newTransformer(address string) *transformer {
 
 // apply sends the delivery to the transformer service and waits for
 // response.
-func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
-	actionMsg := fmt.Sprintf("Transforming delivery via %s", t.Address)
-	str.ActionPrint(actionMsg)
+func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
+	logging.LogObjectAction(
+		fmt.Sprintf("Transforming delivery via %s", t.Address), obj.UID,
+	)
 
 	var conn net.Conn
 	var err error = nil
@@ -38,18 +39,18 @@ func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 		if err != nil {
 			wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
 			wErr := errgo.NewError(wMsg, globals.VERB_WRN)
-			return m, wErr // Return original delivery on failure
+			return obj, wErr // Return original delivery on failure
 		}
 	} else {
 		conn = t.conn
 	}
 
 	// Send the delivery body to transformer
-	_, err = conn.Write([]byte(m.Payload))
+	_, err = conn.Write([]byte(obj.Payload))
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
-		return m, wErr
+		return obj, wErr
 	}
 
 	// Read the transformed response with a timeout
@@ -60,20 +61,22 @@ func (t *transformer) apply(m *protocol.Object) (*protocol.Object, error) {
 	if err != nil {
 		wMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
-		return m, wErr
+		return obj, wErr
 	}
 
 	// Create new delivery with transformed body
 	transformedDelivery := protocol.NewObject(
-		m.ObjType, m.CmdType, m.AckPlcy,
-		m.UID,
-		m.Arg1, m.Arg2, m.Arg3, m.Arg4,
+		obj.ObjType, obj.CmdType, obj.AckPlcy,
+		obj.UID,
+		obj.Arg1, obj.Arg2, obj.Arg3, obj.Arg4,
 		buffer[:n],
 	)
-	transformedDelivery.Responder = m.Responder
-	transformedDelivery.Response = m.Response
+	transformedDelivery.Responder = obj.Responder
+	transformedDelivery.Response = obj.Response
 
-	str.ActionPrint(fmt.Sprintf("Transformed delivery at: %s", t.Address))
+	logging.LogObjectAction(
+		fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID,
+	)
 
 	return transformedDelivery, nil
 }

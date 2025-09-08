@@ -19,10 +19,15 @@ func NewConnResponder(conn net.Conn) *ConnResponder {
 	}
 }
 
+// Shorthand for ConnResponder.C.RemoteAddr().String()
+func (cr *ConnResponder) RemoteAddr() string {
+	return cr.C.RemoteAddr().String()
+}
+
 // Send the given payload back to the connection's return address.
-func (r *ConnResponder) Write(b []byte) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	_, err := r.C.Write(b)
+func (cr *ConnResponder) Write(b []byte) error {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	_, err := cr.C.Write(b)
 	return err
 }

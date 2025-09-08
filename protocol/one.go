@@ -83,13 +83,14 @@ func decodeV1(data []byte, obj *Object) (*Object, error) {
 	if err != nil {
 		wMsg := fmt.Sprintf(
 			"Unable to parse payload from %s: %s",
-			obj.Responder.C.RemoteAddr().String(), err,
+			obj.Responder.RemoteAddr(), err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
 	}
 	obj.Payload = payload
 
+	// Response
 	response := &Response{
 		UID: obj.UID,
 		Ack: globals.ACK_UNKNOWN,
@@ -144,6 +145,14 @@ func parseTrackingHeader(r io.Reader, cmd *Object) (*Object, error) {
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
 	}
+	if uid == "" {
+		wMsg := fmt.Sprintf(
+			"Empty UID field from mesage: %s",
+			cmd.Responder.C.LocalAddr().String(),
+		)
+		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+		return nil, wErr
+	}
 	cmd.UID = uid
 
 	return cmd, nil
@@ -154,7 +163,7 @@ func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 	arg1, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",
-			1, cmd.Responder.C.RemoteAddr().String(), err,
+			1, cmd.Responder.RemoteAddr(), err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -164,7 +173,7 @@ func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 	arg2, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s, %s",
-			2, cmd.Responder.C.RemoteAddr().String(), err,
+			2, cmd.Responder.RemoteAddr(), err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr
@@ -184,7 +193,7 @@ func parseArgumentFields(r io.Reader, cmd *Object) (*Object, error) {
 	arg4, err := readStringU8(r)
 	if err != nil {
 		wMsg := fmt.Sprintf("Unable to parse argument position %d for %s: %s",
-			4, cmd.Responder.C.RemoteAddr().String(), err,
+			4, cmd.Responder.RemoteAddr(), err,
 		)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return nil, wErr

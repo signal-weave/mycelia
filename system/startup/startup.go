@@ -1,9 +1,11 @@
-package boot
+package startup
 
 import (
 	"fmt"
 	"os"
 
+	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/system"
 )
 
@@ -14,9 +16,14 @@ import (
 // -----------------------------------------------------------------------------
 
 // Read cli / config values...
-func Boot(argv []string) {
+func Startup(argv []string) {
+	logging.LogSystemAction("Starting startup Process!")
+
+	makeDirectories()
 	parseCli(argv)
 	parseConfigFile()
+
+	logging.LogSystemAction("Ending startup Process!")
 }
 
 // Parses and stores the runtime flags in public vars.
@@ -36,4 +43,9 @@ func parseConfigFile() {
 	if err == nil {
 		getConfigData()
 	}
+}
+
+// Makes all required subdirectories.
+func makeDirectories() {
+	os.MkdirAll(globals.LogDirectory, 0755)
 }

@@ -7,6 +7,7 @@ import (
 
 	"mycelia/comm"
 	"mycelia/globals"
+	"mycelia/logging"
 	"mycelia/routing"
 	"mycelia/str"
 )
@@ -103,7 +104,7 @@ func (server *Server) UpdateListener() {
 		wMsg := fmt.Sprintf(
 			"Could not open listener to %s, staying on old listener!", addr,
 		)
-		str.WarningPrint(wMsg)
+		logging.LogSystemError(wMsg)
 
 		// These should be in sync, not thrilled with this here though.
 		globals.Address = server.address
@@ -128,7 +129,7 @@ func (server *Server) UpdateListener() {
 
 // Handle incoming data stream.
 func (server *Server) HandleConnection(conn net.Conn) {
-	str.ActionPrint(
+	logging.LogSystemAction(
 		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
 	)
 
