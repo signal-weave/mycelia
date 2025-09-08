@@ -30,7 +30,7 @@ type Response struct {
 // protocol.Response for encoding a response with ack status and corresponding
 // UID to send to the sender via the object.Responder.
 type Object struct {
-	protocol uint8
+	Protocol uint8
 
 	Responder *comm.ConnResponder
 	Response  *Response
@@ -117,7 +117,7 @@ func DecodeFrame(line []byte, resp *comm.ConnResponder) (*Object, error) {
 	}
 
 	obj := &Object{
-		protocol:  version,
+		Protocol:  version,
 		Responder: resp,
 	}
 
@@ -146,9 +146,9 @@ func DecodeFrame(line []byte, resp *comm.ConnResponder) (*Object, error) {
 }
 
 func EncodeResponse(obj *Object) []byte {
-	switch obj.protocol {
+	switch obj.Protocol {
 
-	case uint8(1):
+	case globals.PROTOCOL_V1:
 		return EncodeResponseV1(*obj.Response)
 
 	default:

@@ -36,6 +36,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
 		return obj, wErr // Return original delivery on failure
 	}
+	defer conn.Close()
 
 	// Send the delivery body to transformer
 	_, err = conn.Write([]byte(obj.Payload))
@@ -65,6 +66,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 	)
 	transformedDelivery.Responder = obj.Responder
 	transformedDelivery.Response = obj.Response
+	transformedDelivery.Protocol = obj.Protocol
 
 	logging.LogObjectAction(
 		fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID,
