@@ -86,7 +86,9 @@ Mycelia runtime options:
 
   -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
+  -workers int		   The server listener worker count (1-1024)
   -verbosity int       0, 1, 2, or 3
+  -log-output int	   0, 1, or 2
   -print-tree          Print router tree at startup
   -xform-timeout dur   Transformer timeout
 
@@ -102,6 +104,13 @@ with verbosity values relating to
 3 - Errors + Warnings + Actions
 ```
 
+and log-output values relating to
+```
+0 - .log file
+1 - Console
+2 - Both
+```
+
 # Pre Init
 
 Additionally, Mycelia will check the exe's directory for a `PreInit.json` file.
@@ -114,12 +123,14 @@ broker to use on startup using the `"routes"` field.
 Example PreInit.json file:
 ```json
 {
-  "runtime": {
+  "parameters": {
     "address": "0.0.0.0",
     "port": 8080,
     "verbosity": 2,
+	"log-output": 0,
     "print-tree": true,
     "xform-timeout": "45s",
+	"consolidate": true,
     "security-tokens": [
       "lockheed",
       "martin"
@@ -131,6 +142,7 @@ Example PreInit.json file:
       "channels": [
         {
           "name": "inmem",
+		  "strategy": "pub-sub",
           "transformers": [
             { "address": "127.0.0.1:7010" },
             { "address": "10.0.0.52:8008" }
@@ -143,7 +155,7 @@ Example PreInit.json file:
       ]
     }
   ]
-}
+}}
 ```
 
 # Protocol
