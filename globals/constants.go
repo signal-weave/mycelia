@@ -11,6 +11,11 @@ const (
 	Developer = "Signal Weave"
 )
 
+const (
+	DateLayout = "01-02-2006"  // MM-DD-YYYY
+	TimeLayout = "15-04-05-00" // HH-MM-SS-XX
+)
+
 // -------Memory Values---------------------------------------------------------
 
 const (

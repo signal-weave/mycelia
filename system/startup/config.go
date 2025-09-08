@@ -1,4 +1,4 @@
-package boot
+package startup
 
 import (
 	"encoding/json"

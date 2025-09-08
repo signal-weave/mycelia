@@ -1,11 +1,8 @@
 package system
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 
-	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/protocol"
 )
@@ -14,18 +11,7 @@ import (
 // Herein are the shared values that system sub-packages can reference.
 // -----------------------------------------------------------------------------
 
-// -------Directory + Files-----------------------------------------------------
-
-// The directory the program is running from.
-func GetExecDirectory() string {
-	exePath := errgo.ValueOrPanic(os.Executable())
-	exeDir := filepath.Dir(exePath)
-	return exeDir
-}
-
-var exeDir = GetExecDirectory()
-
-var ConfigFile = fmt.Sprintf("%s/Mycelia_Config.json", exeDir)
+var ConfigFile = filepath.Join(globals.ExeDir, "Mycelia_Config.json")
 
 // This is a list of commands used for booting up and pre-configuring the broker
 // based on the Mycelia_Config.json file.
