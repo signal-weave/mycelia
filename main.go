@@ -11,8 +11,6 @@ import (
 	"mycelia/system/startup"
 )
 
-var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
-
 var majorVersion int = 0  // Proud version
 var minorVersion int = 13 // Real version
 var patchVersion int = 1  // Sucky verison
