@@ -97,7 +97,7 @@ func GetExecDirectory() string {
 	return exeDir
 }
 
-// The directory the .exe file is ran rome.
+// The directory the .exe file is ran from.
 var ExeDir = GetExecDirectory()
 
 // The directory for log and chunk files.
