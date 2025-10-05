@@ -1,23 +1,22 @@
-// * Error handling utilities
-
 package errgo
 
 import (
-	"mycelia/globals"
 	"mycelia/logging"
+
+	"github.com/signal-weave/siglog"
 )
 
 type MyceliaError interface {
 	Error() string
-	Verbosity() int
+	Verbosity() siglog.LogLevel
 }
 
 type myError struct {
 	msg       string
-	verbosity int
+	verbosity siglog.LogLevel
 }
 
-func (me myError) Verbosity() int {
+func (me myError) Verbosity() siglog.LogLevel {
 	return me.verbosity
 }
 
@@ -25,7 +24,7 @@ func (e myError) Error() string {
 	return e.msg
 }
 
-func NewError(msg string, verbosity int) error {
+func NewError(msg string, verbosity siglog.LogLevel) error {
 	e := myError{
 		verbosity: verbosity,
 		msg:       msg,
@@ -38,14 +37,13 @@ func NewError(msg string, verbosity int) error {
 func LogError(e MyceliaError) {
 	switch e.Verbosity() {
 
-	case globals.VERB_ERR:
+	case siglog.LL_ERROR:
 		logging.LogSystemError(e.Error())
 
-	case globals.VERB_WRN:
+	case siglog.LL_WARN:
 		logging.LogSystemWarning(e.Error())
 
-	case globals.VERB_ACT:
+	case siglog.LL_INFO:
 		logging.LogSystemAction(e.Error())
-
 	}
 }

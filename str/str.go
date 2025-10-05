@@ -11,6 +11,7 @@ import (
 	"mycelia/globals"
 
 	"golang.org/x/term"
+	"github.com/signal-weave/siglog"
 )
 
 func SprintfLn(formatStr string, args ...string) {
@@ -43,7 +44,7 @@ func ErrorPrint(s string) {
 	fmt.Println("[ERROR] - " + s)
 }
 
-func PrintByVerbosity(s string, v int) {
+func PrintByVerbosity(s string, v siglog.LogLevel) {
 	if globals.Verbosity == globals.VERB_NIL {
 		return
 	}

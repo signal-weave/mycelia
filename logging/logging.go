@@ -1,48 +1,33 @@
 package logging
 
 import (
-	"mycelia/globals"
+	"github.com/signal-weave/siglog"
 )
-
-func logMessage(msg, uid string, verbosity int) {
-	if globals.Verbosity == globals.VERB_NIL {
-		return
-	}
-
-	go func() {
-		ml := &messageLog{
-			uid:       uid,
-			msg:       msg,
-			verbosity: verbosity,
-		}
-		GlobalLogger.in <- ml
-	}()
-}
 
 // ----------Object Logging----------
 
 func LogObjectAction(msg, uid string) {
-	logMessage(msg, uid, globals.VERB_ACT)
+	siglog.LogEntry(msg, uid, siglog.LL_INFO)
 }
 
 func LogObjectWarning(msg, uid string) {
-	logMessage(msg, uid, globals.VERB_WRN)
+	siglog.LogEntry(msg, uid, siglog.LL_WARN)
 }
 
 func LogObjectError(msg, uid string) {
-	logMessage(msg, uid, globals.VERB_ERR)
+	siglog.LogEntry(msg, uid, siglog.LL_ERROR)
 }
 
 // ----------System Logging----------
 
 func LogSystemAction(msg string) {
-	logMessage(msg, "SYSTEM", globals.VERB_ACT)
+	siglog.LogEntry(msg, "SYSTEM", siglog.LL_INFO)
 }
 
 func LogSystemWarning(msg string) {
-	logMessage(msg, "SYSTEM", globals.VERB_WRN)
+	siglog.LogEntry(msg, "SYSTEM", siglog.LL_WARN)
 }
 
 func LogSystemError(msg string) {
-	logMessage(msg, "SYSTEM", globals.VERB_ERR)
+	siglog.LogEntry(msg, "SYSTEM", siglog.LL_ERROR)
 }

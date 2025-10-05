@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"mycelia/globals"
+
+	"github.com/signal-weave/siglog"
 )
 
 // ParseRuntimeArgs parses only runtime flags validates, and returns error.
@@ -48,7 +50,9 @@ func parseRuntimeArgs(argv []string) error {
     1 - Errors
     2 - Warnings + Errors
     3 - Errors + Warnings + Actions`
-	fs.IntVar(&globals.Verbosity, "verbosity", globals.Verbosity, verbosityHelp)
+	var temp int
+	fs.IntVar(&temp, "verbosity", int(globals.Verbosity), verbosityHelp)
+	globals.Verbosity = siglog.LogLevel(temp)
 	globals.UpdateVerbosityEnvironVar()
 
 	logOutputHelp := `0 - .log file
@@ -58,7 +62,7 @@ func parseRuntimeArgs(argv []string) error {
 		&globals.LogOutput, "log-output", globals.LogOutput, logOutputHelp,
 	)
 
-	usageString := `Mycelia runtime options:
+	const usageString = `Mycelia runtime options:
 
   -address string      Bind address (IP or hostname)
   -port int            Bind port (1-65535)
@@ -71,9 +75,7 @@ func parseRuntimeArgs(argv []string) error {
 Examples:
   mycelia -addr 0.0.0.0 -port 8080 -verbosity 2 -print-tree -xform-timeout 45s
 `
-	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), usageString)
-	}
+	fs.Usage = func() { fmt.Print(fs.Output(), usageString) }
 
 	if err := fs.Parse(argv); err != nil {
 		return err
