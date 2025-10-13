@@ -33,3 +33,4 @@ logs/*
 # json files
 Mycelia_Config.json
 Mycelia_ShutdownReport.json
+*.log
