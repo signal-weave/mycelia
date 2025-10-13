@@ -4,7 +4,7 @@ go 1.25
 
 require github.com/google/uuid v1.6.0
 
-require github.com/signal-weave/siglog v0.0.0-20251005011459-04ac034c0d28
+require github.com/signal-weave/siglog v0.0.0-20251013030320-702a33f5c16e
 
 require (
 	golang.org/x/sys v0.35.0 // indirect

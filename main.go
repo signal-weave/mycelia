@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"mycelia/globals"
@@ -35,5 +36,7 @@ func startServer() {
 		server.Broker.HandleObject(cmd)
 	}
 
-	server.Run()
+	if err := server.Run(); err != nil {
+		fmt.Println(err.Error())
+	}
 }

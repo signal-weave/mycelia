@@ -43,60 +43,63 @@ func (s *Server) GetPort() int {
 }
 
 // Run ...
-func (server *Server) Run() {
-	if server.listener == nil {
-		server.UpdateListener()
+func (s *Server) Run() error {
+	if s.listener == nil {
+		if err := s.UpdateListener(); err != nil {
+			return err
+		}
 	}
-	server.serve()
+	return s.serve()
 }
 
 // Spins up the server...
 // Caps concurrency and avoids spawning unbound go routines.
-func (server *Server) serve() error {
-	if server.jobs == nil {
-		server.jobs = make(chan net.Conn, 1024)
+func (s *Server) serve() error {
+	if s.jobs == nil {
+		s.jobs = make(chan net.Conn, 1024)
 	}
 
 	for range globals.WorkerCount {
 		go func() {
-			for c := range server.jobs {
-				server.HandleConnection(c)
+			for c := range s.jobs {
+				s.HandleConnection(c)
 			}
 		}()
 	}
 
 	for !globals.PerformShutdown.Load() {
-		c, err := server.listener.Accept()
+		c, err := s.listener.Accept()
 		if err != nil {
+			fmt.Println(err.Error())
 			return err
 		}
 
 		// Go runtime selects an unblocked worker when we push the
 		// listener.Accept() into a channel of multiple objects.
-		server.jobs <- c
+		s.jobs <- c
 	}
 
 	return nil
 }
 
-func (server *Server) Shutdown() {
+func (s *Server) Shutdown() {
 	globals.PerformShutdown.Store(true)
 
-	server.mutex.Lock()
-	l := server.listener
-	server.listener = nil
-	server.mutex.Unlock()
+	s.mutex.Lock()
+	l := s.listener
+	s.listener = nil
+	s.mutex.Unlock()
 
 	if l != nil {
 		_ = l.Close()
 	}
-	if server.jobs != nil {
-		close(server.jobs)
+	if s.jobs != nil {
+		close(s.jobs)
 	}
 }
 
 // Updates the socket the server is listening to at runtime.
-func (server *Server) UpdateListener() {
+func (s *Server) UpdateListener() error {
 	// open new first
 	addr := fmt.Sprintf("%s:%d", globals.Address, globals.Port)
 	l, err := net.Listen("tcp", addr)
@@ -107,17 +110,17 @@ func (server *Server) UpdateListener() {
 		logging.LogSystemError(wMsg)
 
 		// These should be in sync, not thrilled with this here though.
-		globals.Address = server.address
-		globals.Port = server.port
-		return
+		globals.Address = s.address
+		globals.Port = s.port
+		return err
 	}
 
-	server.mutex.Lock()
-	old := server.listener
-	server.listener = l
-	server.address = globals.Address
-	server.port = globals.Port
-	server.mutex.Unlock()
+	s.mutex.Lock()
+	old := s.listener
+	s.listener = l
+	s.address = globals.Address
+	s.port = globals.Port
+	s.mutex.Unlock()
 
 	str.SprintfLn("Now listening on %s", addr)
 
@@ -125,10 +128,12 @@ func (server *Server) UpdateListener() {
 		str.SprintfLn("Closing listener on %s", old.Addr().String())
 		_ = old.Close() // will cause a benign net.ErrClosed in Run()
 	}
+
+	return nil
 }
 
 // Handle incoming data stream.
-func (server *Server) HandleConnection(conn net.Conn) {
+func (s *Server) HandleConnection(conn net.Conn) {
 	logging.LogSystemAction(
 		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
 	)
@@ -144,6 +149,6 @@ func (server *Server) HandleConnection(conn net.Conn) {
 			continue
 		}
 
-		server.Broker.HandleBytes(frame, resp)
+		s.Broker.HandleBytes(frame, resp)
 	}
 }
