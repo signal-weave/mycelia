@@ -1,5 +1,9 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/signal-weave/siglog v0.0.0-20251005011459-04ac034c0d28 h1:Zscz1LQ9ZJoPRGbS7NeZ+CLRHqZNKFOEMzcH4wg1P5c=
+github.com/signal-weave/siglog v0.0.0-20251005011459-04ac034c0d28/go.mod h1:fh4Pz2pRspEE/pGX4I0C/ba/K7PV56QzYBaFE5rtDKI=
+github.com/signal-weave/siglog v0.0.0-20251013030320-702a33f5c16e h1:4RkUYpz6cIWzkjbncuz2CJNS5Lna0I7cpxC8PqJRH1g=
+github.com/signal-weave/siglog v0.0.0-20251013030320-702a33f5c16e/go.mod h1:fh4Pz2pRspEE/pGX4I0C/ba/K7PV56QzYBaFE5rtDKI=
 golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
 golang.org/x/sys v0.35.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
 golang.org/x/term v0.34.0 h1:O/2T7POpk0ZZ7MAzMeWFSg6S5IpWd/RXDlM9hgM3DR4=

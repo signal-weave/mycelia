@@ -15,7 +15,7 @@ import (
 // This is here so the server that spawns the broker can add itself without
 // causing a circular dependency.
 type server interface {
-	UpdateListener()
+	UpdateListener() error
 	GetAddress() string
 	GetPort() int
 	Shutdown()

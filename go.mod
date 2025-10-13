@@ -1,10 +1,10 @@
 module mycelia
 
-go 1.23.0
-
-toolchain go1.23.9
+go 1.25
 
 require github.com/google/uuid v1.6.0
+
+require github.com/signal-weave/siglog v0.0.0-20251013030320-702a33f5c16e
 
 require (
 	golang.org/x/sys v0.35.0 // indirect

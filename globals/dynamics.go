@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/signal-weave/siglog"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,7 +31,8 @@ var Port int = 5000
 // How much output to send to the console.
 // By default it is 3 until cli or config file adjust - This way we get the most
 // visibility until user narrows view.
-var Verbosity int = VERB_ACT // 0=quiet, 1=info, 2=debug, 3=trace...
+// 0=quiet, 1=info, 2=debug, 3=trace...
+var Verbosity siglog.LogLevel = siglog.LL_INFO
 
 // Where log messages should go to.
 // Defaults to .log file.
@@ -59,7 +62,7 @@ var WorkerCount int = 4
 var MaxLogAge int = 14
 
 func UpdateVerbosityEnvironVar() {
-	os.Setenv("VERBOSITY", strconv.Itoa(Verbosity))
+	os.Setenv("VERBOSITY", strconv.Itoa(int(Verbosity)))
 }
 
 func PrintDynamicValues() {

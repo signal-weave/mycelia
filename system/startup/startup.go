@@ -7,6 +7,8 @@ import (
 	"mycelia/globals"
 	"mycelia/logging"
 	"mycelia/system"
+
+	"github.com/signal-weave/siglog"
 )
 
 // -----------------------------------------------------------------------------
@@ -17,6 +19,7 @@ import (
 
 // Read cli / config values...
 func Startup(argv []string) {
+	InitializeLogger()
 	logging.LogSystemAction("Starting startup Process!")
 
 	makeDirectories()
@@ -24,6 +27,19 @@ func Startup(argv []string) {
 	parseConfigFile()
 
 	logging.LogSystemAction("Ending startup Process!")
+}
+
+// InitializeLogger sets all of the logging values including log level, output
+// directory, and batch mode.
+func InitializeLogger() {
+	siglog.SetLogDirectory(globals.LogDirectory)
+	fmt.Println("$$$", os.Getenv("ENV_SL_LOGDIR"))
+	siglog.SetOutput(siglog.OUT_FILE)
+	siglog.SetLogLevel(siglog.LL_DEBUG)
+
+	if err := siglog.SetBatchMode(siglog.BATCH_NONE); err != nil {
+		fmt.Println(err)
+	}
 }
 
 // Parses and stores the runtime flags in public vars.

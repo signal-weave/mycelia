@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"mycelia/globals"
@@ -12,8 +13,8 @@ import (
 )
 
 var majorVersion int = 0  // Proud version
-var minorVersion int = 13 // Real version
-var patchVersion int = 1  // Sucky verison
+var minorVersion int = 14 // Real version
+var patchVersion int = 0  // Sucky verison
 
 func main() {
 	str.PrintStartupText(majorVersion, minorVersion, patchVersion)
@@ -35,5 +36,7 @@ func startServer() {
 		server.Broker.HandleObject(cmd)
 	}
 
-	server.Run()
+	if err := server.Run(); err != nil {
+		fmt.Println(err.Error())
+	}
 }

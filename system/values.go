@@ -5,6 +5,8 @@ import (
 
 	"mycelia/globals"
 	"mycelia/protocol"
+
+	"github.com/signal-weave/siglog"
 )
 
 // -----------------------------------------------------------------------------
@@ -24,14 +26,14 @@ var ObjectList = []*protocol.Object{}
 // This handles type conversion - Go marshals json integers to float64 by
 // default for whatever fucking reason.
 type ParamData struct {
-	Address          *string   `json:"address"`
-	Port             *int      `json:"port"`
-	Verbosity        *int      `json:"verbosity"`
-	LogOutput        *int      `json:"log-output"`
-	PrintTree        *bool     `json:"print-tree"`
-	TransformTimeout *string   `json:"xform-timeout"`
-	AutoConsolidate  *bool     `json:"consolidate"`
-	SecurityToken    *[]string `json:"security-tokens"`
+	Address          *string          `json:"address"`
+	Port             *int             `json:"port"`
+	Verbosity        *siglog.LogLevel `json:"verbosity"`
+	LogOutput        *int             `json:"log-output"`
+	PrintTree        *bool            `json:"print-tree"`
+	TransformTimeout *string          `json:"xform-timeout"`
+	AutoConsolidate  *bool            `json:"consolidate"`
+	SecurityToken    *[]string        `json:"security-tokens"`
 }
 
 func NewParamData() *ParamData {

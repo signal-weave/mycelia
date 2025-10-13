@@ -111,16 +111,16 @@ and log-output values relating to
 2 - Both
 ```
 
-# Pre Init
+# Config File
 
-Additionally, Mycelia will check the exe's directory for a `PreInit.json` file.
-This file can specify any of the CLI args in the `"runtime"` field - these will
-overwrite any piped cli args.
+Additionally, Mycelia will check the exe's directory for a `Mycelia_Config.json`
+file. This file can specify any of the CLI args in the `"runtime"` field - these
+will overwrite any piped cli args.
 
 Pre-defined routing structures can also be defined within the file for the
 broker to use on startup using the `"routes"` field.
 
-Example PreInit.json file:
+Example Mycelia_Config.json file:
 ```json
 {
   "parameters": {

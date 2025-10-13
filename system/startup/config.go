@@ -46,7 +46,7 @@ func getConfigData() {
 	}
 
 	var bd system.SystemData
-	err = json.Unmarshal(data, &bd)
+	json.Unmarshal(data, &bd)
 
 	if bd.Parameters != nil {
 		parseRuntimeConfigurable(*bd.Parameters)

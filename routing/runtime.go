@@ -10,6 +10,8 @@ import (
 	"mycelia/globals"
 	"mycelia/logging"
 	"mycelia/protocol"
+
+	"github.com/signal-weave/siglog"
 )
 
 // -----------------------------------------------------------------------------
@@ -21,13 +23,13 @@ import (
 // SecurityToken is measured against the globals token list. If it can't be
 // found in globals then the user message is rejected.
 type runtimeUpdater struct {
-	SecurityToken    *string `json:"security-token"`
-	Address          *string `json:"address"`
-	Port             *int    `json:"port"`
-	Verbosity        *int    `json:"verbosity"`
-	PrintTree        *bool   `json:"print-tree"`
-	TransformTimeout *string `json:"xform-timeout"`
-	AutoConsolidate  *bool   `json:"consolidate"`
+	SecurityToken    *string          `json:"security-token"`
+	Address          *string          `json:"address"`
+	Port             *int             `json:"port"`
+	Verbosity        *siglog.LogLevel `json:"verbosity"`
+	PrintTree        *bool            `json:"print-tree"`
+	TransformTimeout *string          `json:"xform-timeout"`
+	AutoConsolidate  *bool            `json:"consolidate"`
 }
 
 // Verify that the values and sender are valid and then update the globals, if
