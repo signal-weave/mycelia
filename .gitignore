@@ -29,6 +29,7 @@ go.work.sum
 
 # log files
 logs/*
+*.log
 
 # json files
 Mycelia_Config.json

@@ -19,7 +19,7 @@ import (
 
 // Read cli / config values...
 func Startup(argv []string) {
-	InitializeLogger()
+	initializeLogger()
 	logging.LogSystemAction("Starting startup Process!")
 
 	makeDirectories()
@@ -29,11 +29,10 @@ func Startup(argv []string) {
 	logging.LogSystemAction("Ending startup Process!")
 }
 
-// InitializeLogger sets all of the logging values including log level, output
+// initializeLogger sets all of the logging values including log level, output
 // directory, and batch mode.
-func InitializeLogger() {
+func initializeLogger() {
 	siglog.SetLogDirectory(globals.LogDirectory)
-	fmt.Println("$$$", os.Getenv("ENV_SL_LOGDIR"))
 	siglog.SetOutput(siglog.OUT_FILE)
 	siglog.SetLogLevel(siglog.LL_DEBUG)
 

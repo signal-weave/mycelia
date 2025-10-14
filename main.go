@@ -14,7 +14,7 @@ import (
 
 var majorVersion int = 0  // Proud version
 var minorVersion int = 14 // Real version
-var patchVersion int = 0  // Sucky verison
+var patchVersion int = 1  // Sucky verison
 
 func main() {
 	str.PrintStartupText(majorVersion, minorVersion, patchVersion)

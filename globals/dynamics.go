@@ -22,8 +22,7 @@ import (
 var PerformShutdown atomic.Bool
 
 // The address the server will use to listen for message.
-// var Address string = "127.0.0.1"
-var Address string = "10.0.0.52"
+var Address string = "127.0.0.1"
 
 // The port the server will listen on.
 var Port int = 5000
