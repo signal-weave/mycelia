@@ -29,7 +29,7 @@ func Startup(argv []string) {
 	logging.LogSystemAction("Ending startup Process!")
 }
 
-// initializeLogger sets all of the logging values including log level, output
+// initializeLogger sets all the logging values including log level, output
 // directory, and batch mode.
 func initializeLogger() {
 	siglog.SetLogDirectory(globals.LogDirectory)

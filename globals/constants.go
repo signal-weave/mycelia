@@ -16,10 +16,6 @@ const (
 	TimeLayout = "15-04-05-00" // HH-MM-SS-XX
 )
 
-const (
-	PROTOCOL_V1 = uint8(1)
-)
-
 // -------Memory Values---------------------------------------------------------
 
 const (

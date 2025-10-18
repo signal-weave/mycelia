@@ -8,7 +8,8 @@ import (
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
+
+	"github.com/signal-weave/rhizome"
 )
 
 // transformer intercepts deliveries, processes them, and returns modified
@@ -25,7 +26,7 @@ func newTransformer(address string) *transformer {
 
 // apply sends the delivery to the transformer service and waits for
 // response.
-func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
+func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 	logging.LogObjectAction(
 		fmt.Sprintf("Transforming delivery via %s", t.Address), obj.UID,
 	)
@@ -39,7 +40,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 	defer conn.Close()
 
 	// Send the delivery body to transformer
-	_, err = conn.Write([]byte(obj.Payload))
+	_, err = conn.Write(obj.Payload)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
@@ -58,7 +59,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 	}
 
 	// Create new delivery with transformed body
-	transformedDelivery := protocol.NewObject(
+	transformedDelivery := rhizome.NewObject(
 		obj.ObjType, obj.CmdType, obj.AckPlcy,
 		obj.UID,
 		obj.Arg1, obj.Arg2, obj.Arg3, obj.Arg4,
@@ -66,7 +67,7 @@ func (t *transformer) apply(obj *protocol.Object) (*protocol.Object, error) {
 	)
 	transformedDelivery.Responder = obj.Responder
 	transformedDelivery.Response = obj.Response
-	transformedDelivery.Protocol = obj.Protocol
+	transformedDelivery.Version = obj.Version
 
 	logging.LogObjectAction(
 		fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID,

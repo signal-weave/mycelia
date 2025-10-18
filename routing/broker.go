@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sync"
 
-	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
 	"mycelia/str"
+
+	"github.com/signal-weave/rhizome"
 )
 
 // This is here so the server that spawns the broker can add itself without
@@ -23,7 +23,7 @@ type server interface {
 
 // -------Base Broker Details---------------------------------------------------
 
-// The primary object orchestrator.
+// Broker is the primary object orchestrator.
 // Takes the incoming byte stream and runs it through the object parser where
 // a generated object is created and then runs the object through the route
 // structure.
@@ -40,11 +40,11 @@ func NewBroker(s server) *Broker {
 	}
 }
 
-// Handles the raw byte form of a object, hot off a socket, converts it to an
-// object, and forwards it to the object handler.
-func (b *Broker) HandleBytes(input []byte, resp *comm.ConnResponder) {
+// HandleBytes handles the raw byte form of a object, hot off a socket, converts
+// it to an object, and forwards it to the object handler.
+func (b *Broker) HandleBytes(input []byte, resp *rhizome.ConnResponder) {
 	// Parse byte stream -> object.
-	obj, err := protocol.DecodeFrame(input, resp)
+	obj, err := rhizome.DecodeFrame(input, resp)
 	if err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func (b *Broker) HandleBytes(input []byte, resp *comm.ConnResponder) {
 // -------Route Management------------------------------------------------------
 
 // getRoute returns ptr to existing or nil.
-func (b *Broker) getRoute(obj *protocol.Object) *route {
+func (b *Broker) getRoute(obj *rhizome.Object) *route {
 	b.mutex.RLock()
 	r := b.routes[obj.Arg1]
 	b.mutex.RUnlock()
@@ -70,7 +70,7 @@ func (b *Broker) getRoute(obj *protocol.Object) *route {
 
 // Creates a route from the given object whose Arg1 is the route name.
 // If the route already exists, the existing route is returned instead.
-func (b *Broker) createRoute(obj *protocol.Object) *route {
+func (b *Broker) createRoute(obj *rhizome.Object) *route {
 	r := b.getRoute(obj)
 	if r != nil {
 		return r
@@ -98,11 +98,11 @@ func (b *Broker) removeEmptyRoute(name string) {
 	}
 }
 
-// Gets a channel from a protocol object whose arg1 is the route and arg2 is the
+// Gets a channel from a rhizome object whose arg1 is the route and arg2 is the
 // channel.
 // Will return a pointer if found or nil if not.
 // Will write response with nack code for which item wasn't found.
-func (b *Broker) getChannel(obj *protocol.Object) *channel {
+func (b *Broker) getChannel(obj *rhizome.Object) *channel {
 	r := b.getRoute(obj)
 	if r == nil {
 		obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
@@ -118,9 +118,9 @@ func (b *Broker) getChannel(obj *protocol.Object) *channel {
 
 // -------Object Handling------------------------------------------------------
 
-// Handles the object generated from the incoming byte stream.
+// HandleObject routes the object generated from the incoming byte stream.
 // Is exported for boot to load PreInit.json structures into.
-func (b *Broker) HandleObject(obj *protocol.Object) error {
+func (b *Broker) HandleObject(obj *rhizome.Object) error {
 	switch obj.ObjType {
 	case globals.OBJ_DELIVERY:
 		b.handleDelivery(obj)
@@ -142,7 +142,7 @@ func (b *Broker) HandleObject(obj *protocol.Object) error {
 	return nil
 }
 
-func (b *Broker) handleDelivery(obj *protocol.Object) {
+func (b *Broker) handleDelivery(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_SEND:
@@ -163,7 +163,7 @@ func (b *Broker) handleDelivery(obj *protocol.Object) {
 	}
 }
 
-func (b *Broker) handleChannel(obj *protocol.Object) {
+func (b *Broker) handleChannel(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_ADD:
@@ -188,7 +188,7 @@ func (b *Broker) handleChannel(obj *protocol.Object) {
 	b.printStructure()
 }
 
-func (b *Broker) handleTransformer(obj *protocol.Object) {
+func (b *Broker) handleTransformer(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_ADD:
@@ -221,7 +221,7 @@ func (b *Broker) handleTransformer(obj *protocol.Object) {
 	b.printStructure()
 }
 
-func (b *Broker) handleSubscriber(obj *protocol.Object) {
+func (b *Broker) handleSubscriber(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_ADD:
@@ -254,7 +254,7 @@ func (b *Broker) handleSubscriber(obj *protocol.Object) {
 	b.printStructure()
 }
 
-func (b *Broker) handleGlobals(obj *protocol.Object) {
+func (b *Broker) handleGlobals(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_UPDATE:
@@ -277,7 +277,7 @@ func (b *Broker) handleGlobals(obj *protocol.Object) {
 	}
 }
 
-func (b *Broker) handleActions(obj *protocol.Object) {
+func (b *Broker) handleActions(obj *rhizome.Object) {
 	switch obj.CmdType {
 
 	case globals.CMD_SIGTERM:

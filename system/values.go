@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 
 	"mycelia/globals"
-	"mycelia/protocol"
 
+	"github.com/signal-weave/rhizome"
 	"github.com/signal-weave/siglog"
 )
 
@@ -15,13 +15,13 @@ import (
 
 var ConfigFile = filepath.Join(globals.ExeDir, "Mycelia_Config.json")
 
-// This is a list of commands used for booting up and pre-configuring the broker
+// ObjectList is a list of commands used for booting up and pre-configuring the broker
 // based on the Mycelia_Config.json file.
-var ObjectList = []*protocol.Object{}
+var ObjectList []*rhizome.Object
 
 // -------System Runtime Data Structures----------------------------------------
 
-// Proxy struct for unmarshalling the Mycelia_Config.json runtime data into
+// ParamData Proxy struct for unmarshalling the Mycelia_Config.json runtime data into
 // cleanly.
 // This handles type conversion - Go marshals json integers to float64 by
 // default for whatever fucking reason.
@@ -50,12 +50,13 @@ func NewParamData() *ParamData {
 	}
 }
 
-// Values detailing how the broker shutdown last.
+// ShutdownReport details how the broker shutdown last.
 type ShutdownReport struct {
 	GracefulShutdown *bool `json:"graceful-shutdown"`
 }
 
-// Any global dynamic values, shutdown deatils, or pre-defined routes.
+// SystemData represents global dynamic values, shutdown details, or pre-defined
+// routes.
 type SystemData struct {
 	ShutdownReport *ShutdownReport   `json:"shutdown-report"`
 	Parameters     *ParamData        `json:"parameters"`
@@ -66,7 +67,7 @@ func NewSystemData() *SystemData {
 	shutdownStatus := false
 	report := &ShutdownReport{GracefulShutdown: &shutdownStatus}
 
-	routes := []map[string]any{}
+	var routes []map[string]any
 
 	return &SystemData{
 		ShutdownReport: report,

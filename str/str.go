@@ -10,8 +10,8 @@ import (
 
 	"mycelia/globals"
 
-	"golang.org/x/term"
 	"github.com/signal-weave/siglog"
+	"golang.org/x/term"
 )
 
 func SprintfLn(formatStr string, args ...string) {
@@ -70,15 +70,15 @@ func getOutputWidth() int {
 	return globals.DEFAULT_TERMINAL_W
 }
 
-// Prints "-" repeated to fill the terminal length if a terminal is being used
-// for Stdout, otherwise repeats 80 columns wide.
+// PrintAsciiLine prints "-" repeated to fill the terminal length if a terminal
+// is being used for Stdout, otherwise repeats 80 columns wide.
 func PrintAsciiLine() {
 	width := getOutputWidth()
 	fmt.Println(strings.Repeat("-", width))
 }
 
-// Prints a "-----header-----" to fill the terminal length if a terminal is
-// being used for Stdout, otherwise prints 80 columns wide.
+// PrintCenteredHeader prints a "-----header-----" to fill the terminal length
+// if a terminal is being used for Stdout, otherwise prints 80 columns wide.
 func PrintCenteredHeader(header string) {
 	width := getOutputWidth()
 	vis := utf8.RuneCountInString(header)

@@ -45,5 +45,8 @@ func LogError(e MyceliaError) {
 
 	case siglog.LL_INFO:
 		logging.LogSystemAction(e.Error())
+
+	default:
+		logging.LogSystemError(e.Error())
 	}
 }

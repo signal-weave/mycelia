@@ -1,10 +1,13 @@
 package routing
 
 import (
+	"fmt"
+	"mycelia/logging"
 	"sync"
 
 	"mycelia/globals"
-	"mycelia/protocol"
+
+	"github.com/signal-weave/rhizome"
 )
 
 // A worker that manages the communication between transformers and subscribers
@@ -13,7 +16,7 @@ import (
 type partition struct {
 	route   *route
 	channel *channel
-	in      chan *protocol.Object
+	in      chan *rhizome.Object
 	wg      sync.WaitGroup
 }
 
@@ -74,7 +77,13 @@ func (p *partition) loop() {
 			// If no remaining channels, inform sender the message was sent.
 			if result.AckPlcy == globals.ACK_PLCY_ONSENT {
 				result.Response.Ack = globals.ACK_SENT
-				result.Responder.Write(protocol.EncodeResponse(result))
+				payload, err := rhizome.EncodeResponse(result)
+				if err != nil {
+					logging.LogSystemError(
+						fmt.Sprintf("could not encode msg from %s", result.Responder.RemoteAddr()),
+					)
+				}
+				result.Responder.Write(payload)
 			}
 		}
 	}

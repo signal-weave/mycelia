@@ -9,10 +9,10 @@ import (
 
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
 	"mycelia/system"
 
 	"github.com/google/uuid"
+	"github.com/signal-weave/rhizome"
 )
 
 // -----------------------------------------------------------------------------
@@ -159,7 +159,7 @@ func parseChannels(channelData map[string]any, routeName string) {
 	strategy := strconv.Itoa(int(globals.StrategyValue[strategyName]))
 	id := uuid.New().String()
 
-	obj := protocol.NewObject(
+	obj := rhizome.NewObject(
 		globals.OBJ_CHANNEL,
 		globals.CMD_ADD,
 		globals.ACK_PLCY_NOREPLY,
@@ -184,7 +184,7 @@ func parseTransformers(channelData map[string]any, routeName string) {
 		}
 		id := uuid.New().String()
 		addr := transformer["address"].(string)
-		obj := protocol.NewObject(
+		obj := rhizome.NewObject(
 			globals.OBJ_TRANSFORMER,
 			globals.CMD_ADD,
 			globals.ACK_PLCY_NOREPLY,
@@ -209,7 +209,7 @@ func parseSubscribers(channelData map[string]any, routeName string) {
 		}
 		id := uuid.New().String()
 		addr := subscriber["address"].(string)
-		obj := protocol.NewObject(
+		obj := rhizome.NewObject(
 			globals.OBJ_SUBSCRIBER,
 			globals.CMD_ADD,
 			globals.ACK_PLCY_NOREPLY,

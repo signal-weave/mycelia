@@ -5,10 +5,11 @@ import (
 	"net"
 
 	"mycelia/logging"
-	"mycelia/protocol"
+
+	"github.com/signal-weave/rhizome"
 )
 
-// Object representation of the client subscribed to an endpoint, ie. the
+// Object representation of the client subscribed to an endpoint, i.e. the
 // distributed machine that a delivery will be forwarded to.
 type subscriber struct {
 	Address string
@@ -19,7 +20,7 @@ func newSubscriber(address string) *subscriber {
 }
 
 // Forwards the delivery to the client represented by the consumer object.
-func (c *subscriber) deliver(obj *protocol.Object) {
+func (c *subscriber) deliver(obj *rhizome.Object) {
 	logging.LogObjectAction(
 		fmt.Sprintf("Attempting to dial %s", c.Address), obj.UID,
 	)
