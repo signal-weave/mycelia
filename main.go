@@ -28,6 +28,8 @@ func main() {
 	shutdown.Shutdown()
 }
 
+// test
+
 // Starts the server - checks for pre-loaded commands from the PreInit.json file
 // and loads them into the server's broker, then runs the server.
 func startServer() {
