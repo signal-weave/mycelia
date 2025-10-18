@@ -2,6 +2,7 @@ package startup
 
 import (
 	"fmt"
+	"mycelia/str"
 	"os"
 
 	"mycelia/globals"
@@ -22,6 +23,7 @@ func Startup(argv []string) {
 	initializeLogger()
 	logging.LogSystemAction("Starting startup Process!")
 
+	str.PrintStartupText(system.BuildMetadata.String())
 	makeDirectories()
 	parseCli(argv)
 	parseConfigFile()

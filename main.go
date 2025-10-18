@@ -6,18 +6,13 @@ import (
 
 	"mycelia/globals"
 	"mycelia/server"
-	"mycelia/str"
 	"mycelia/system"
 	"mycelia/system/shutdown"
 	"mycelia/system/startup"
 )
 
-var majorVersion = 0  // Proud version
-var minorVersion = 15 // Real  version
-var patchVersion = 0  // Sucky version
-
 func main() {
-	str.PrintStartupText(majorVersion, minorVersion, patchVersion)
+	updateVersion() // Be sure to update!
 
 	startup.Startup(os.Args[1:])
 
@@ -26,6 +21,15 @@ func main() {
 	startServer() // Performs loop until globals.PerformShutdown is true.
 
 	shutdown.Shutdown()
+}
+
+func updateVersion() {
+	system.BuildMetadata.MajorVersion = 0  // Proud version
+	system.BuildMetadata.MinorVersion = 16 // Real  version
+	system.BuildMetadata.PatchVersion = 0  // Sucky version
+
+	system.BuildMetadata.ReleaseType = system.ReleaseDev
+	system.BuildMetadata.DevVersion = 1
 }
 
 // Starts the server - checks for preloaded commands from the PreInit.json file

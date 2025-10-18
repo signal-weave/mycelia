@@ -30,18 +30,17 @@ func printHeader() {
 	}
 }
 
-func printVersion(major, minor, patch int) {
-	brokerVersion := fmt.Sprintf("%d.%d.%d", major, minor, patch)
-	verString := fmt.Sprintf("Running verison: %s", brokerVersion)
+func printVersion(version string) {
+	verString := fmt.Sprintf("Running verison: %s", version)
 	fmt.Println(verString)
 }
 
-func PrintStartupText(maj, min, patch int) {
+func PrintStartupText(version string) {
 	PrintAsciiLine()
 	printHeader()
 	PrintAsciiLine()
 	fmt.Println(producedBy)
-	printVersion(maj, min, patch)
+	printVersion(version)
 	PrintAsciiLine()
 	fmt.Println(disclaimer)
 	PrintAsciiLine()
