@@ -23,6 +23,8 @@ func main() {
 	shutdown.Shutdown()
 }
 
+// Sets the build metadata fields denoting what kind of build that will be
+// generated.
 func updateVersion() {
 	system.BuildMetadata.MajorVersion = 0  // Proud version
 	system.BuildMetadata.MinorVersion = 16 // Real  version
