@@ -9,8 +9,8 @@ import (
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
 
+	"github.com/signal-weave/rhizome"
 	"github.com/signal-weave/siglog"
 )
 
@@ -35,7 +35,7 @@ type runtimeUpdater struct {
 // Verify that the values and sender are valid and then update the globals, if
 // they are.
 // Returns if the user was verified or not.
-func updateGlobals(obj *protocol.Object) bool {
+func updateGlobals(obj *rhizome.Object) bool {
 	var rv runtimeUpdater
 	err := json.Unmarshal(obj.Payload, &rv)
 	if err != nil {
@@ -43,7 +43,7 @@ func updateGlobals(obj *protocol.Object) bool {
 			"Could not parse payload for globals update from %s",
 			obj.Responder.C.RemoteAddr().String(),
 		)
-		errgo.NewError(wMsg, globals.VERB_WRN)
+		_ = errgo.NewError(wMsg, globals.VERB_WRN)
 		return false
 	}
 
@@ -71,7 +71,7 @@ func updateGlobals(obj *protocol.Object) bool {
 	return true
 }
 
-// Unpack the unrtimeUpdater values into the globals.
+// Unpack the runtimeUpdater values into the globals.
 func unpackGlobals(ru runtimeUpdater, sender string) {
 	if ru.Address != nil {
 		globals.Address = *ru.Address

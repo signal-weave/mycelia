@@ -12,9 +12,9 @@ import (
 	"mycelia/system/startup"
 )
 
-var majorVersion int = 0  // Proud version
-var minorVersion int = 14 // Real version
-var patchVersion int = 1  // Sucky verison
+var majorVersion = 0  // Proud version
+var minorVersion = 15 // Real  version
+var patchVersion = 0  // Sucky version
 
 func main() {
 	str.PrintStartupText(majorVersion, minorVersion, patchVersion)
@@ -28,15 +28,18 @@ func main() {
 	shutdown.Shutdown()
 }
 
-// Starts the server - checks for pre-loaded commands from the PreInit.json file
+// Starts the server - checks for preloaded commands from the PreInit.json file
 // and loads them into the server's broker, then runs the server.
 func startServer() {
-	server := server.NewServer(globals.Address, globals.Port)
+	s := server.NewServer(globals.Address, globals.Port)
 	for _, cmd := range system.ObjectList {
-		server.Broker.HandleObject(cmd)
+		err := s.Broker.HandleObject(cmd)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 
-	if err := server.Run(); err != nil {
+	if err := s.Run(); err != nil {
 		fmt.Println(err.Error())
 	}
 }

@@ -8,7 +8,8 @@ import (
 
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
+
+	"github.com/signal-weave/rhizome"
 )
 
 // Channels are the subscription buckets that fill routes. A subscriber
@@ -54,11 +55,11 @@ func newChannel(
 	ch.tSnap.Store([]transformer{})
 	ch.sSnap.Store([]subscriber{})
 
-	partitions := []*partition{}
+	var partitions []*partition
 	for range numPartitions {
 		np := newPartition(r, ch)
 		partitions = append(partitions, np)
-		np.in = make(chan *protocol.Object, globals.PartitionChanSize)
+		np.in = make(chan *rhizome.Object, globals.PartitionChanSize)
 		np.start()
 	}
 	ch.partitions = partitions
@@ -189,15 +190,15 @@ func (ch *channel) checkEmptyChannel() {
 	}
 }
 
-func (c *channel) enqueue(m *protocol.Object) {
-	c.mutex.RLock()
-	parts := c.partitions
-	c.mutex.RUnlock()
+func (ch *channel) enqueue(m *rhizome.Object) {
+	ch.mutex.RLock()
+	parts := ch.partitions
+	ch.mutex.RUnlock()
 
 	if len(parts) == 0 {
 		return // Channel is closed / removed
 	}
 
-	idx := int(c.hash([]byte(m.Arg3))) % len(parts)
+	idx := int(ch.hash([]byte(m.Arg3))) % len(parts)
 	parts[idx].in <- m
 }

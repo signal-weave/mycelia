@@ -8,7 +8,8 @@ import (
 
 	"mycelia/globals"
 	"mycelia/logging"
-	"mycelia/protocol"
+
+	"github.com/signal-weave/rhizome"
 )
 
 // The primary grouping for message traversal. A route can contain multiple
@@ -27,7 +28,7 @@ type route struct {
 }
 
 func newRoute(broker *Broker, name string) *route {
-	channels := []*channel{}
+	var channels []*channel
 
 	r := route{
 		broker:   broker,
@@ -66,13 +67,19 @@ func (r *route) getChannel(name string) *channel {
 //
 // If the channel already exists, a response is sent with an ack value of
 // globals.ACK_TYPE_CHANNEL_ALREADY_EXISTS.
-func (r *route) createChannel(obj *protocol.Object) {
+func (r *route) createChannel(obj *rhizome.Object) {
 	// Args: route, name, strategy, nil
 	ch := r.getChannel(obj.Arg2)
 	if ch != nil {
 		if obj.Responder != nil {
 			obj.Response.Ack = globals.ACK_CHANNEL_ALREADY_EXISTS
-			obj.Responder.Write(protocol.EncodeResponse(obj))
+			payload, err := rhizome.EncodeResponse(obj)
+			if err != nil {
+				logging.LogSystemError(
+					fmt.Sprintf("could not create channel from %s", obj.Responder.RemoteAddr()),
+				)
+			}
+			obj.Responder.Write(payload)
 		}
 		return
 	}
@@ -149,7 +156,7 @@ func (r *route) removeChannel(name string) {
 // Sends the message down the channel. The channel's partition will send it to
 // the next channel so routes are only concerned about sending to the first
 // channel.
-func (r *route) enqueue(msg *protocol.Object) {
+func (r *route) enqueue(msg *rhizome.Object) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 

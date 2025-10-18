@@ -8,17 +8,17 @@ import (
 	"mycelia/globals"
 )
 
-var line1 string = "███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗"
-var line2 string = "████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗"
-var line3 string = "██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║"
-var line4 string = "██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║"
-var line5 string = "██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║"
-var line6 string = "╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝"
+var line1 = "███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗"
+var line2 = "████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗"
+var line3 = "██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║"
+var line4 = "██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║"
+var line5 = "██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║"
+var line6 = "╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝"
 
-var lines []string = []string{line1, line2, line3, line4, line5, line6}
+var lines = []string{line1, line2, line3, line4, line5, line6}
 
-var producedBy string = fmt.Sprintf("A %s product.", globals.Developer)
-var disclaimer string = "Mycelia is a work-in-progress concurrent message broker."
+var producedBy = fmt.Sprintf("A %s product.", globals.Developer)
+var disclaimer = "Mycelia is a work-in-progress concurrent message broker."
 
 func printHeader() {
 	width := getOutputWidth()

@@ -5,11 +5,11 @@ package globals
 type SelectionStrategy int
 
 const (
-	// Default name for deadletter channels.
+	// DeadLetter is the name for dead letter channels.
 	DeadLetter = "deadLetter"
 
-	// The number of protocol.Object that a mycelia channel partition can hold
-	// at any maximum.
+	// PartitionChanSize is the number of protocol.Object that a mycelia channel
+	// partition can hold at any maximum.
 	PartitionChanSize = 128
 )
 

@@ -10,6 +10,8 @@ import (
 	"mycelia/logging"
 	"mycelia/routing"
 	"mycelia/str"
+
+	"github.com/signal-weave/rhizome"
 )
 
 func NewServer(address string, port int) *Server {
@@ -20,7 +22,7 @@ func NewServer(address string, port int) *Server {
 	return server
 }
 
-// Servers are responsible for translating raw TCP string input into routable
+// Server is responsible for translating raw TCP string input into routable
 // messages.
 type Server struct {
 	jobs     chan net.Conn
@@ -98,7 +100,7 @@ func (s *Server) Shutdown() {
 	}
 }
 
-// Updates the socket the server is listening to at runtime.
+// UpdateListener updates which socket the server is listening to at runtime.
 func (s *Server) UpdateListener() error {
 	// open new first
 	addr := fmt.Sprintf("%s:%d", globals.Address, globals.Port)
@@ -132,13 +134,13 @@ func (s *Server) UpdateListener() error {
 	return nil
 }
 
-// Handle incoming data stream.
+// HandleConnection manages incoming data stream.
 func (s *Server) HandleConnection(conn net.Conn) {
 	logging.LogSystemAction(
 		fmt.Sprintf("Client connected: %s\n", conn.RemoteAddr().String()),
 	)
 
-	resp := comm.NewConnResponder(conn)
+	resp := rhizome.NewConnResponder(conn)
 
 	for {
 		frame, err := comm.ReadFrameU32(conn)

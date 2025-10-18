@@ -18,8 +18,8 @@ import (
 
 const lenU32 = 4
 
-// Read the frame's byte stream until the message header's worth of bytes have
-// been consumed, then return a buffer of those bytes or error.
+// ReadFrameU32 reads the frame's byte stream until the message header's worth
+// of bytes have been consumed, then return a buffer of those bytes or error.
 func ReadFrameU32(conn net.Conn) ([]byte, error) {
 	var hdr [lenU32]byte
 	if _, err := io.ReadFull(conn, hdr[:]); err != nil {
