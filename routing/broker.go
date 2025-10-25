@@ -49,7 +49,7 @@ func (b *Broker) HandleBytes(input []byte, resp *rhizome.ConnResponder) {
 		return
 	}
 
-	b.HandleObject(obj)
+	_ = b.HandleObject(obj)
 }
 
 // -------Route Management------------------------------------------------------
@@ -61,7 +61,10 @@ func (b *Broker) getRoute(obj *rhizome.Object) *route {
 	b.mutex.RUnlock()
 
 	if r == nil {
-		obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		if err != nil {
+			logging.LogObjectWarning(err.Error(), obj.UID)
+		}
 		return nil
 	}
 
@@ -105,12 +108,14 @@ func (b *Broker) removeEmptyRoute(name string) {
 func (b *Broker) getChannel(obj *rhizome.Object) *channel {
 	r := b.getRoute(obj)
 	if r == nil {
-		obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		LogPossibleAckError(obj, err)
 		return nil
 	}
 	c := r.getChannel(obj.Arg2)
 	if c == nil {
-		obj.ResponeWithAck(globals.ACK_CHANNEL_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.ACK_CHANNEL_NOT_FOUND)
+		LogPossibleAckError(obj, err)
 		return nil
 	}
 	return c
@@ -148,7 +153,8 @@ func (b *Broker) handleDelivery(obj *rhizome.Object) {
 	case globals.CMD_SEND:
 		r := b.getRoute(obj)
 		if r == nil {
-			obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+			err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+			LogPossibleAckError(obj, err)
 			return
 		}
 		r.enqueue(obj) // no channels means route will send to dead letter.
@@ -264,7 +270,10 @@ func (b *Broker) handleGlobals(obj *rhizome.Object) {
 		}
 		if b.ManagingServer.GetAddress() != globals.Address ||
 			b.ManagingServer.GetPort() != globals.Port {
-			b.ManagingServer.UpdateListener()
+			err := b.ManagingServer.UpdateListener()
+			if err != nil {
+				logging.LogObjectError(err.Error(), obj.UID)
+			}
 		}
 
 	default:
@@ -322,4 +331,13 @@ func (b *Broker) printStructure() {
 		r.mutex.RUnlock()
 	}
 	str.PrintAsciiLine()
+}
+
+// LogPossibleAckError logs any error from a rhizome object that occurred when
+// attempting to respond with an ack.
+func LogPossibleAckError(obj *rhizome.Object, err error) {
+	if err != nil {
+		m := fmt.Sprintf("Object error when resopnding with ack: %s", err)
+		logging.LogObjectWarning(m, obj.UID)
+	}
 }

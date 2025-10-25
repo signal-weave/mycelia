@@ -13,18 +13,17 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Herein is the starup process related functions, all neatly placed in one
+// Herein is the startup process related functions, all neatly placed in one
 // file.
 // This is the top of the cli + pre-init/recovery stack.
 // -----------------------------------------------------------------------------
 
-// Read cli / config values...
+// Startup reads cli / config values and initializes systems like logging, etc.
 func Startup(argv []string) {
 	initializeLogger()
 	logging.LogSystemAction("Starting startup Process!")
 
 	str.PrintStartupText(system.BuildMetadata.String())
-	makeDirectories()
 	parseCli(argv)
 	parseConfigFile()
 
@@ -34,12 +33,24 @@ func Startup(argv []string) {
 // initializeLogger sets all the logging values including log level, output
 // directory, and batch mode.
 func initializeLogger() {
-	siglog.SetLogDirectory(globals.LogDirectory)
-	siglog.SetOutput(siglog.OUT_FILE)
-	siglog.SetLogLevel(siglog.LL_DEBUG)
+	err := siglog.SetLogDirectory(globals.LogDirectory)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Could not create log dir: %s", err))
+		return
+	}
+	err = siglog.SetOutput(siglog.OUT_FILE)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Could not set log out file: %s", err))
+		return
+	}
+	err = siglog.SetLogLevel(siglog.LL_DEBUG)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Unable to set log level environ var: %s", err))
+		return
+	}
 
 	if err := siglog.SetBatchMode(siglog.BATCH_NONE); err != nil {
-		fmt.Println(err)
+		fmt.Println(fmt.Sprintf("Could not set log batch mode: %s", err))
 	}
 }
 
@@ -47,8 +58,10 @@ func initializeLogger() {
 func parseCli(argv []string) {
 	err := parseRuntimeArgs(argv)
 	if err != nil {
-		// We do not make a Mycelia Error here because main hands this in stdout
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Println(fmt.Sprintf("Could not parse runtime args: %s", err))
+		// We do not make a Mycelia Error here because main hands this to stdout
+		_, err = fmt.Fprintln(os.Stderr, err)
+		fmt.Println(fmt.Sprintf("Could not write to stdout: %s", err))
 		os.Exit(2)
 	}
 }
@@ -60,9 +73,4 @@ func parseConfigFile() {
 	if err == nil {
 		getConfigData()
 	}
-}
-
-// Makes all required subdirectories.
-func makeDirectories() {
-	os.MkdirAll(globals.LogDirectory, 0755)
 }
