@@ -75,15 +75,18 @@ func (p *partition) loop() {
 			next.enqueue(result)
 		} else {
 			// If no remaining channels, inform sender the message was sent.
-			if result.AckPlcy == globals.ACK_PLCY_ONSENT {
-				result.Response.Ack = globals.ACK_SENT
+			if result.AckPlcy == globals.AckPlcyOnsent {
+				result.Response.Ack = globals.AckSent
 				payload, err := rhizome.EncodeResponse(result)
 				if err != nil {
 					logging.LogSystemError(
 						fmt.Sprintf("could not encode msg from %s", result.Responder.RemoteAddr()),
 					)
 				}
-				result.Responder.Write(payload)
+				err = result.Responder.Write(payload)
+				if err != nil {
+					// ...
+				}
 			}
 		}
 	}

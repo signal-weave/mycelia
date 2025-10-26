@@ -35,7 +35,7 @@ var Verbosity = siglog.LL_INFO
 
 // LogOutput where log messages should go to.
 // Defaults to .log file.
-var LogOutput = LOG_TO_FILE // 0=.log file, 1=console, 2=both
+var LogOutput = LogToFile // 0=.log file, 1=console, 2=both
 
 // PrintTree enables debug tree printing.
 var PrintTree = false

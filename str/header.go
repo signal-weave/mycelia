@@ -8,21 +8,21 @@ import (
 	"mycelia/globals"
 )
 
-var line1 = "███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗"
-var line2 = "████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗"
-var line3 = "██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║"
-var line4 = "██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║"
-var line5 = "██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║"
-var line6 = "╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝"
-
-var lines = []string{line1, line2, line3, line4, line5, line6}
+var lines = []string{
+	"███╗   ███╗██╗   ██╗ ██████╗███████╗██╗     ██╗ █████╗ ",
+	"████╗ ████║╚██╗ ██╔╝██╔════╝██╔════╝██║     ██║██╔══██╗",
+	"██╔████╔██║ ╚████╔╝ ██║     █████╗  ██║     ██║███████║",
+	"██║╚██╔╝██║  ╚██╔╝  ██║     ██╔══╝  ██║     ██║██╔══██║",
+	"██║ ╚═╝ ██║   ██║   ╚██████╗███████╗███████╗██║██║  ██║",
+	"╚═╝     ╚═╝   ╚═╝    ╚═════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝",
+}
 
 var producedBy = fmt.Sprintf("A %s product.", globals.Developer)
 var disclaimer = "Mycelia is a work-in-progress concurrent message broker."
 
 func printHeader() {
 	width := getOutputWidth()
-	vis := utf8.RuneCountInString(line1)
+	vis := utf8.RuneCountInString(lines[0])
 	spacer := (width - vis) / 2
 	prefix := strings.Repeat(" ", spacer)
 	for _, v := range lines {

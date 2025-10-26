@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/logging"
@@ -34,27 +35,31 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 	conn, err := net.Dial("tcp", t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
-		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr // Return original delivery on failure
 	}
-	defer conn.Close()
+	defer comm.CloseConnection(conn)
 
 	// Send the delivery body to transformer
 	_, err = conn.Write(obj.Payload)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
-		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr
 	}
 
 	// Read the transformed response with a timeout
-	conn.SetReadDeadline(time.Now().Add(globals.TransformTimeout))
+	err = conn.SetReadDeadline(time.Now().Add(globals.TransformTimeout))
+	if err != nil {
+		m := fmt.Sprintf("Unable to set deadline for conn to %s: %s", conn.RemoteAddr(), err)
+		logging.LogSystemWarning(m)
+	}
 
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
 	if err != nil {
 		wMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
-		wErr := errgo.NewError(wMsg, globals.VERB_WRN)
+		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr
 	}
 

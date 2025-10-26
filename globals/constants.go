@@ -11,104 +11,100 @@ const (
 	Developer = "Signal Weave"
 )
 
-const (
-	DateLayout = "01-02-2006"  // MM-DD-YYYY
-	TimeLayout = "15-04-05-00" // HH-MM-SS-XX
-)
-
 // -------Memory Values---------------------------------------------------------
 
 const (
 	BytesInKilobyte = 1024
 	BytesInMegabyte = 1024 * BytesInKilobyte
-	BytesInGigabyte = 1024 * BytesInMegabyte
 )
 
 // -------Logging---------------------------------------------------------------
 
 const (
-	VERB_NIL = 0 // No printing
+	VerbNil = 0 // No printing
 
-	// The VERB_ERR verbosity level is reserved for when internals of the broker
+	// The VerbErr verbosity level is reserved for when internals of the broker
 	// encounter a problem that would normally keep the broker from operating.
-	VERB_ERR = 1 // Error printing
+	VerbErr = 1 // Error printing
 
-	// The VERB_WRN verbosity level is reserved for when clients have sent the
+	// The VerbWrn verbosity level is reserved for when clients have sent the
 	// broker bad data, such as an undialable address, or a fake object.
-	VERB_WRN = 2 // Warning + error printing
+	VerbWrn = 2 // Warning + error printing
 
-	// The VERB_ACT verbosity level is reserved for when actions the user may
+	// The VertAct verbosity level is reserved for when actions the user may
 	// want to know about have taken place, such as when a client connects or
 	// disconnects, or when a route as updated.
-	VERB_ACT = 3 // Action + warning + error printing
+	VertAct = 3 // Action + warning + error printing
 )
 
 const (
-	LOG_TO_FILE    = 0
-	LOG_TO_CONSOLE = 1
-	LOG_TO_BOTH    = 2
+	LogToFile    = 0
+	LogToConsole = 1
+	LogToBoth    = 2
 )
 
 // -------Objects---------------------------------------------------------------
 
 const (
-	OBJ_UNKNOWN uint8 = 0
+	ObjUnknown uint8 = 0
 
-	OBJ_DELIVERY    uint8 = 1
-	OBJ_TRANSFORMER uint8 = 2
-	OBJ_SUBSCRIBER  uint8 = 3
-	OBJ_CHANNEL     uint8 = 4
+	ObjDelivery    uint8 = 1
+	ObjTransformer uint8 = 2
+	ObjSubscriber  uint8 = 3
+	ObjChannel     uint8 = 4
 
-	OBJ_GLOBALS uint8 = 20
+	ObjGlobals uint8 = 20
 
-	OBJ_Action uint8 = 50
+	ObjAction uint8 = 50
 )
 
 const (
-	CMD_UNKNOWN uint8 = 0
+	CmdUnknown uint8 = 0
 
-	CMD_SEND   uint8 = 1
-	CMD_ADD    uint8 = 2
-	CMD_REMOVE uint8 = 3
+	CmdSend   uint8 = 1
+	CmdAdd    uint8 = 2
+	CmdRemove uint8 = 3
 
-	CMD_UPDATE uint8 = 20
+	CmdUpdate uint8 = 20
 
-	CMD_SIGTERM uint8 = 50
+	CmdSigterm uint8 = 50
 )
 
 // -------Acks/Nacks------------------------------------------------------------
 
 const (
-	// Sender does not wish to receive ack.
-	ACK_PLCY_NOREPLY uint8 = 0
+	// AckPlcyNoreply means sender does not wish to receive ack.
+	AckPlcyNoreply uint8 = 0
 
-	// Sender wants to get ack when broker delivers to final subscriber.
+	// AckPlcyOnsent means sender wants to get ack when broker delivers to final
+	//subscriber.
 	// This often means sending the ack back after the final channel has
 	// processed the message object.
-	ACK_PLCY_ONSENT uint8 = 1
+	AckPlcyOnsent uint8 = 1
 )
 
 const (
-	ACK_UNKNOWN uint8 = 0 // Undetermined
+	AckUnknown uint8 = 0 // Undetermined
 
-	// Broker was able to and finished sending message to subscribers.
-	ACK_SENT uint8 = 1
+	// AckSent means broker was able to and finished sending message to
+	//subscribers.
+	AckSent uint8 = 1
 
-	// This isn't used by the broker, but its here for clarity.
+	// AckTimeout isn't used by the broker, but its here for clarity.
 	// Client APIs do use this value when timing out while trying to connect to
 	// the broker.
-	// If no ack was gotten before the timeout time, a response with ACK_TIMEOUT
+	// If no ack was gotten before the timeout time, a response with AckTimeout
 	// is generated and returned instead.
-	ACK_TIMEOUT uint8 = 10
+	AckTimeout uint8 = 10
 
-	ACK_CHANNEL_NOT_FOUND      uint8 = 20
-	ACK_CHANNEL_ALREADY_EXISTS uint8 = 21
-	ACK_ROUTE_NOT_FOUND        uint8 = 30
+	AckChannelNotFound      uint8 = 20
+	AckChannelAlreadyExists uint8 = 21
+	AckRouteNotFound        uint8 = 30
 )
 
 // -------Terminal--------------------------------------------------------------
 
 const (
-	DEFAULT_TERMINAL_W = 80
-	DEFAULT_TERMINAL_H = 25
+	DefaultTerminalW = 80
+	DefaultTerminalH = 25
 )

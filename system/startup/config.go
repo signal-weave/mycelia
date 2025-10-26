@@ -22,8 +22,7 @@ import (
 // The Mycelia_Config.json file acts as an alternative or addition to providing
 // values on startup.
 
-// It will overwrite any CLI values that were placed in it if they were also
-// provided by CLI.
+// It will overwrite any matching CLI values.
 
 // Any CLI value can be placed under the "parameters" field in the json as well
 // as any pre-defined routes/channels/transformers/subscribers (provided they
@@ -46,7 +45,10 @@ func getConfigData() {
 	}
 
 	var bd system.SystemData
-	json.Unmarshal(data, &bd)
+	err = json.Unmarshal(data, &bd)
+	if err != nil {
+		logging.LogSystemError(fmt.Sprintf("Cannot unmarshal config file: %s", err))
+	}
 
 	if bd.Parameters != nil {
 		parseRuntimeConfigurable(*bd.Parameters)
@@ -160,9 +162,9 @@ func parseChannels(channelData map[string]any, routeName string) {
 	id := uuid.New().String()
 
 	obj := rhizome.NewObject(
-		globals.OBJ_CHANNEL,
-		globals.CMD_ADD,
-		globals.ACK_PLCY_NOREPLY,
+		globals.ObjChannel,
+		globals.CmdAdd,
+		globals.AckPlcyNoreply,
 		id,
 		routeName,
 		channelName,
@@ -185,9 +187,9 @@ func parseTransformers(channelData map[string]any, routeName string) {
 		id := uuid.New().String()
 		addr := transformer["address"].(string)
 		obj := rhizome.NewObject(
-			globals.OBJ_TRANSFORMER,
-			globals.CMD_ADD,
-			globals.ACK_PLCY_NOREPLY,
+			globals.ObjTransformer,
+			globals.CmdAdd,
+			globals.AckPlcyNoreply,
 			id,
 			routeName,
 			channelName,
@@ -210,9 +212,9 @@ func parseSubscribers(channelData map[string]any, routeName string) {
 		id := uuid.New().String()
 		addr := subscriber["address"].(string)
 		obj := rhizome.NewObject(
-			globals.OBJ_SUBSCRIBER,
-			globals.CMD_ADD,
-			globals.ACK_PLCY_NOREPLY,
+			globals.ObjSubscriber,
+			globals.CmdAdd,
+			globals.AckPlcyNoreply,
 			id,
 			routeName,
 			channelName,
