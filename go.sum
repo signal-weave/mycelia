@@ -4,6 +4,8 @@ github.com/signal-weave/rhizome v0.0.0-20251018050440-a07f9f8a5deb h1:42mm9QAWGq
 github.com/signal-weave/rhizome v0.0.0-20251018050440-a07f9f8a5deb/go.mod h1:lQgk25uu5fX3AkpeSmxX+/XZ17pBCcApwpISkAmXrcg=
 github.com/signal-weave/rhizome v0.0.0-20251018052320-4018e157797f h1:W44akFOgBxfd9aMC1IzuiEi0etm4v3X5WU+oSknZsQk=
 github.com/signal-weave/rhizome v0.0.0-20251018052320-4018e157797f/go.mod h1:lQgk25uu5fX3AkpeSmxX+/XZ17pBCcApwpISkAmXrcg=
+github.com/signal-weave/rhizome v0.0.0-20251026012104-ff1807d82b48 h1:V5L9hOnUq7a2f+a5ZiHo5348VJ7MWPUr/Bo9P6wAtOU=
+github.com/signal-weave/rhizome v0.0.0-20251026012104-ff1807d82b48/go.mod h1:lQgk25uu5fX3AkpeSmxX+/XZ17pBCcApwpISkAmXrcg=
 github.com/signal-weave/siglog v0.0.0-20251005011459-04ac034c0d28 h1:Zscz1LQ9ZJoPRGbS7NeZ+CLRHqZNKFOEMzcH4wg1P5c=
 github.com/signal-weave/siglog v0.0.0-20251005011459-04ac034c0d28/go.mod h1:fh4Pz2pRspEE/pGX4I0C/ba/K7PV56QzYBaFE5rtDKI=
 github.com/signal-weave/siglog v0.0.0-20251013030320-702a33f5c16e h1:4RkUYpz6cIWzkjbncuz2CJNS5Lna0I7cpxC8PqJRH1g=
