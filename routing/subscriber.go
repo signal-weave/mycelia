@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"mycelia/comm"
 	"mycelia/logging"
 
 	"github.com/signal-weave/rhizome"
@@ -32,7 +33,7 @@ func (c *subscriber) deliver(obj *rhizome.Object) {
 		)
 		return
 	}
-	defer conn.Close()
+	defer comm.CloseConnection(conn)
 
 	_, err = conn.Write(obj.Payload)
 	if err != nil {

@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"net"
+
 	"mycelia/errgo"
 	"mycelia/globals"
-	"net"
 )
 
 // -----------------------------------------------------------------------------
@@ -33,7 +34,7 @@ func ReadFrameU32(conn net.Conn) ([]byte, error) {
 	if n > globals.BytesInMegabyte {
 		// sanity limit of 1MB
 		return nil, errgo.NewError(
-			fmt.Sprintf("Frame too large: %d bytes", n), globals.VERB_WRN,
+			fmt.Sprintf("Frame too large: %d bytes", n), globals.VerbWrn,
 		)
 	}
 

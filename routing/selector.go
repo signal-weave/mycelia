@@ -5,7 +5,7 @@ import (
 )
 
 // A selector is the channel component that chooses which subscribers a message
-// should be sent to using variuos selection strategies: round-robin, random,
+// should be sent to using various selection strategies: round-robin, random,
 // pub/sub, etc.
 type selector interface {
 	Select() []subscriber

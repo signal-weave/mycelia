@@ -1,18 +1,19 @@
 package comm
 
 import (
-	"mycelia/globals"
 	"sync"
+
+	"mycelia/globals"
 )
 
 // -----------------------------------------------------------------------------
 // Herein are pooling helpers for connections and message buffers.
 // -----------------------------------------------------------------------------
 
-// A reusable sync.Pool to reduce the number of byte buffer creations.
+// BufPool is a reusable sync.Pool to reduce the number of byte buffer creations.
 // Will reduce GC calls and big allocations.
 //
-// - Use the pool inside of hot-path I/O functions.
+// - Use the pool inside hot-path I/O functions.
 //
 // - Borrow buffer → use it → copy out → return buffer.
 //

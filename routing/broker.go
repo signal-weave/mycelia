@@ -61,7 +61,7 @@ func (b *Broker) getRoute(obj *rhizome.Object) *route {
 	b.mutex.RUnlock()
 
 	if r == nil {
-		err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.AckRouteNotFound)
 		if err != nil {
 			logging.LogObjectWarning(err.Error(), obj.UID)
 		}
@@ -108,13 +108,13 @@ func (b *Broker) removeEmptyRoute(name string) {
 func (b *Broker) getChannel(obj *rhizome.Object) *channel {
 	r := b.getRoute(obj)
 	if r == nil {
-		err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.AckRouteNotFound)
 		LogPossibleAckError(obj, err)
 		return nil
 	}
 	c := r.getChannel(obj.Arg2)
 	if c == nil {
-		err := obj.ResponeWithAck(globals.ACK_CHANNEL_NOT_FOUND)
+		err := obj.ResponeWithAck(globals.AckChannelNotFound)
 		LogPossibleAckError(obj, err)
 		return nil
 	}
@@ -127,20 +127,20 @@ func (b *Broker) getChannel(obj *rhizome.Object) *channel {
 // Is exported for boot to load PreInit.json structures into.
 func (b *Broker) HandleObject(obj *rhizome.Object) error {
 	switch obj.ObjType {
-	case globals.OBJ_DELIVERY:
+	case globals.ObjDelivery:
 		b.handleDelivery(obj)
-	case globals.OBJ_CHANNEL:
+	case globals.ObjChannel:
 		b.handleChannel(obj)
-	case globals.OBJ_TRANSFORMER:
+	case globals.ObjTransformer:
 		b.handleTransformer(obj)
-	case globals.OBJ_SUBSCRIBER:
+	case globals.ObjSubscriber:
 		b.handleSubscriber(obj)
-	case globals.OBJ_GLOBALS:
+	case globals.ObjGlobals:
 		b.handleGlobals(obj)
-	case globals.OBJ_Action:
+	case globals.ObjAction:
 		b.handleActions(obj)
 	default:
-		wErr := errgo.NewError("Unknown object type!", globals.VERB_WRN)
+		wErr := errgo.NewError("Unknown object type!", globals.VerbWrn)
 		return wErr
 	}
 
@@ -150,10 +150,10 @@ func (b *Broker) HandleObject(obj *rhizome.Object) error {
 func (b *Broker) handleDelivery(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_SEND:
+	case globals.CmdSend:
 		r := b.getRoute(obj)
 		if r == nil {
-			err := obj.ResponeWithAck(globals.ACK_ROUTE_NOT_FOUND)
+			err := obj.ResponeWithAck(globals.AckRouteNotFound)
 			LogPossibleAckError(obj, err)
 			return
 		}
@@ -172,12 +172,12 @@ func (b *Broker) handleDelivery(obj *rhizome.Object) {
 func (b *Broker) handleChannel(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_ADD:
+	case globals.CmdAdd:
 		// Args: route, name, strategy, nil
 		r := b.createRoute(obj)
 		r.createChannel(obj)
 
-	case globals.CMD_REMOVE:
+	case globals.CmdRemove:
 		// Args: route, name, nil, nil
 		fmt.Println("CHANNEL.REMOVE not yet implemented.")
 		return
@@ -197,7 +197,7 @@ func (b *Broker) handleChannel(obj *rhizome.Object) {
 func (b *Broker) handleTransformer(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_ADD:
+	case globals.CmdAdd:
 		// Args: route, channel, address, nil
 		t := newTransformer(obj.Arg3)
 		c := b.getChannel(obj)
@@ -206,7 +206,7 @@ func (b *Broker) handleTransformer(obj *rhizome.Object) {
 		}
 		c.addTransformer(*t)
 
-	case globals.CMD_REMOVE:
+	case globals.CmdRemove:
 		// Args: route, channel, address, nil
 		t := newTransformer(obj.Arg3)
 		c := b.getChannel(obj)
@@ -230,7 +230,7 @@ func (b *Broker) handleTransformer(obj *rhizome.Object) {
 func (b *Broker) handleSubscriber(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_ADD:
+	case globals.CmdAdd:
 		// Args: route, channel, address, nil
 		s := newSubscriber(obj.Arg3)
 		c := b.getChannel(obj)
@@ -239,7 +239,7 @@ func (b *Broker) handleSubscriber(obj *rhizome.Object) {
 		}
 		c.addSubscriber(*s)
 
-	case globals.CMD_REMOVE:
+	case globals.CmdRemove:
 		// Args: route, channel, address, nil
 		s := newSubscriber(obj.Arg3)
 		c := b.getChannel(obj)
@@ -263,7 +263,7 @@ func (b *Broker) handleSubscriber(obj *rhizome.Object) {
 func (b *Broker) handleGlobals(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_UPDATE:
+	case globals.CmdUpdate:
 		hasPermission := updateGlobals(obj)
 		if !hasPermission {
 			return
@@ -289,7 +289,7 @@ func (b *Broker) handleGlobals(obj *rhizome.Object) {
 func (b *Broker) handleActions(obj *rhizome.Object) {
 	switch obj.CmdType {
 
-	case globals.CMD_SIGTERM:
+	case globals.CmdSigterm:
 		b.ManagingServer.Shutdown()
 
 	default:

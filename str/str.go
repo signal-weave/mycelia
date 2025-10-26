@@ -24,37 +24,37 @@ func SprintfLn(formatStr string, args ...string) {
 }
 
 func ActionPrint(s string) {
-	if globals.Verbosity < globals.VERB_ACT {
+	if globals.Verbosity < globals.VertAct {
 		return
 	}
 	fmt.Println("[ACTION] - " + s)
 }
 
 func WarningPrint(s string) {
-	if globals.Verbosity < globals.VERB_WRN {
+	if globals.Verbosity < globals.VerbWrn {
 		return
 	}
 	fmt.Println("[WARNING] - " + s)
 }
 
 func ErrorPrint(s string) {
-	if globals.Verbosity < globals.VERB_ERR {
+	if globals.Verbosity < globals.VerbErr {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)
 }
 
 func PrintByVerbosity(s string, v siglog.LogLevel) {
-	if globals.Verbosity == globals.VERB_NIL {
+	if globals.Verbosity == globals.VerbNil {
 		return
 	}
-	if v == globals.VERB_ACT && globals.Verbosity >= v {
+	if v == globals.VertAct && globals.Verbosity >= v {
 		ActionPrint(s)
 	}
-	if v == globals.VERB_WRN && globals.Verbosity >= v {
+	if v == globals.VerbWrn && globals.Verbosity >= v {
 		WarningPrint(s)
 	}
-	if v == globals.VERB_ERR && globals.Verbosity >= v {
+	if v == globals.VerbErr && globals.Verbosity >= v {
 		ErrorPrint(s)
 	}
 }
@@ -67,7 +67,7 @@ func getOutputWidth() int {
 			return width
 		}
 	}
-	return globals.DEFAULT_TERMINAL_W
+	return globals.DefaultTerminalW
 }
 
 // PrintAsciiLine prints "-" repeated to fill the terminal length if a terminal

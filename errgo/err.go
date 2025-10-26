@@ -16,8 +16,8 @@ type myError struct {
 	verbosity siglog.LogLevel
 }
 
-func (me myError) Verbosity() siglog.LogLevel {
-	return me.verbosity
+func (e myError) Verbosity() siglog.LogLevel {
+	return e.verbosity
 }
 
 func (e myError) Error() string {

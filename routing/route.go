@@ -72,7 +72,7 @@ func (r *route) createChannel(obj *rhizome.Object) {
 	ch := r.getChannel(obj.Arg2)
 	if ch != nil {
 		if obj.Responder != nil {
-			obj.Response.Ack = globals.ACK_CHANNEL_ALREADY_EXISTS
+			obj.Response.Ack = globals.AckChannelAlreadyExists
 			payload, err := rhizome.EncodeResponse(obj)
 			if err != nil {
 				logging.LogSystemError(

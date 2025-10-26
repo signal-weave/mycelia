@@ -43,7 +43,7 @@ func updateGlobals(obj *rhizome.Object) bool {
 			"Could not parse payload for globals update from %s",
 			obj.Responder.C.RemoteAddr().String(),
 		)
-		_ = errgo.NewError(wMsg, globals.VERB_WRN)
+		_ = errgo.NewError(wMsg, globals.VerbWrn)
 		return false
 	}
 
