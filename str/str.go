@@ -10,7 +10,6 @@ import (
 
 	"mycelia/globals"
 
-	"github.com/signal-weave/siglog"
 	"golang.org/x/term"
 )
 
@@ -42,21 +41,6 @@ func ErrorPrint(s string) {
 		return
 	}
 	fmt.Println("[ERROR] - " + s)
-}
-
-func PrintByVerbosity(s string, v siglog.LogLevel) {
-	if globals.Verbosity == globals.VerbNil {
-		return
-	}
-	if v == globals.VertAct && globals.Verbosity >= v {
-		ActionPrint(s)
-	}
-	if v == globals.VerbWrn && globals.Verbosity >= v {
-		WarningPrint(s)
-	}
-	if v == globals.VerbErr && globals.Verbosity >= v {
-		ErrorPrint(s)
-	}
 }
 
 // Returns the current terminal width if it can be found else 80.
