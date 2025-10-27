@@ -61,10 +61,6 @@ func (b *Broker) getRoute(obj *rhizome.Object) *route {
 	b.mutex.RUnlock()
 
 	if r == nil {
-		err := obj.ResponeWithAck(globals.AckRouteNotFound)
-		if err != nil {
-			logging.LogObjectWarning(err.Error(), obj.UID)
-		}
 		return nil
 	}
 
@@ -153,8 +149,6 @@ func (b *Broker) handleDelivery(obj *rhizome.Object) {
 	case globals.CmdSend:
 		r := b.getRoute(obj)
 		if r == nil {
-			err := obj.ResponeWithAck(globals.AckRouteNotFound)
-			LogPossibleAckError(obj, err)
 			return
 		}
 		r.enqueue(obj) // no channels means route will send to dead letter.

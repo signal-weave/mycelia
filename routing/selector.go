@@ -1,6 +1,10 @@
 package routing
 
 import (
+	"math/rand"
+	"sync"
+	"time"
+
 	"mycelia/globals"
 )
 
@@ -19,12 +23,14 @@ func newSelector(ch *channel, strat globals.SelectionStrategy) selector {
 		return &randomSelector{
 			strategy: strat,
 			channel:  ch,
+			rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
 		}
 
 	case globals.SelStratRoundRobin:
 		return &roundRobinSelector{
 			strategy: strat,
 			channel:  ch,
+			last:     -1,
 		}
 
 	case globals.SelStratPubSub:
@@ -34,7 +40,10 @@ func newSelector(ch *channel, strat globals.SelectionStrategy) selector {
 		}
 
 	default:
-		return nil
+		return &pubSubSelector{
+			strategy: strat,
+			channel:  ch,
+		}
 	}
 }
 
@@ -43,6 +52,7 @@ func newSelector(ch *channel, strat globals.SelectionStrategy) selector {
 type randomSelector struct {
 	strategy globals.SelectionStrategy
 	channel  *channel
+	rng      *rand.Rand
 }
 
 func (rs *randomSelector) GetStrategyName() string {
@@ -66,9 +76,10 @@ func (rs *randomSelector) Select() []subscriber {
 // -------Round-Robin Selector--------------------------------------------------
 
 type roundRobinSelector struct {
-	strategy  globals.SelectionStrategy
-	channel   *channel
-	lastIndex int
+	strategy globals.SelectionStrategy
+	channel  *channel
+	mu       sync.Mutex
+	last     int
 }
 
 func (rrs *roundRobinSelector) GetStrategyName() string {
@@ -78,17 +89,19 @@ func (rrs *roundRobinSelector) GetStrategyName() string {
 func (rrs *roundRobinSelector) Select() []subscriber {
 	subscribers := rrs.channel.loadSubscribers()
 	if len(subscribers) == 0 {
-		return []subscriber{}
+		return nil
+	}
+	rrs.mu.Lock()
+
+	if rrs.last < 0 || rrs.last >= len(subscribers)-1 {
+		rrs.last = 0
+	} else {
+		rrs.last++
 	}
 
-	nextIndex := rrs.lastIndex + 1
-	if nextIndex == len(subscribers) {
-		nextIndex = 0
-	}
-	rrs.lastIndex = nextIndex
-
-	chosen := subscribers[nextIndex]
-	return []subscriber{chosen}
+	idx := rrs.last
+	rrs.mu.Unlock()
+	return []subscriber{subscribers[idx]}
 }
 
 // -------Pub/Sub Selector------------------------------------------------------

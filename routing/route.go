@@ -46,7 +46,7 @@ func newRoute(broker *Broker, name string) *route {
 }
 
 // Checks if a channel exists on the route.
-// Returns channel and index if it does, else nil and -1.
+// Returns channel if found else nil.
 func (r *route) getChannel(name string) *channel {
 	var ch *channel = nil
 
@@ -79,7 +79,11 @@ func (r *route) createChannel(obj *rhizome.Object) {
 					fmt.Sprintf("could not create channel from %s", obj.Responder.RemoteAddr()),
 				)
 			}
-			obj.Responder.Write(payload)
+			err = obj.Responder.Write(payload)
+			if err != nil {
+				m := fmt.Sprintf("Could not write ack for %s: %s", obj.Responder.RemoteAddr(), err)
+				logging.LogObjectWarning(m, obj.UID)
+			}
 		}
 		return
 	}

@@ -31,7 +31,7 @@ func (p *partition) start() { p.wg.Add(1); go p.loop() }
 func (p *partition) stop()  { close(p.in); p.wg.Wait() }
 
 // Should be called as a go routine so the partition worker is always working.
-// It can be fed messages through partition.in which will get processed in the
+// It can be fed messages through partition.in which will be processed by the
 // loop. Remember to call partition.stop() to close loop + channel and shutdown.
 func (p *partition) loop() {
 	defer p.wg.Done()
@@ -85,7 +85,8 @@ func (p *partition) loop() {
 				}
 				err = result.Responder.Write(payload)
 				if err != nil {
-					// ...
+					m := fmt.Sprintf("Unable to write to %s: %s", result.Responder.RemoteAddr(), err)
+					logging.LogObjectWarning(m, result.UID)
 				}
 			}
 		}
