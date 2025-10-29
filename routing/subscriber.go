@@ -1,10 +1,10 @@
 package routing
 
 import (
+	"context"
 	"fmt"
-	"net"
+	"time"
 
-	"mycelia/comm"
 	"mycelia/logging"
 
 	"github.com/signal-weave/rhizome"
@@ -22,26 +22,26 @@ func newSubscriber(address string) *subscriber {
 
 // Forwards the delivery to the client represented by the consumer object.
 func (c *subscriber) deliver(obj *rhizome.Object) {
-	logging.LogObjectAction(
-		fmt.Sprintf("Attempting to dial %s", c.Address), obj.UID,
-	)
+	logging.LogObjectAction(fmt.Sprintf("Attempting to dial %s", c.Address), obj.UID)
 
-	conn, err := net.Dial("tcp", c.Address)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	b, err := globalConnPool.Get(ctx, c.Address)
 	if err != nil {
-		logging.LogObjectWarning(
-			fmt.Sprintf("Could not dial %s", c.Address), obj.UID,
-		)
+		logging.LogObjectWarning(fmt.Sprintf("Could not dial %s", c.Address), obj.UID)
 		return
 	}
-	defer comm.CloseConnection(conn)
+	defer b.Put()
 
-	_, err = conn.Write(obj.Payload)
+	_ = b.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
+	_, err = b.Conn().Write(obj.Payload)
 	if err != nil {
+		b.MarkBroken()
 		wMsg := fmt.Sprintf("Error sending to %s", c.Address)
 		logging.LogObjectWarning(wMsg, obj.UID)
 		return
 	}
-	logging.LogObjectAction(
-		fmt.Sprintf("Wrote delivery to: %s", c.Address), obj.UID,
-	)
+	logging.LogObjectAction(fmt.Sprintf("Wrote delivery to: %s", c.Address), obj.UID)
 }
