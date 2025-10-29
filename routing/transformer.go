@@ -1,11 +1,10 @@
 package routing
 
 import (
+	"context"
 	"fmt"
-	"net"
 	"time"
 
-	"mycelia/comm"
 	"mycelia/errgo"
 	"mycelia/globals"
 	"mycelia/logging"
@@ -28,36 +27,35 @@ func newTransformer(address string) *transformer {
 // apply sends the delivery to the transformer service and waits for
 // response.
 func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
-	logging.LogObjectAction(
-		fmt.Sprintf("Transforming delivery via %s", t.Address), obj.UID,
-	)
+	logging.LogObjectAction(fmt.Sprintf("Transforming delivery via %s", t.Address), obj.UID)
 
-	conn, err := net.Dial("tcp", t.Address)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	b, err := globalConnPool.Get(ctx, t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr // Return original delivery on failure
 	}
-	defer comm.CloseConnection(conn)
+	defer b.Put()
 
 	// Send the delivery body to transformer
-	_, err = conn.Write(obj.Payload)
-	if err != nil {
+	_ = b.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if _, err = b.Conn().Write(obj.Payload); err != nil {
+		b.MarkBroken()
 		wMsg := fmt.Sprintf("Could not send data to transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr
 	}
 
-	// Read the transformed response with a timeout
-	err = conn.SetReadDeadline(time.Now().Add(globals.TransformTimeout))
-	if err != nil {
-		m := fmt.Sprintf("Unable to set deadline for conn to %s: %s", conn.RemoteAddr(), err)
-		logging.LogSystemWarning(m)
-	}
+	// Read the transformed response with timeout
+	_ = b.SetReadDeadline(time.Now().Add(globals.TransformTimeout))
 
 	buffer := make([]byte, 4096)
-	n, err := conn.Read(buffer)
+	n, err := b.Conn().Read(buffer)
 	if err != nil {
+		b.MarkBroken()
 		wMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr
@@ -74,9 +72,7 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 	transformedDelivery.Response = obj.Response
 	transformedDelivery.Version = obj.Version
 
-	logging.LogObjectAction(
-		fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID,
-	)
+	logging.LogObjectAction(fmt.Sprintf("Transformed delivery at: %s", t.Address), obj.UID)
 
 	return transformedDelivery, nil
 }

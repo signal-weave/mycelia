@@ -57,10 +57,6 @@ var DefaultNumPartitions = 4
 // WorkerCount is the number of workers to allocate to the server listener.
 var WorkerCount = 4
 
-// MaxLogAge is how many days a log file should be kept around.
-// If set to 0, log file cleanup is ignored.
-var MaxLogAge = 14
-
 func UpdateVerbosityEnvironVar() {
 	_ = os.Setenv("VERBOSITY", strconv.Itoa(int(Verbosity)))
 }
