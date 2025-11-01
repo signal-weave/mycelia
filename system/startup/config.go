@@ -44,7 +44,7 @@ func getConfigData() {
 		return
 	}
 
-	var bd system.SystemData
+	var bd system.Data
 	err = json.Unmarshal(data, &bd)
 	if err != nil {
 		logging.LogSystemError(fmt.Sprintf("Cannot unmarshal config file: %s", err))
