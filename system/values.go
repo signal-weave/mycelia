@@ -36,42 +36,15 @@ type ParamData struct {
 	SecurityToken    *[]string        `json:"security-tokens"`
 }
 
-func NewParamData() *ParamData {
-	timeoutStr := globals.TransformTimeout.String()
-
-	return &ParamData{
-		Address:          &globals.Address,
-		Port:             &globals.Port,
-		Verbosity:        &globals.Verbosity,
-		PrintTree:        &globals.PrintTree,
-		TransformTimeout: &timeoutStr,
-		AutoConsolidate:  &globals.AutoConsolidate,
-		SecurityToken:    &globals.SecurityTokens,
-	}
-}
-
 // ShutdownReport details how the broker shutdown last.
 type ShutdownReport struct {
 	GracefulShutdown *bool `json:"graceful-shutdown"`
 }
 
-// SystemData represents global dynamic values, shutdown details, or pre-defined
+// Data represents global dynamic values, shutdown details, or pre-defined
 // routes.
-type SystemData struct {
+type Data struct {
 	ShutdownReport *ShutdownReport   `json:"shutdown-report"`
 	Parameters     *ParamData        `json:"parameters"`
 	Routes         *[]map[string]any `json:"routes"`
-}
-
-func NewSystemData() *SystemData {
-	shutdownStatus := false
-	report := &ShutdownReport{GracefulShutdown: &shutdownStatus}
-
-	var routes []map[string]any
-
-	return &SystemData{
-		ShutdownReport: report,
-		Parameters:     NewParamData(),
-		Routes:         &routes,
-	}
 }

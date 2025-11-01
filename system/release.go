@@ -4,7 +4,7 @@ type ReleaseType int
 
 const (
 	// ReleaseDev builds are for development only and not to be released.
-	ReleaseDev ReleaseType = iota
+	ReleaseDev ReleaseType = 1 << iota
 
 	// ReleaseCandidate builds are potential releases that can be tagged after
 	// testing, verification, and quality assurance.

@@ -27,15 +27,16 @@ func main() {
 // generated.
 func updateVersion() {
 	system.BuildMetadata.MajorVersion = 0  // Proud version
-	system.BuildMetadata.MinorVersion = 17 // Real  version
-	system.BuildMetadata.PatchVersion = 2  // Sucky version
+	system.BuildMetadata.MinorVersion = 18 // Real  version
+	system.BuildMetadata.PatchVersion = 1  // Sucky version
 
 	system.BuildMetadata.ReleaseType = system.ReleaseDev
 	system.BuildMetadata.DevVersion = 1
 }
 
-// Starts the server - checks for preloaded commands from the PreInit.json file
-// and loads them into the server's broker, then runs the server.
+// Starts the server - checks for preloaded commands from the
+// Mycelia_Config.json file and loads them into the server's broker, then runs
+// the server.
 func startServer() {
 	s := server.NewServer(globals.Address, globals.Port)
 	for _, cmd := range system.ObjectList {
