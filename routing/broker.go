@@ -104,13 +104,13 @@ func (b *Broker) removeEmptyRoute(name string) {
 func (b *Broker) getChannel(obj *rhizome.Object) *channel {
 	r := b.getRoute(obj)
 	if r == nil {
-		err := obj.ResponeWithAck(globals.AckRouteNotFound)
+		err := obj.RespondWithAck(globals.AckRouteNotFound)
 		LogPossibleAckError(obj, err)
 		return nil
 	}
 	c := r.getChannel(obj.Arg2)
 	if c == nil {
-		err := obj.ResponeWithAck(globals.AckChannelNotFound)
+		err := obj.RespondWithAck(globals.AckChannelNotFound)
 		LogPossibleAckError(obj, err)
 		return nil
 	}

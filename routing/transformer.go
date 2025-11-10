@@ -66,6 +66,7 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 		obj.ObjType, obj.CmdType, obj.AckPlcy,
 		obj.UID,
 		obj.Arg1, obj.Arg2, obj.Arg3, obj.Arg4,
+		obj.PayloadEncoding,
 		buffer[:n],
 	)
 	transformedDelivery.Responder = obj.Responder

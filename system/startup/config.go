@@ -170,6 +170,7 @@ func parseChannels(channelData map[string]any, routeName string) {
 		channelName,
 		strategy,
 		"",
+		rhizome.EncodingJson,
 		[]byte{},
 	)
 
@@ -195,6 +196,7 @@ func parseTransformers(channelData map[string]any, routeName string) {
 			channelName,
 			addr,
 			"",
+			rhizome.EncodingJson,
 			[]byte{},
 		)
 		system.ObjectList = append(system.ObjectList, obj)
@@ -220,6 +222,7 @@ func parseSubscribers(channelData map[string]any, routeName string) {
 			channelName,
 			addr,
 			"",
+			rhizome.EncodingJson,
 			[]byte{},
 		)
 		system.ObjectList = append(system.ObjectList, obj)
