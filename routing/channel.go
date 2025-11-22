@@ -155,7 +155,7 @@ func (ch *channel) removeSubscriber(s subscriber) {
 	ch.checkEmptyChannel()
 }
 
-// Atomicly load the subscriber list without having to lock the mutex.
+// Atomically load the subscriber list without having to lock the mutex.
 func (ch *channel) loadSubscribers() []subscriber {
 	if v := ch.sSnap.Load(); v != nil {
 		return v.([]subscriber)
