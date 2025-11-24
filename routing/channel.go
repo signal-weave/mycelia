@@ -17,8 +17,9 @@ import (
 // through each of its transformers before forwarding it to the subscriber.
 //
 // More than one channel may exist in a route - Subscribers choose which
-// transform "checkpoint" they wish to subscribe to. i.e. a delivery transformed
-// by one channel will then be sent to the next channel in a route.
+// transform "checkpoint" they wish to subscribe to. I.e., a delivery
+// transformed by one channel will then be sent to the next channel in a route,
+// and subscribers choose where in the route they wish to subscribe.
 type channel struct {
 	mutex sync.RWMutex
 	route *route

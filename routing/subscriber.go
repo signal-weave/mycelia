@@ -10,7 +10,7 @@ import (
 	"github.com/signal-weave/rhizome"
 )
 
-// Object representation of the client subscribed to an endpoint, i.e. the
+// Object representation of the client subscribed to an endpoint, i.e., the
 // distributed machine that a delivery will be forwarded to.
 type subscriber struct {
 	Address string

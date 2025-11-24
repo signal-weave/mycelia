@@ -33,6 +33,7 @@ logs/*
 
 # json files
 Mycelia_Config.json
+Mycelia_Config.yaml
 Mycelia_ShutdownReport.json
 
 # IDE files
