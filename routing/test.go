@@ -54,3 +54,16 @@ func mkSubs(n int) []subscriber {
 	}
 	return out
 }
+
+// -------Partition-------------------------------------------------------------
+
+// Start a partition with a tiny buffered input and stop cleanly
+func newTestPartition() *partition {
+	p := &partition{
+		route:   &route{},   // not used directly thanks to seams
+		channel: &channel{}, // not used directly thanks to seams
+	}
+	p.in = make(chan *rhizome.Object, 1)
+	p.start()
+	return p
+}
