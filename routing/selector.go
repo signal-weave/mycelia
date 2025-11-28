@@ -22,27 +22,25 @@ func newSelector(ch *channel, strat globals.SelectionStrategy) selector {
 	case globals.SelStratRandom:
 		return &randomSelector{
 			strategy: strat,
-			channel:  ch,
-			rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
+
+			// Needed to seed randomizer
+			rng: rand.New(rand.NewSource(time.Now().UnixNano())),
+
+			loadFn:   ch.loadSubscribers,
+			chooseFn: func(s []subscriber) (subscriber, bool) { return randomElement(s) },
 		}
 
 	case globals.SelStratRoundRobin:
 		return &roundRobinSelector{
 			strategy: strat,
-			channel:  ch,
 			last:     -1,
-		}
-
-	case globals.SelStratPubSub:
-		return &pubSubSelector{
-			strategy: strat,
-			channel:  ch,
+			loadFn:   ch.loadSubscribers,
 		}
 
 	default:
 		return &pubSubSelector{
 			strategy: strat,
-			channel:  ch,
+			loadFn:   ch.loadSubscribers,
 		}
 	}
 }
@@ -51,8 +49,9 @@ func newSelector(ch *channel, strat globals.SelectionStrategy) selector {
 
 type randomSelector struct {
 	strategy globals.SelectionStrategy
-	channel  *channel
 	rng      *rand.Rand
+	loadFn   func() []subscriber
+	chooseFn func([]subscriber) (subscriber, bool)
 }
 
 func (rs *randomSelector) GetStrategyName() string {
@@ -60,12 +59,12 @@ func (rs *randomSelector) GetStrategyName() string {
 }
 
 func (rs *randomSelector) Select() []subscriber {
-	subscribers := rs.channel.loadSubscribers()
+	subscribers := rs.loadFn()
 	if len(subscribers) == 0 {
 		return []subscriber{}
 	}
 
-	chosen, found := randomElement(subscribers)
+	chosen, found := rs.chooseFn(subscribers)
 	if !found {
 		return []subscriber{}
 	}
@@ -77,9 +76,9 @@ func (rs *randomSelector) Select() []subscriber {
 
 type roundRobinSelector struct {
 	strategy globals.SelectionStrategy
-	channel  *channel
 	mu       sync.Mutex
 	last     int
+	loadFn   func() []subscriber
 }
 
 func (rrs *roundRobinSelector) GetStrategyName() string {
@@ -87,7 +86,7 @@ func (rrs *roundRobinSelector) GetStrategyName() string {
 }
 
 func (rrs *roundRobinSelector) Select() []subscriber {
-	subscribers := rrs.channel.loadSubscribers()
+	subscribers := rrs.loadFn()
 	if len(subscribers) == 0 {
 		return nil
 	}
@@ -108,7 +107,7 @@ func (rrs *roundRobinSelector) Select() []subscriber {
 
 type pubSubSelector struct {
 	strategy globals.SelectionStrategy
-	channel  *channel
+	loadFn   func() []subscriber
 }
 
 func (pss *pubSubSelector) GetStrategyName() string {
@@ -116,7 +115,7 @@ func (pss *pubSubSelector) GetStrategyName() string {
 }
 
 func (pss *pubSubSelector) Select() []subscriber {
-	subscribers := pss.channel.loadSubscribers()
+	subscribers := pss.loadFn()
 	if len(subscribers) == 0 {
 		return []subscriber{}
 	}

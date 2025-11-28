@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"time"
@@ -11,6 +12,19 @@ import (
 
 	"github.com/signal-weave/rhizome"
 )
+
+var transformBufSize = 65535
+
+// readTransformed reads from the transformer's response buffer in dependency
+// injection fashion.
+var readTransformed = func(r *bufio.Reader) ([]byte, error) {
+	buf := make([]byte, transformBufSize)
+	n, err := r.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf[:n], nil
+}
 
 // transformer intercepts deliveries, processes them, and returns modified
 // deliveries.
@@ -32,7 +46,7 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	b, err := globalConnPool.Get(ctx, t.Address)
+	b, err := dialBorrowed(ctx, t.Address)
 	if err != nil {
 		wMsg := fmt.Sprintf("Could not dial transformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VerbWrn)
@@ -52,11 +66,12 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 	// Read the transformed response with timeout
 	_ = b.SetReadDeadline(time.Now().Add(globals.TransformTimeout))
 
-	buffer := make([]byte, 4096)
-	n, err := b.Conn().Read(buffer)
+	reader := bufio.NewReader(b.Conn())
+
+	transformedPayload, err := readTransformed(reader)
 	if err != nil {
 		b.MarkBroken()
-		wMsg := fmt.Sprintf("Error reading from transformer %s", t.Address)
+		wMsg := fmt.Sprintf("Error readinga from trnasformer %s", t.Address)
 		wErr := errgo.NewError(wMsg, globals.VerbWrn)
 		return obj, wErr
 	}
@@ -67,7 +82,7 @@ func (t *transformer) apply(obj *rhizome.Object) (*rhizome.Object, error) {
 		obj.UID,
 		obj.Arg1, obj.Arg2, obj.Arg3, obj.Arg4,
 		obj.PayloadEncoding,
-		buffer[:n],
+		transformedPayload,
 	)
 	transformedDelivery.Responder = obj.Responder
 	transformedDelivery.Response = obj.Response

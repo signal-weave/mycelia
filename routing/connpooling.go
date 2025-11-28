@@ -2,7 +2,6 @@ package routing
 
 import (
 	"context"
-	"errors"
 	"net"
 	"sync"
 	"time"
@@ -21,6 +20,7 @@ type Pool struct {
 	WriteTimeout time.Duration // optional default on borrow; set 0 to skip
 }
 
+// A pool of net.Conns for a single address.
 type addrPool struct {
 	addr   string
 	ch     chan net.Conn // The pool
@@ -30,12 +30,6 @@ type addrPool struct {
 
 	// track last-used to evict stale conns when returned
 	lastUsed map[net.Conn]time.Time
-}
-
-type Borrowed struct {
-	conn   net.Conn
-	owner  *addrPool
-	broken bool
 }
 
 // NewPool creates a pool with reasonable defaults.
@@ -54,6 +48,7 @@ func NewPool() *Pool {
 // tracking the per-address pools.
 var globalConnPool = NewPool()
 
+// getAddrPool returns the addrPool for addr, creating it if necessary.
 func (p *Pool) getAddrPool(addr string) *addrPool {
 	v, ok := p.pools.Load(addr)
 	if ok {
@@ -111,41 +106,4 @@ func (p *Pool) Get(ctx context.Context, addr string) (*Borrowed, error) {
 		}
 		return &Borrowed{conn: r.c, owner: ap}, nil
 	}
-}
-
-func (b *Borrowed) Conn() net.Conn { return b.conn }
-func (b *Borrowed) MarkBroken()    { b.broken = true }
-
-// Put releases the borrowed connection back into the pool (unless broken).
-func (b *Borrowed) Put() {
-	if b.conn == nil || b.owner == nil {
-		return
-	}
-	if b.broken {
-		_ = b.conn.Close()
-		return
-	}
-
-	select {
-	case b.owner.ch <- b.conn:
-		b.owner.mu.Lock()
-		b.owner.lastUsed[b.conn] = time.Now()
-		b.owner.mu.Unlock()
-	default:
-		// Close if full
-		_ = b.conn.Close()
-	}
-}
-
-func (b *Borrowed) SetReadDeadline(t time.Time) error {
-	if b.conn == nil {
-		return errors.New("nil conn")
-	}
-	return b.conn.SetReadDeadline(t)
-}
-func (b *Borrowed) SetWriteDeadline(t time.Time) error {
-	if b.conn == nil {
-		return errors.New("nil conn")
-	}
-	return b.conn.SetWriteDeadline(t)
 }

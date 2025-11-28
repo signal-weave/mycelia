@@ -10,6 +10,14 @@ import (
 	"github.com/signal-weave/rhizome"
 )
 
+// subWrite lets a subscriber write to a borrowed connection in dependency
+// injection fashion.
+var subWrite = func(b borrower, data []byte) error {
+	_ = b.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	_, err := b.Conn().Write(data)
+	return err
+}
+
 // Object representation of the client subscribed to an endpoint, i.e., the
 // distributed machine that a delivery will be forwarded to.
 type subscriber struct {
@@ -27,17 +35,14 @@ func (c *subscriber) deliver(obj *rhizome.Object) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	b, err := globalConnPool.Get(ctx, c.Address)
+	b, err := dialBorrowed(ctx, c.Address)
 	if err != nil {
 		logging.LogObjectWarning(fmt.Sprintf("Could not dial %s", c.Address), obj.UID)
 		return
 	}
 	defer b.Put()
 
-	_ = b.SetWriteDeadline(time.Now().Add(10 * time.Second))
-
-	_, err = b.Conn().Write(obj.Payload)
-	if err != nil {
+	if err := subWrite(b, obj.Payload); err != nil {
 		b.MarkBroken()
 		wMsg := fmt.Sprintf("Error sending to %s", c.Address)
 		logging.LogObjectWarning(wMsg, obj.UID)

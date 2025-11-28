@@ -2,10 +2,10 @@ package globals
 
 // -------Channels--------------------------------------------------------------
 
-// SelectionStrategy is the enum for which selection strategy a channel
-// utilizes. It is placed in globals so that system/startup can reference it
-// when parsing Mycelia_Config.json files, without needing to import the routing
-// package.
+// SelectionStrategy is the enum for which selection strategy a channel uses.
+//
+// It is placed in globals so that system/startup can reference it when parsing
+// Mycelia_Config.yaml files, without needing to import the routing package.
 type SelectionStrategy int
 
 const (

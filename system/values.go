@@ -13,7 +13,7 @@ import (
 // Herein are the shared values that system sub-packages can reference.
 // -----------------------------------------------------------------------------
 
-var ConfigFile = filepath.Join(globals.ExeDir, "Mycelia_Config.json")
+var ConfigFile = filepath.Join(globals.ExeDir, "Mycelia_Config.yaml")
 
 // ObjectList is a list of commands used for booting up and pre-configuring the broker
 // based on the Mycelia_Config.json file.

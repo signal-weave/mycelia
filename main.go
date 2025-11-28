@@ -27,7 +27,7 @@ func main() {
 // generated.
 func updateVersion() {
 	system.BuildMetadata.MajorVersion = 0  // Proud version
-	system.BuildMetadata.MinorVersion = 20 // Real  version
+	system.BuildMetadata.MinorVersion = 21 // Real  version
 	system.BuildMetadata.PatchVersion = 0  // Sucky version
 
 	system.BuildMetadata.ReleaseType = system.ReleaseDev

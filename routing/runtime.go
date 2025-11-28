@@ -47,7 +47,7 @@ func updateGlobals(obj *rhizome.Object) bool {
 		return false
 	}
 
-	// Is user authorized
+	// Is user authorized?
 	if rv.SecurityToken == nil {
 		logging.LogObjectError(
 			fmt.Sprintf("Message lacks security token from %s",
